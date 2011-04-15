@@ -1,0 +1,409 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+##############################################################################
+#
+#    RPC data dump module for OpenERP, fetch data and save them
+#    Copyright (C) 2010 Thamini S.A. (<http://www.thamini.com>) Xavier ALT
+#
+#    This file is a part of RPC data dump
+#
+#    RPC data dump is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    RPC data dump is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
+
+import xmlrpclib
+import socket
+import os
+import sys
+import time
+import codecs
+import csv
+from lxml import etree
+from pprint import pprint
+from optparse import OptionParser
+
+
+# get command line options
+usage = "usage: xmlrpc-dump [options] model id1 id2 id3"
+parser = OptionParser(usage=usage)
+parser.add_option("-s", "--server", dest="server",
+                  help='Server to connect to', default='localhost')
+parser.add_option("-p", "--port", dest="port",
+                  help='Which port to connect to', default=8069, type='int')
+parser.add_option("-d", "--database", dest="database",
+                  help='The database from where we\'re going to dump')
+parser.add_option("-u", "--user", dest="user",
+                  help='The user used to connect to the DB', default='admin')
+parser.add_option("-w", "--password", dest="password",
+                  help='The password use to connect to the DB', default='admin')
+parser.add_option("-m", "--module", dest="module",
+                  help='The module prefix', default=''),
+parser.add_option("-o", "--output", dest="output",
+                  help='The output filename, if not specified stdout is used')
+parser.add_option("--save-ids", action="store_true", dest="save_ids", default=False)
+parser.add_option("--sql-ids", action="store_true", dest="sql_ids", default=False)
+parser.add_option("--debug", action="store_true", dest="debug", default=False)
+parser.add_option("-a", "--all", dest="all", help='Take all ids', action="store_true")
+parser.add_option("--without-relation", action="store_true", dest="without_relation", help="Don't take back relations. Just give normal fields")
+parser.add_option("--m2o-only", action="store_true", dest="m2o_only", help="Get only many2one relations and normal fields")
+parser.add_option("--m2m-only", action="store_true", dest="m2m_only", help="Get only many2many relations and normal fields")
+
+(option, args) = parser.parse_args()
+
+if len(args) < 2:
+    if len(args) == 1 and option.all:
+        print "Option 'all' choosed. Take back all elements in database for the choosen model."
+    else:
+        parser.print_help()
+        sys.exit(2)
+
+_logsock = xmlrpclib.ServerProxy('http://%s:%d/xmlrpc/common' % (option.server, option.port))
+_userid = _logsock.login(option.database, option.user, option.password )
+_sock = xmlrpclib.ServerProxy('http://%s:%d/xmlrpc/object' % (option.server, option.port))
+
+def z_exec(model, name, *args):
+    try:
+        r =  _sock.execute(option.database, _userid, option.password, model, name, *args)
+        return r
+    except Exception, e:
+        #print("RPC CALL: %s %s %s" % (model, name, (args)))
+        #print("%s %s" % (e.faultCode, e.faultString))
+        raise e
+
+# indent function taken from:
+# URL: http://infix.se/2007/02/06/gentlemen-indent-your-xml
+# Desc: variant of indent() function found of effbotlib
+#       (see http://effbot.org/zone/element-lib.htm)
+# @20100716: Modified to force newline avec </record> tag
+def indent(elem, level=0):
+    i = "\n" + level*"    "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "    "
+        for e in elem:
+            indent(e, level+1)
+            if not e.tail or not e.tail.strip():
+                e.tail = i + "    "
+                if e.tag == 'record':
+                    e.tail = '\n' + e.tail
+        if not e.tail or not e.tail.strip():
+            e.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+
+def get_remote_xmlid(model, id):
+    domain = [('model','=',model),('res_id','=',id)]
+    ids = z_exec('ir.model.data', 'search', domain)
+    if not ids:
+        return None
+    if len(ids) > 1:
+        if model == 'res.users' and id == 1:
+            return 'base.user_admin' # duplicate content (base.user_admin, base.user_root)
+        raise Exception("Can't get more than 1 remote xmlid for model '%s', id '%s' (%s)" % (model, id, ids))
+    return '%(module)s.%(name)s' % z_exec('ir.model.data', 'read', ids[0], ['module', 'name'])
+
+class oomodel(object):
+    @classmethod
+    def get_fields(cls, model):
+        fields_info = z_exec(model, 'fields_get')
+        #print("FIELDS_INFO ::")
+        #pprint(fields_info)
+        return fields_info
+
+    def __init__(self, model, id, fields=None, module=None):
+        self.module = None
+        self.model = model
+        self.id = id
+        self._uuid = None
+        if not fields:
+            self.fields = oomodel.get_fields(model)
+        else:
+            self.fields = fields
+        self.data = z_exec(model, 'read', id, [])
+
+    def __repr__(self):
+        return u'<OO (%s, %s)>' % (self.model, self.id)
+
+    def __getattr__(self, key):
+        if key.startswith('data_'):
+            return self.data[key[5:]]
+        return super(oomodel, self).__getattribute__(key)
+
+#    def get_uuid_workflow_transition(self):
+#        return 'workflow_transition_%s_%s_%s' % (self.data['act_from'][1], self.data['act_to'][1], self.data['signal'])
+
+    def get_uuid(self):
+        if self._uuid:
+            return self._uuid
+        # try to search for existing id inside ir.model.data
+        remote_xmlid = get_remote_xmlid(self.model, self.id)
+        if remote_xmlid:
+            return remote_xmlid
+        uuid = []
+        if self.module:
+            uuid.append(self.module)
+        uuid.append(self.model)
+        try:
+            spec_method = getattr(self, 'get_uuid_%s' % (self.model.replace('.','_')))
+            if spec_method:
+                return spec_method()
+        except AttributeError:
+            pass
+        try:
+            rec_name = z_exec(self.model, 'name_get', self.id)
+        except xmlrpclib.Fault, e:
+            # TODO: Is there a better way to handle fault on name_get() call ?
+            rec_name = False
+        if rec_name:
+            uuid.append(rec_name[0][1])
+        else:
+            uuid.append(self.id)
+        self._uuid = ('_'.join(('%s' for x in range(len(uuid)))) % tuple(uuid)).replace('.', '_').replace(' ','_').lower()
+        self._uuid += '_%d' % (self.id)
+        return self._uuid
+
+    uuid = property(get_uuid)
+
+    def get_base_fields(self):
+        """Return non relational fields"""
+        for fname in self.fields:
+            if self.fields[fname]['type'] in ('boolean','char','integer','selection','text'):
+                yield fname
+        raise StopIteration
+
+    base_fields = property(get_base_fields)
+
+    def get_int_rel_fields(self):
+        """Return M2O and M2M fields"""
+        for fname in self.fields:
+            if option.m2o_only:
+                if self.fields[fname]['type'] in ('many2one'):
+                    yield fname
+            elif option.m2m_only:
+                if self.fields[fname]['type'] in ('many2many'):
+                    yield fname
+            else:
+                if self.fields[fname]['type'] in ('many2one', 'many2many'):
+                    yield fname
+        raise StopIteration
+
+    int_rel_fields = property(get_int_rel_fields)
+
+    def get_ext_rel_fields(self):
+        """Return O2M fields"""
+        for fname in self.fields:
+            if self.fields[fname]['type'] == 'one2many':
+                yield fname
+        raise StopIteration
+
+    ext_rel_fields = property(get_ext_rel_fields)
+
+
+class openerp_xml_file(object):
+
+    def __init__(self, options, module=None):
+        # register options
+        self.options = options
+        # register module namespace
+        self.module = module
+        # create list of explicitly requested elements
+        self.req_ids = {}
+        # create empty list of tree elements
+        self.xml_ids = {}
+        self.xml_ids_new_only = {}
+        self.xml_elements = []
+        self.xml_elements_set = set()
+
+    def get_remote_xmlid(self, model, id):
+        return get_remote_xmlid(model, id)
+
+    def get_absolute_xmlid(self, value):
+        if '.' not in value and self.module:
+            value = '%s.%s' % (self.module, value)
+        if self.module:
+            module_prefix = '%s.' % (self.module)
+            if value.startswith(module_prefix):
+                # if one of our own resources remove absolue reference
+                value = value[len(module_prefix):]
+        return value
+
+    def dump(self, model, ids, prefix='', parent=None):
+        if isinstance(ids, (int,long)):
+            ids = [ ids ]
+
+        #print(">>> DUMPING: %s, %s" % (model, ids))
+        model_fields = oomodel.get_fields(model)
+
+        for id in ids:
+            remote_xmlid = self.get_remote_xmlid(model, id)
+            #if remote_xmlid is not None:
+                #print("--- BREAK found remote xmlid '%s' for ressource %s, %s" % (remote_xmlid, model, id))
+                #continue
+
+            #print("--- %s" % (id))
+            record = oomodel(model, id, fields=model_fields, module=self.module)
+            self.req_ids[(model, record.id)] = record.uuid
+            self.xml_ids[(model, record.id)] = record.uuid
+            if remote_xmlid is None:
+                new_xmlid = record.uuid
+                if self.module:
+                    new_xmlid = '%s.%s' % (self.module, new_xmlid)
+                self.xml_ids_new_only[(model, record.id)] = new_xmlid
+
+            if not option.without_relation:
+                for field in record.int_rel_fields:
+                    #print("::: DEBUG (INT REL FIELD): %s" % (field))
+                    #print("          %s" % (record.data[field]))
+                    if record.data[field]:
+                        # try getting xml ref
+                        frel = record.fields[field]['relation']
+                        if record.fields[field]['type'] == 'many2many':
+                            fids = record.data[field]
+                        else:
+                            fids = [ record.data[field][0] ]
+                        for fid in fids:
+                            try:
+                                rel_xmlid = self.xml_ids[(frel, fid)]
+                            except KeyError:
+                                # we don't currently know this resource xmlid
+                                remote_xmlid = self.get_remote_xmlid(frel, fid)
+                                if remote_xmlid is not None and (frel, fid) not in self.req_ids:
+                                    # resource already have a remote xmlid, so we use this one
+                                    self.xml_ids[(frel, fid)] = remote_xmlid
+                                else:
+                                    # we need to dump this resource
+                                    self.dump(frel, fid)
+
+            if (model, record.id) not in self.xml_ids:
+                self.xml_elements.append(record)
+            elif (model, record.id) in self.xml_ids and (model, record.id) in self.req_ids and (model, record.id) not in self.xml_elements_set:
+                # this record was explicitely marked to be dumped
+                self.xml_elements.append(record)
+                self.xml_elements_set.add((model, record.id))
+            elif self.module and self.xml_ids[(model, record.id)].startswith('%s.' % (self.module)):
+                self.xml_elements.append(record)
+                self.xml_elements_set.add((model, record.id))
+
+            for field in record.ext_rel_fields:
+                #print("::: DEBUG (EXT REL FIELD): %s" % (field))
+                self.dump(record.fields[field]['relation'], record.data[field], parent=record)
+
+    def save_to_xml(self, record):
+        comment = etree.Comment("model: %s, id: %s" % (record.model, record.id))
+
+        xml_record = etree.Element('record')
+        xml_record.set('model', record.model)
+        xml_record.set('id', self.get_absolute_xmlid(self.xml_ids[(record.model, record.id)]))
+        for field in record.base_fields:
+            fdesc = record.fields[field]
+            fdata = record.data[field]
+            if fdesc.get('required', False) or fdata:
+                felem = etree.Element('field')
+                felem.set('name', field)
+                if fdesc['type'] == 'boolean':
+                    felem.set('eval', fdata and '1' or '0')
+                else:
+                    try:
+                        if isinstance(fdata, (int,long,list)):
+                            fdata = str(fdata)
+                        if not isinstance(fdata, unicode):
+                            fdata = unicode(fdata, 'utf-8')
+                        felem.text = fdata
+                    except TypeError:
+                        print("Ooops with field %s: %s" % (field, record.data[field]))
+                        raise
+                xml_record.append(felem)
+        if not option.without_relation:
+            for field in record.int_rel_fields:
+                fdesc = record.fields[field]
+                fdata = record.data[field]
+                if fdesc.get('required',False) or fdata:
+                    felem = etree.Element('field')
+                    felem.set('name', field)
+                    def get_ref_value(relation, fid):
+                        return self.get_absolute_xmlid(self.xml_ids[(relation, fid)])
+
+                    if record.fields[field]['type'] == 'many2many':
+                        felem_value = "[(6,0,[%s])]" % (','.join([ "ref('%s')" % (get_ref_value(fdesc['relation'], fid)) for fid in record.data[field]]))
+                        felem.set('eval', felem_value)
+                    else:
+                        ref_value = u""
+                        if fdata:
+                            ref_value = get_ref_value(fdesc['relation'], fdata[0])
+                        felem.set('ref', ref_value)
+                    xml_record.append(felem)
+        return [ comment, xml_record ]
+
+    def save(self, filename):
+        # create base xml tree
+        root = etree.Element("openerp")
+        data = etree.Element("data")
+        root.append(data)
+        if self.options.sql_ids:
+            for (model, id), xmlid in self.xml_ids_new_only.iteritems():
+                print("INSERT INTO ir_model_data (create_uid, write_uid, create_date, write_date, module, model, res_id, name) VALUES (%d, %d, now()::timestamp, now()::timestamp, E'%s', E'%s', %s, E'%s');" % (_userid, _userid, self.module, model, id, xmlid))
+        if self.options.save_ids and self.module:
+            datetime_now = time.strftime('%Y-%m-%d %H:%M:%S')
+            for (model, id), xmlid in self.xml_ids_new_only.iteritems():
+                z_exec('ir.model.data', 'create', {
+                    'noupdate': False,
+                    'module': self.module,
+                    'model': model,
+                    'res_id': id,
+                    'name': self.get_absolute_xmlid(xmlid),
+                    'date_init': datetime_now,
+                    'date_update': datetime_now,
+                })
+        if self.options.debug:
+            #print(">>> new ids ...")
+            #print(self.xml_ids_new_only.values())
+            #print(">>> existing ids ...")
+            #print(self.xml_ids.values())
+            print(">>> xml_elements ...")
+            pprint(self.xml_elements)
+        for record in self.xml_elements:
+            new_node = self.save_to_xml(record)
+            if isinstance(new_node, (list,tuple)):
+                for node in new_node:
+                    data.append(node)
+            else:
+                data.append(new_node)
+#        print(etree.tostring(root, pretty_print=True))
+        indent(root)
+        data = etree.tostring(root)
+        if filename and filename != '-':
+            print("writing output to: %s" % (filename))
+            of = open(filename, 'wb')
+            of.write(data)
+        else:
+            print(data)
+#        print(etree.tostring(root))
+#        print(prettyPrint(etree))
+
+
+oxf = openerp_xml_file(option, option.module)
+model = args.pop(0)
+if option.all:
+    ids = z_exec(model, 'search', [])
+    total = 0
+    for id in ids:
+        oxf.dump(model, int(id))
+        total += 1
+    print "%s elements to be written." % total
+else:
+    for model_id in args:
+        oxf.dump(model, int(model_id))
+oxf.save(option.output)
