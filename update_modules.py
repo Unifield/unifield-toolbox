@@ -2,13 +2,17 @@
 # -*- encoding: utf-8 -*-
 import xmlrpclib
 import sys
+from os.path import dirname,join,isdir
+from os import mkdir
+import ConfigParser
+import subprocess
+import time
 
-
-dbs = [('finance','admin'), ('supply','admin'), ('sprint1', 'admin'), ('sandbox', 'admin')]
-user = "admin"
-host = "127.0.0.1"
-port = "8069"
-#port = "8062"
+config = ConfigParser.RawConfigParser()
+config.read(join(dirname(__file__),'update_modules.ini'))
+host = config.get('Server', 'host')
+port = config.get('Server', 'port')
+backupdir = config.get('Server', 'backupdir')
 
 if len(sys.argv) < 2:
     print "Usage: %s module1,module2,...."%(sys.argv[0],)
@@ -16,12 +20,45 @@ if len(sys.argv) < 2:
 
 modules = sys.argv[1].split(',')
 ok = True
-for dbname,pwd in dbs:
-    sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/common'%(host,port))
-    uid = sock.login(dbname, user, pwd)
-    sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/object'%(host,port))
 
-    ids = sock.execute(dbname, uid, pwd, 'ir.module.module', 'search',[('name', 'in', modules),('state','in',['installed', 'to upgrade'])])
+def get_db(config):
+    sections = config.sections()
+    sections.pop(sections.index('Server'))
+    ret = []
+    for section in sections:
+        user = config.get(section, 'user')
+        dbname = config.get(section, 'dbname')
+        pwd = config.get(section, 'password')
+        ret.append((dbname, user, pwd))
+    return ret
+
+class Proxy():
+    sock = False
+    uid = False
+    pwd = False
+    dbname = False
+    host = False
+    port = False
+
+    def __init__(self, host, port, dbname, username, password):
+        self.dbname = dbname
+        self.pwd = password
+        self.host = host
+        self.port = port
+        sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/common'%(self.host,self.port))
+        self.uid = sock.login(dbname, username, pwd)
+        self.sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/object'%(self.host,self.port))
+
+    def exec_meth(self, module, method, *args):
+        return self.sock.execute(self.dbname, self.uid, self.pwd, module, method, *args)
+
+    def get_module_ids(self, modules):
+        return self.exec_meth('ir.module.module', 'search', [('name', 'in', modules),('state','in',['installed', 'to upgrade'])])
+
+
+for dbname, user, pwd in get_db(config):
+    xml = Proxy(host, port, dbname, user, pwd)
+    ids = xml.get_module_ids(modules)
     if len(ids) != len(modules):
         print "Base: %s, modules not present"%(dbname,)
         ok = False
@@ -29,12 +66,21 @@ for dbname,pwd in dbs:
 if not ok:
     sys.exit(1)
 
-for dbname,pwd in dbs:
-    sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/common'%(host,port))
-    uid = sock.login(dbname, user, pwd)
-    sock = xmlrpclib.ServerProxy('http://%s:%s/xmlrpc/object'%(host,port))
+if backupdir:
+    for dbname, user, pwd in get_db(config):
+        if not isdir(backupdir):
+            mkdir(backupdir)
 
-    ids = sock.execute(dbname, uid, pwd, 'ir.module.module', 'search',[('name', 'in', modules),('state','=','installed')])
-    sock.execute(dbname, uid, pwd, 'ir.module.module', 'button_upgrade', ids)
+        args = ['/usr/bin/pg_dump', '-Fc', dbname, '-f', join(backupdir, '%s-%s.dump'%(dbname, time.strftime('%Y%m%d%H%M%S')))]
+        subprocess.check_call(args)
+else:
+    inp = raw_input("There isn't any backups, are you sure ? (y/N) ")
+    if inp not in ['Y','y']:
+        sys.exit('Failed')
 
-    sock.execute(dbname, uid, pwd, 'base.module.upgrade', 'upgrade_module', [])
+
+for dbname, user, pwd in get_db(config):
+    xml = Proxy(host, port, dbname, user, pwd)
+    ids = xml.get_module_ids(modules)
+    xml.exec_meth('ir.module.module', 'button_upgrade', ids)
+    xml.exec_meth('base.module.upgrade', 'upgrade_module', [])
