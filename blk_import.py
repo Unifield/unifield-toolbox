@@ -53,7 +53,7 @@ for f in sorted(glob.glob(os.path.join(args[0], '*.csv'))):
     
     print >> sys.stderr, obj
     fo = open(f)
-    wid = sock.execute(opt.dbname, uid, opt.pwd, 'import_data', 'create', {'ignore': 1, 'object': obj, 'file': base64.encodestring(fo.read())})
+    wid = sock.execute(opt.dbname, uid, opt.pwd, 'import_data', 'create', {'ignore': 1, 'object': obj, 'file': base64.encodestring(fo.read()), 'debug': True})
     fo.close()
     sock.execute(opt.dbname, uid, opt.pwd, 'import_data', 'import_csv', [wid])
     while nb_request() == nbr:
