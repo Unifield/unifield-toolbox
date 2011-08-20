@@ -2,14 +2,26 @@
 
 import cgitb,optparse,os,re,subprocess,sys,time
 import fileinput
-import launchpadlib.launchpad,mako.template
+import mako.template
 from lib import initdb
 import threading
-
+import ConfigParser
+import psycopg2
+import psycopg2.extensions
+from bzrlib.branch import Branch
+from bzrlib.bzrdir import BzrDir
+from bzrlib.workingtree import WorkingTree
+from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
+import shutil
 
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
+
+def write_pid(pidfile, pid):
+    pidf = open(pidfile, "w")
+    pidf.write("%d"%pid)
+    pidf.close()
 
 def log(*l,**kw):
     out=[time.strftime("%Y-%m-%d %H:%M:%S")]
@@ -18,14 +30,8 @@ def log(*l,**kw):
             i=repr(i)
         out.append(i)
     out+=["%s=%r"%(k,v) for k,v in kw.items()]
-    print " ".join(out)
-
-def lock(name):
-    fd=os.open(name,os.O_CREAT|os.O_RDWR,0600)
-    fcntl.lockf(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-
-def nowait():
-    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+    sys.stdout.write(" ".join(out))
+    sys.stdout.write("\n")
 
 def run(l):
     log("run",*l)
@@ -41,6 +47,15 @@ def kill(pid,sig=9):
         os.kill(pid,sig)
     except OSError:
         pass
+    
+def _is_running(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+        return pid
+    except OSError:
+        return False
 
 def underscorize(n):
     return n.replace("~","").replace(":","_").replace("/","_")
@@ -77,20 +92,99 @@ class RunBotBranch(object):
         self.data_path = os.path.join(self.instance_path,"unifield-data")
 
         self.web_path=os.path.join(self.instance_path,"unifield-web")
-	self.etc_path = os.path.join(self.instance_path,"etc")
+        self.etc_path = os.path.join(self.instance_path,"etc")
         self.web_bin_path=os.path.join(self.web_path,"openerp-web.py")
 
         self.log_path=os.path.join(self.instance_path, 'logs')
         self.log_server_path=os.path.join(self.log_path,'server.txt')
         self.log_web_path=os.path.join(self.log_path,'web.txt')
-
-    def start_createdb(self,port):
-        dbname = self.subdomain.lower()
+        self.file_pidweb = os.path.join(self.instance_path,'etc','web.pid')
+        self.file_pidserver = os.path.join(self.instance_path,'etc','server.pid')
+        self.configfile = os.path.join(self.instance_path,'config.ini')
         
-#        run(["dropdb",dbname]) #there could be error if the db existed already, done by intention!
-        run(["createdb",dbname]) #there could be error if the db existed already, done by intention!
+        self.ini = ConfigParser.ConfigParser()
+        self.ini.readfp(open(self.runbot.common_configfile, 'r'))
+        self.ini.read(self.configfile)
+        if not self.ini.has_section('global'):
+            self.ini.add_section('global')
+       
+    def write_ini(self):
+        f = open(self.configfile, "w")
+        self.ini.write(f)
+        f.close()
+
+    def remove_option(self, key):
+        try:
+            return self.ini.remove_option('global', key)
+        except ConfigParser.NoOptionError:
+            return False
+
+    def get_ini(self, key):
+        try:
+            return self.ini.get('global', key)
+        except ConfigParser.NoOptionError:
+            return False
+    
+    def get_int_ini(self, key):
+        try:
+            return self.ini.getint('global', key)
+        except ConfigParser.NoOptionError:
+            return False
+
+    def get_bool_ini(self, key, default=False):
+        try:
+            return self.ini.getboolean('global', key)
+        except ConfigParser.NoOptionError:
+            return default
+    def set_ini(self, key, value):
+        return self.ini.set('global', key, '%s'%value)
+
+
+    def is_web_running(self):
+        pid = self.pidweb()
+        return _is_running(pid)
+
+    def is_server_running(self):
+        pid = self.pidserver()
+        return _is_running(pid)
+
+    def _get_pid(self, pidfile):
+        if not os.path.isfile(pidfile):
+            return False
+        try:
+            pf = file(pidfile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+            return pid
+        except IOError:
+            return False
+        return False
+
+    def pidweb(self):
+        return self._get_pid(self.file_pidweb)
+
+    def pidserver(self):
+        return self._get_pid(self.file_pidserver)
+
+    def start_createdb(self):
+        dbname = self.subdomain.lower()
+        try:
+            conn = psycopg2.connect(database=dbname)
+            log("Database %s exists"%(dbname, ))
+        except psycopg2.OperationalError:
+            log("Creating database %s"%(dbname, ))
+            conn = psycopg2.connect(database='template1')
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            c = conn.cursor()
+            c.execute('CREATE DATABASE %s'%(dbname, ))
+        conn.close()
+
 
     def start_run_server(self,port):
+        if self.is_server_running():
+            log("run","Server %s already running ..."%(self.subdomain, ))
+            return True
+        
         log("branch-start-run-server", self.project_name, port=port)
         out=open(self.log_server_path,"w")
         
@@ -98,27 +192,32 @@ class RunBotBranch(object):
 
         
         dbname = self.subdomain.lower()
-        cmd=[self.server_bin_path,"-c",config_file, "-d",dbname,"--no-xmlrpc","--no-xmlrpcs","--netrpc-port=%d"%(self.runbot.server_port+port)]
+        cmd=[self.server_bin_path,"-c",config_file, "-d",dbname,"--no-xmlrpc","--no-xmlrpcs","--netrpc-port=%d"%(port)]
 
-        if self.runbot.no_msf_profile:
-            cmd += ['-i', 'base']
-            self.runbot.load_data = False
-        else:
-            cmd += ['-i', 'msf_profile']
+        modules = self.get_ini('modules')
+        if not modules:
+            modules = 'base'
 
-        if self.runbot.load_data:
-            cmd.append("--without-demo=all")
+        if 'msf_profile' not in modules:
+            self.set_ini('load_data',0)
+
+        cmd += ['-i', modules]
+         
+        if self.get_bool_ini('load_data') or not self.get_bool_ini('load_demo'):
+                cmd.append("--without-demo=all")
 
         log("run",*cmd,log=self.log_server_path)
         p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
         self.running_server_pid=p.pid
+        write_pid(self.file_pidserver, p.pid)
     
-        if self.runbot.load_data:
+        if self.get_bool_ini('load_data') and not self.get_bool_ini('data_already_loaded'):
             pid = os.fork()
             if not pid:
-                thread = threading.Thread(target=initdb.connect_db, args=('admin', 'admin', dbname, '127.0.0.1', self.runbot.server_port+port, self.data_path, self.runbot.nginx_path, self.name))
+                thread = threading.Thread(target=initdb.connect_db, args=('admin', 'admin', dbname, '127.0.0.1', port, self.data_path, self.runbot.nginx_path, self.name))
                 thread.start()
                 sys.exit(1)
+            self.set_ini('data_already_loaded', '1')
         else:
             dest = os.path.join(self.runbot.nginx_path, '%s.png'%(self.name,))
             os.path.exists(dest) and os.remove(dest)
@@ -126,31 +225,33 @@ class RunBotBranch(object):
 
 
     def start_run_web(self,port):
-        config="""
-        [global]
-        server.environment = "development"
-        server.socket_host = "0.0.0.0"
-        server.socket_port = %d
-        server.thread_pool = 10
-        tools.sessions.on = True
-        log.access_level = "INFO"
-        log.error_level = "INFO"
-        tools.csrf.on = False
-        tools.log_tracebacks.on = False
-        tools.cgitb.on = True
-        openerp.server.host = 'localhost'
-        openerp.server.port = %d
-        openerp.server.protocol = 'socket'
-        openerp.server.timeout = 1500
-        tools.proxy.on = True
-        [openerp-web]
-        dblist.filter = 'BOTH'
-        dbbutton.visible = True
-        company.url = ''
-        """%(self.runbot.web_port+port,self.runbot.server_port+port)
-        config=config.replace("\n        ","\n")
+        if self.is_web_running():
+            log("run","Web %s already running ..."%(self.subdomain, ))
+            return True
 
-	config_file = os.path.join(self.etc_path,"openerp-web.cfg")
+        config="""[global]
+server.environment = "development"
+server.socket_host = "0.0.0.0"
+server.socket_port = %d
+server.thread_pool = 10
+tools.sessions.on = True
+log.access_level = "INFO"
+log.error_level = "INFO"
+tools.csrf.on = False
+tools.log_tracebacks.on = False
+tools.cgitb.on = True
+openerp.server.host = 'localhost'
+openerp.server.port = %d
+openerp.server.protocol = 'socket'
+openerp.server.timeout = 1500
+tools.proxy.on = True
+[openerp-web]
+dblist.filter = 'BOTH'
+dbbutton.visible = True
+company.url = ''
+"""%(port+1,port)
+
+        config_file = os.path.join(self.etc_path,"openerp-web.cfg")
         open(config_file,"w").write(config)
 
         out=open(self.log_web_path,"w")
@@ -159,15 +260,17 @@ class RunBotBranch(object):
         log("run",*cmd,log=self.log_web_path)
         p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
         self.running_web_pid=p.pid
+        write_pid(self.file_pidweb, p.pid)
 
-    def start(self,port):
+    def start(self):
+        port = self.get_int_ini('port')
         log("branch-start",branch=self.unique_name,port=port)
         
         '''
         Here check if the instance existed already, then do not drop and recreate the DB, just launch the server and web!
         '''
-        
-        self.start_createdb(port)
+      
+        self.start_createdb()
         self.start_run_server(port)
         self.start_run_web(port)
 
@@ -176,38 +279,61 @@ class RunBotBranch(object):
         self.running_t0=time.time()
         self.running=True
         self.running_port=port
+        self.write_ini()
 
     def stop(self):
         log("branch-stop",branch=self.unique_name,port=self.running_port)
-        kill(self.running_server_pid)
-        kill(self.running_web_pid)
-        self.runbot.running.remove(self)
+        pidserver = self.pidserver()
+        if pidserver:
+            log('Kill server %s'%(pidserver,))
+            kill(pidserver)
+        pidweb = self.pidweb()
+        if pidweb:
+            log('Kill server %s'%(pidweb,))
+            kill(pidweb)
+        if self in self.runbot.running:
+            self.runbot.running.remove(self)
         self.running=False
         self.running_port=None
 
 class RunBot(object):
-    def __init__(self,wd,server_port,web_port,nginx_port,domain, load_data, no_msf_profile):
+    def __init__(self,wd,server_port,nginx_port,domain):
         self.wd=wd
-        self.common_path=os.path.join(self.wd,"common")
+        self.common_path = os.path.join(self.wd,"common")
+        self.common_etc = os.path.join(self.common_path,"etc")
+        self.common_configfile = os.path.join(self.common_etc,"default_config.ini")
         self.server_port=int(server_port)
-        self.web_port=int(web_port)
         self.nginx_port=int(nginx_port)
         self.domain=domain
         self.uf_instances={}
         self.now = time.strftime("%Y-%m-%d %H:%M:%S")
         self.running=[]
-        self.load_data = load_data
-        self.no_msf_profile = no_msf_profile
-	self.nginx_path = os.path.join(self.wd,'nginx')
+        self.nginx_path = os.path.join(self.wd,'nginx')
+        self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
+        
+        self.running_path=os.path.join(self.wd, "running")
+        allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
+
+        for folder in allsubdirs:
+            rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
+            if rbb.get_bool_ini('start',True):
+                self.init_folder(rbb)
+
+    def is_nginx_running(self):
+        return _is_running(self.nginx_pid())
+
+    def nginx_pid(self):
+        if os.path.isfile(self.nginx_pid_path):
+            return int(open(self.nginx_pid_path).read())
+        else:
+            return False
 
     def nginx_reload(self):
-        nginx_path = os.path.join(self.wd,'nginx')
-        nginx_pid_path = os.path.join(nginx_path,'nginx.pid')
-        if os.path.isfile(nginx_pid_path):
-            pid=int(open(nginx_pid_path).read())
+        pid = self.nginx_pid()
+        if pid:
             os.kill(pid,1)
         else:
-            run(["nginx","-p", self.wd + "/", "-c", os.path.join(nginx_path,"nginx.conf")])
+            run(["nginx","-p", self.wd + "/", "-c", os.path.join(self.nginx_path,"nginx.conf")])
 
     def nginx_config(self):
         template="""
@@ -225,7 +351,7 @@ class RunBot(object):
              server {
                 listen ${r.nginx_port};
                 server_name ${i.subdomain}.${r.domain};
-                location / { proxy_pass http://127.0.0.1:${r.web_port+i.running_port}; proxy_set_header X-Forwarded-Host $host; }
+                location / { proxy_pass http://127.0.0.1:${i.running_port+1}; proxy_set_header X-Forwarded-Host $host; }
              }
           % endfor
         }
@@ -286,7 +412,7 @@ class RunBot(object):
         % for i in r.running:
         <tr class="file">
             <td class="name left">
-                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${r.server_port+i.running_port})</small> <img src="${i.subdomain}.png" alt=""/>
+                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
                 <br>
             </td>
             <td class="date">
@@ -333,17 +459,11 @@ class RunBot(object):
         f.close()
         self.nginx_reload()
 
-    def allocate_port_and_run(self,rbb):
-        if len(self.running) >= 100:
-            victim = self.running[-1]
-            victim.stop()
-        running_ports=[i.running_port for i in self.running]
-        for p in range(100):
-            if p not in running_ports:
-                break
-
-        rbb.start(p)
-        #self.nginx_udpate()
+    def _get_port(self):
+        i = self.server_port
+        while i in self.ports:
+            i += 2
+        return i
 
     def subdirs(self, dir):
         '''
@@ -358,21 +478,18 @@ class RunBot(object):
         ''' 
         Get the sub folders and build a list of instances to be run 
         '''
-        self.kill_runbot_processes() # this is currently not working
-        running_path=os.path.join(self.wd, "running")
-        allsubdirs = self.subdirs(running_path) # in consumption that the sub-folder NAMES are valid
-
-        for folder in allsubdirs:
-            rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
-            '''
-            Check if the current instance is running, then stop it and rebuild, restart the instance
-            '''
-            if rbb.running:
-                rbb.stop()
-            else: 
-                self.init_folder(folder) # create some necessary files and folder
-                 
-            self.allocate_port_and_run(rbb)
+        self.ports = []
+        for rbb in self.uf_instances.values():
+            num_port = rbb.get_int_ini('port')
+            if num_port:
+                self.ports.append(num_port)
+                self.ports.append(num_port+1)
+        
+        for rbb in self.uf_instances.values():
+            if not rbb.get_int_ini('port'):
+                rbb.set_ini('port',self._get_port())
+            if rbb.get_bool_ini('start',True):
+                rbb.start()
             
         self.nginx_udpate()
 
@@ -388,46 +505,44 @@ class RunBot(object):
         p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
 
         
-    def init_folder(self, folder):
+    def init_folder(self, rbb):
 
         ''' To do the following things if not exist
             - create the logs folder for storing log files
             - create soft-link to: unifield-server, unifield-addons, unifield-web if not exist (in case no change has been made)
         '''
-        instance_path=os.path.join(self.wd, "running", folder)
         
-        logs_dir = os.path.join(instance_path, "logs")
+        logs_dir = os.path.join(rbb.instance_path, "logs")
         if not os.path.exists(logs_dir):
             os.mkdir(logs_dir)
 
         # copy the unifield-server project from 'common' folder if not existed
-        #self.copy_project(instance_path, "unifield-server")
-        #self.copy_project(instance_path, "unifield-web")
-	self.create_softlink(instance_path, "unifield-server")
-	self.create_softlink(instance_path, "unifield-web")
+        self.create_module(rbb, "unifield-server")
+        self.create_module(rbb, "unifield-web")
         # copy the folder 'etc' from 'common' folder, then fill the instance path
-        self.process_folder_etc(instance_path, folder)
+        self.process_folder_etc(rbb)
 
         # create softlinks for these 3 projects if not existed
-        self.create_softlink(instance_path, "unifield-addons")
-        self.create_softlink(instance_path, "unifield-wm")
-        self.create_softlink(instance_path, "unifield-data")
+        self.create_module(rbb, "unifield-addons")
+        self.create_module(rbb, "unifield-wm")
+        self.create_module(rbb, "unifield-data")
 
 
-    def process_folder_etc(self, instance_path, folder):
+    def process_folder_etc(self, rbb):
         # delete and recopy the folder "etc"
-        project_path = os.path.join(instance_path, "etc")
-        run(["rm","-r", project_path]) # delete first
+        project_path = rbb.etc_path
+        #run(["rm","-r", project_path]) # delete first
         
-        common_etc_path = os.path.join(self.common_path, "etc")
-        run(["cp","-r", common_etc_path, instance_path])
+        if not os.path.exists(os.path.join(project_path)):
+            run(["cp","-r", self.common_etc, rbb.instance_path])
         
-        # replace the UF_ADDONS_PATH with the modules path of the current instance 
-        config_file = os.path.join(project_path, 'openerprc')
-        for line in fileinput.FileInput(config_file, inplace=1):
-            line = line.replace("UF_ADDONS_PATH", instance_path)
-            line = line.replace("UF_INSTANCE", folder)
-            print line
+            # replace the UF_ADDONS_PATH with the modules path of the current instance 
+            config_file = os.path.join(project_path, 'openerprc')
+            for line in fileinput.FileInput(config_file, inplace=1):
+                line = line.replace("UF_ADDONS_PATH", rbb.instance_path)
+                line = line.replace("UF_INSTANCE", rbb.name)
+                line = line.replace("PIDFILE", rbb.file_pidserver)
+                sys.stdout.write(line)
 
     def copy_project(self, instance_path, project_name):
         # create soft-link for unifield-XXX
@@ -436,11 +551,25 @@ class RunBot(object):
             common_project_path = os.path.join(self.common_path, project_name)
             run(["cp","-r", common_project_path, instance_path])
 
-    def create_softlink(self, instance_path, project_name):
-        project_path = os.path.join(instance_path, project_name)
+    def create_module(self, rbb, module):
+        project_path = os.path.join(rbb.instance_path, module)
+        common_project_path = os.path.join(self.common_path, module)
         if not os.path.exists(project_path):
-            common_project_path = os.path.join(self.common_path, project_name)
-            run(["ln","-s", common_project_path, project_path])
+            source_module = rbb.get_ini(module)
+            if not source_module or source_module == 'link':
+                log('Link module %s'%(module, ))
+                run(["ln","-s", common_project_path, project_path])
+            else:
+                directory = LaunchpadDirectory()
+                d = directory._resolve(source_module)
+                branch = Branch.open(d)
+
+                # for symlink
+                common_project_path = os.path.realpath(common_project_path)
+                orig = WorkingTree.open(common_project_path)
+                log('bzr checkout %s'%(d, ))
+                branch.create_checkout(project_path, lightweight=True, accelerator_tree=orig)
+
 
     def create_softlink_modules(self, instance_path, project_name):
         # create soft-link of modules to unifield-server/bin/addons
@@ -454,30 +583,88 @@ class RunBot(object):
         project_path = os.path.join(project_path, "*")
         run(["ln","-s", server_addons_path, project_path])
 
+def run_option(o,a):
+    r = RunBot(o.runbot_dir,o.runbot_port,o.runbot_nginx_port,o.runbot_nginx_domain)
+    if len(a) > 1:
+        if a[1] == 'skel':
+            if not a[2]:
+                sys.stderr.write("Error: no instance !")
+            elif a[2] in r.uf_instances:
+                sys.stderr.write("Error: %s exists\n"%(a[2], ))
+            else:
+                new_folder = os.path.join(r.running_path, a[2])
+                os.mkdir(new_folder)
+                new_ini = os.path.join(new_folder, 'config.ini')
+                shutil.copy(r.common_configfile, new_ini)
+                f = open(new_ini, "a")
+                f.write("start = 0")
+                f.close()
+                sys.stderr.write("Please edit %s, and change 'start'\n"%(new_ini, ))
+            return
+
+        if a[1] == 'killall':
+            for rbb in r.uf_instances.values():
+                rbb.stop()
+            return
+        
+        if a[1] == 'kill':
+            if a[2] not in r.uf_instances:
+                sys.stderr.write("%s not in instance\n"%a[2])
+            else:
+                r.uf_instances[a[2]].stop()
+            return
+        
+        if a[1] == 'list':
+            sys.stderr.write("Nginx ")
+            pid = r.is_nginx_running()
+            if pid:
+                sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+            else:
+                sys.stderr.write("isn't running\n")
+
+            for rbb in r.uf_instances.values():
+                sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+                sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+                sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+        
+        elif a[1] == 'restartall':
+            for rbb in r.uf_instances.values():
+                rbb.stop()
+        
+        elif a[1] == 'restart':
+            if a[2] not in r.uf_instances:
+                sys.stderr.write("%s not in instance"%a[2])
+            else:
+                r.uf_instances[a[2]].stop()
+
+    r.process_instances()
+
 def main():
 
     os.chdir(os.path.normpath(os.path.dirname(__file__)))
-    parser = optparse.OptionParser(usage="%prog [--runbot-init|--runbot-run] [options] ",version="1.0")
+    parser = optparse.OptionParser(usage="%prog [--runbot-init|--runbot-run] [options] [killall | kill <instance> | restartall | restart <instance> | list | skel <instance>] ",version="1.0")
     parser.add_option("--runbot-init", action="store_true", help="initialize the runbot environment")
     parser.add_option("--runbot-run", action="store_true", help="run the runbot")
     parser.add_option("--runbot-dir", metavar="DIR", default=".", help="runbot working dir (%default)")
-    parser.add_option("--runbot-server-port", metavar="PORT", default=9200, help="starting port for servers (%default)")
-    parser.add_option("--runbot-web-port", metavar="PORT", default=9300, help="starting port for web (%default)")
+    parser.add_option("--runbot-port", metavar="PORT", default=9000, help="starting port for servers (%default)")
     parser.add_option("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (%default)")
     parser.add_option("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.unifield.org", help="virtual host domain (%default)")
-    parser.add_option("--load-data", default=True, action="store_false", help="load unifield data")
-    parser.add_option("--only-base", default=False, action="store_true", help="don't load msf_profile")
+    parser.add_option("--debug", action="store_true", default=False, help="print debug on stdout")
+    
     
     o, a = parser.parse_args(sys.argv)
     if (o.runbot_dir == '.'):
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
 
-    # first, kill all processes running previously by Runbot
-    running_path=os.path.join(o.runbot_dir, "running")
-    print "kill `ps faux | grep " + running_path + " | awk '{print $2}' `"
+    fsock = False
+    if not o.debug:
+        fsock = open('out.log', 'a')
+        sys.stdout = fsock
+    run_option(o, a)
+
+    if fsock:
+        fsock.close()
     
-    r = RunBot(o.runbot_dir,o.runbot_server_port,o.runbot_web_port,o.runbot_nginx_port,o.runbot_nginx_domain, o.load_data, o.only_base)
-    r.process_instances()
 
 if __name__ == '__main__':
     main()
