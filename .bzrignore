@@ -5,3 +5,10 @@ common/unifield-addons
 common/unifield-server
 common/unifield-data
 nginx/nginx.pid
+out.log
+nginx/access.log
+nginx/error.log
+nginx/index.html
+!nginx/ok.png
+!nginx/nok.png
+nginx/*.png
