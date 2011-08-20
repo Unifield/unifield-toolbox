@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import cgitb,optparse,os,re,subprocess,sys,time
+import cgitb,os,re,subprocess,sys,time
+import argparse
 import fileinput
 import mako.template
 from lib import initdb
@@ -583,76 +584,84 @@ class RunBot(object):
         project_path = os.path.join(project_path, "*")
         run(["ln","-s", server_addons_path, project_path])
 
-def run_option(o,a):
+def run_option(o):
     r = RunBot(o.runbot_dir,o.runbot_port,o.runbot_nginx_port,o.runbot_nginx_domain)
-    if len(a) > 1:
-        if a[1] == 'skel':
-            if not a[2]:
-                sys.stderr.write("Error: no instance !")
-            elif a[2] in r.uf_instances:
-                sys.stderr.write("Error: %s exists\n"%(a[2], ))
-            else:
-                new_folder = os.path.join(r.running_path, a[2])
-                os.mkdir(new_folder)
-                new_ini = os.path.join(new_folder, 'config.ini')
-                shutil.copy(r.common_configfile, new_ini)
-                f = open(new_ini, "a")
-                f.write("start = 0")
-                f.close()
-                sys.stderr.write("Please edit %s, and change 'start'\n"%(new_ini, ))
-            return
+    if o.command == 'skel':
+        if not o.instance:
+            sys.stderr.write("Error: no instance !\n")
+        elif o.instance in r.uf_instances:
+            sys.stderr.write("Error: %s exists\n"%(o.instance, ))
+        else:
+            new_folder = os.path.join(r.running_path, o.instance)
+            os.mkdir(new_folder)
+            new_ini = os.path.join(new_folder, 'config.ini')
+            shutil.copy(r.common_configfile, new_ini)
+            f = open(new_ini, "a")
+            f.write("start = 0")
+            f.close()
+            sys.stderr.write("Please edit %s, and change 'start'\n"%(new_ini, ))
+        return
 
-        if a[1] == 'killall':
-            for rbb in r.uf_instances.values():
-                rbb.stop()
-            return
-        
-        if a[1] == 'kill':
-            if a[2] not in r.uf_instances:
-                sys.stderr.write("%s not in instance\n"%a[2])
-            else:
-                r.uf_instances[a[2]].stop()
-            return
-        
-        if a[1] == 'list':
-            sys.stderr.write("Nginx ")
-            pid = r.is_nginx_running()
-            if pid:
-                sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
-            else:
-                sys.stderr.write("isn't running\n")
+    if o.command == 'killall':
+        for rbb in r.uf_instances.values():
+            rbb.stop()
+        return
+    
+    if o.command == 'kill':
+        if o.instance not in r.uf_instances:
+            sys.stderr.write("%s not in instance\n"%o.instance)
+        else:
+            r.uf_instances[o.instance].stop()
+        return
+    
+    if o.command == 'list':
+        sys.stderr.write("Nginx ")
+        pid = r.is_nginx_running()
+        if pid:
+            sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+        else:
+            sys.stderr.write("isn't running\n")
 
-            for rbb in r.uf_instances.values():
-                sys.stderr.write("Instance %s:\n"%(rbb.name, ))
-                sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
-                sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
-        
-        elif a[1] == 'restartall':
-            for rbb in r.uf_instances.values():
-                rbb.stop()
-        
-        elif a[1] == 'restart':
-            if a[2] not in r.uf_instances:
-                sys.stderr.write("%s not in instance"%a[2])
-            else:
-                r.uf_instances[a[2]].stop()
+        for rbb in r.uf_instances.values():
+            sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+            sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+            sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+    
+    elif o.command == 'restartall':
+        for rbb in r.uf_instances.values():
+            rbb.stop()
+    
+    elif o.command == 'restart':
+        if o.instance not in r.uf_instances:
+            sys.stderr.write("%s not in instance\n"%o.instance)
+        else:
+            r.uf_instances[o.instance].stop()
 
     r.process_instances()
 
 def main():
 
     os.chdir(os.path.normpath(os.path.dirname(__file__)))
-    parser = optparse.OptionParser(usage="%prog [--runbot-init|--runbot-run] [options] [killall | kill <instance> | restartall | restart <instance> | list | skel <instance>] ",version="1.0")
-    parser.add_option("--runbot-init", action="store_true", help="initialize the runbot environment")
-    parser.add_option("--runbot-run", action="store_true", help="run the runbot")
-    parser.add_option("--runbot-dir", metavar="DIR", default=".", help="runbot working dir (%default)")
-    parser.add_option("--runbot-port", metavar="PORT", default=9000, help="starting port for servers (%default)")
-    parser.add_option("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (%default)")
-    parser.add_option("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.unifield.org", help="virtual host domain (%default)")
-    parser.add_option("--debug", action="store_true", default=False, help="print debug on stdout")
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument("--runbot-dir", metavar="DIR", default=".", help="runbot working dir (default: %(default)s)")
+    parser.add_argument("--runbot-port", metavar="PORT", default=9000, help="starting port for servers (default: %(default)s)")
+    parser.add_argument("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (default: %(default)s)")
+    parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.unifield.org", help="virtual host domain (default: %(default)s)")
+    parser.add_argument("--debug", action="store_true", default=False, help="print debug on stdout (default: %(default)s)")
+    subparsers = parser.add_subparsers(dest='command')
+    run_parser = subparsers.add_parser('run', help='start new instances')
+    killall_parser = subparsers.add_parser('killall', help='kill all instances')
+    kill_parser = subparsers.add_parser('kill', help='kill an instance')
+    kill_parser.add_argument('instance', action='store', help='instance to kill')
+    restartall_parser = subparsers.add_parser('restartall', help='restart all instances')
+    restart_parser = subparsers.add_parser('restart', help='restart an instance')
+    restart_parser.add_argument('instance', action='store', help='instance to kill')
+    list_parser = subparsers.add_parser('list', help='list all instances')
+    skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
+    skel_parser.add_argument('instance', action='store', help='instance to kill')
     
-    
-    o, a = parser.parse_args(sys.argv)
+    o = parser.parse_args()
     if (o.runbot_dir == '.'):
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
 
@@ -660,7 +669,7 @@ def main():
     if not o.debug:
         fsock = open('out.log', 'a')
         sys.stdout = fsock
-    run_option(o, a)
+    run_option(o)
 
     if fsock:
         fsock.close()
