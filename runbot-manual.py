@@ -459,7 +459,6 @@ class RunBot(object):
         <tr class="file">
             <td class="name left">
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
-                <br>
             </td>
             <td class="date">
                 % if t-i.running_t0 < 120:
@@ -473,6 +472,10 @@ class RunBot(object):
                 <a href="http://${i.subdomain}.${r.domain}/${i.subdomain}/logs/web.txt">web</a>
             </td>
         </tr>
+             % if i.get_ini('comment'):
+                <tr>
+                   <td colspan="3" class="comment">${i.get_ini('comment')}</td>
+             % endif
         % endfor
         <tr>
             <td colspan='3'><hr/></td>
