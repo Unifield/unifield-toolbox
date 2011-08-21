@@ -640,6 +640,8 @@ def list_inst(o, r):
 
     for rbb in r.uf_instances.values():
         sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+        if not rbb.get_bool_ini('start',True):
+            sys.stderr.write("    Disabled in config.ini\n")
         sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
         sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
     
