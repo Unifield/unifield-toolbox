@@ -533,7 +533,10 @@ class RunBot(object):
         
         for rbb in self.uf_instances.values():
             if not rbb.get_int_ini('port'):
-                rbb.set_ini('port',self._get_port())
+                new_port = self._get_port()
+                self.ports.append(new_port)
+                self.ports.append(new_port+1)
+                rbb.set_ini('port', new_port)
             if rbb.get_bool_ini('start',True):
                 rbb.start()
             
