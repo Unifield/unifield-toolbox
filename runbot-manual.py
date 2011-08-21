@@ -516,7 +516,7 @@ class RunBot(object):
         Retrieve the direct sub folders of the given folder 
         '''
         return [name for name in os.listdir(dir)
-            if os.path.isdir(os.path.join(dir, name))]
+            if os.path.isdir(os.path.join(dir, name)) and not name.startswith('.')]
 
     def process_instances(self):
         log("runbot-folder")
