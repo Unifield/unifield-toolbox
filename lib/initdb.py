@@ -55,22 +55,19 @@ def try_socket(sock, host, port, max_wait, start_time=False):
     sock.close()
     return True
 
-def connect_db(user, pwd, dbname, host, port, path, nginx=False, name=False):
-    if nginx and name:
-        dest = os.path.join(nginx, '%s.png'%(name,))
-        os.path.exists(dest) and os.remove(dest)
-        os.symlink(os.path.join(nginx,'nok.png'), dest)
+def connect_db(user, pwd, dbname, host, port, path):
+    msg = []
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if try_socket(sock, host, port, 290):
         utils.rpc.initialize(host, port, 'socket', storage=dict())
         utils.rpc.session.login(dbname, user, pwd)
-        if wizard_init():
+        wiz = wizard_init()
+        if wiz:
             import_csv(path)
-    if nginx and name:
-        os.remove(dest)
-        os.symlink(os.path.join(nginx,'ok.png'), dest)
-    else:
-        print >> sys.stderr, 'Server not ready'
+            return 'Data successfully loaded'
+        return 'Data not loaded: no init wizard to execute' 
+    
+    raise Exception('Data not loaded: server is not ready')
 
 
 if __name__=="__main__":

@@ -5,7 +5,6 @@ import argparse
 import fileinput
 import mako.template
 from lib import initdb
-import threading
 import ConfigParser
 import psycopg2
 import psycopg2.extensions
@@ -14,6 +13,8 @@ from bzrlib.bzrdir import BzrDir
 from bzrlib.workingtree import WorkingTree
 from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
 import shutil
+import smtplib 
+from email.mime.text import MIMEText
 
 #----------------------------------------------------------
 # OpenERP rdtools utils
@@ -137,9 +138,9 @@ class RunBotBranch(object):
             return self.ini.getboolean('global', key)
         except ConfigParser.NoOptionError:
             return default
+
     def set_ini(self, key, value):
         return self.ini.set('global', key, '%s'%value)
-
 
     def is_web_running(self):
         pid = self.pidweb()
@@ -180,14 +181,13 @@ class RunBotBranch(object):
             c.execute('CREATE DATABASE %s'%(dbname, ))
         conn.close()
 
-
     def start_run_server(self,port):
         if self.is_server_running():
             log("run","Server %s already running ..."%(self.subdomain, ))
             return True
         
         log("branch-start-run-server", self.project_name, port=port)
-        out=open(self.log_server_path,"w")
+        out=open(self.log_server_path,"a")
         
         config_file = os.path.join(self.instance_path,'etc', 'openerprc')
 
@@ -215,15 +215,46 @@ class RunBotBranch(object):
         if self.get_bool_ini('load_data') and not self.get_bool_ini('data_already_loaded'):
             pid = os.fork()
             if not pid:
-                thread = threading.Thread(target=initdb.connect_db, args=('admin', 'admin', dbname, '127.0.0.1', port, self.data_path, self.runbot.nginx_path, self.name))
-                thread.start()
+                self._symlink_nginx_icon('nok')
+                try:
+                    msg = initdb.connect_db('admin', 'admin', dbname, '127.0.0.1', port, self.data_path)
+                except Exception, e:
+                    self._email(str(e), True)
+                    log('init', self.name, str(e))
+                    sys.exit(1)
+                self._symlink_nginx_icon('ok')
+                self._email(msg)
                 sys.exit(1)
             self.set_ini('data_already_loaded', '1')
         else:
-            dest = os.path.join(self.runbot.nginx_path, '%s.png'%(self.name,))
-            os.path.exists(dest) and os.remove(dest)
-            os.symlink(os.path.join(self.runbot.nginx_path,'ok.png'), dest)
+            self._symlink_nginx_icon('ok')
 
+    def _email(self, msg, err=False):
+        dest = self.get_ini('email')
+        if self.runbot.smtp_host and dest:
+            if err:
+                data ="Unable to initialize %s.\n\n%s\n\n"%(self.name, msg)
+            else:
+                data ="Your instance is ready: http://%s.%s\n%s\n\n"%(self.subdomain, self.runbot.domain, msg)
+
+
+            data += "http://%s"%(self.runbot.domain, )
+            msg = MIMEText(data)
+
+            msg['Subject'] = 'Runbot %s'%(self.name, )
+            msg['To'] = dest
+            msg['From'] = 'noreply@%s'%(self.runbot.domain, )
+
+            s = smtplib.SMTP(self.runbot.smtp_host)
+            s.sendmail(msg['From'], dest.split(','), msg.as_string())
+
+
+
+    def _symlink_nginx_icon(self, itype):
+        # assert itype in ['ok', 'nok']
+        dest = os.path.join(self.runbot.nginx_path, '%s.png'%(self.name,))
+        os.path.exists(dest) and os.remove(dest)
+        os.symlink(os.path.join(self.runbot.nginx_path,'%s.png'%(itype, )), dest)
 
     def start_run_web(self,port):
         if self.is_web_running():
@@ -255,7 +286,7 @@ company.url = ''
         config_file = os.path.join(self.etc_path,"openerp-web.cfg")
         open(config_file,"w").write(config)
 
-        out=open(self.log_web_path,"w")
+        out=open(self.log_web_path,"a")
         cmd=[self.web_bin_path, '-c', config_file]
         
         log("run",*cmd,log=self.log_web_path)
@@ -297,8 +328,20 @@ company.url = ''
         self.running=False
         self.running_port=None
 
+    def delete(self):
+        self.stop()
+        run(['dropdb', self.subdomain.lower()])
+        log("Delete %s"%self.instance_path)
+        shutil.rmtree(self.instance_path)
+        try:
+            os.remove(os.path.join(self.runbot.nginx_path, '%s.png'%(self.name, )))
+        except OSError, e:
+            pass
+
+        del(self.runbot.uf_instances[self.name])
+
 class RunBot(object):
-    def __init__(self,wd,server_port,nginx_port,domain):
+    def __init__(self, wd, server_port, nginx_port, domain, init, smtp_host):
         self.wd=wd
         self.common_path = os.path.join(self.wd,"common")
         self.common_etc = os.path.join(self.common_path,"etc")
@@ -311,13 +354,14 @@ class RunBot(object):
         self.running=[]
         self.nginx_path = os.path.join(self.wd,'nginx')
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
+        self.smtp_host = smtp_host
         
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
 
         for folder in allsubdirs:
             rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
-            if rbb.get_bool_ini('start',True):
+            if init and rbb.get_bool_ini('start',True):
                 self.init_folder(rbb)
 
     def is_nginx_running(self):
@@ -352,6 +396,7 @@ class RunBot(object):
              server {
                 listen ${r.nginx_port};
                 server_name ${i.subdomain}.${r.domain};
+                location /${i.subdomain}/logs/ { alias ${i.log_path}/; }
                 location / { proxy_pass http://127.0.0.1:${i.running_port+1}; proxy_set_header X-Forwarded-Host $host; }
              }
           % endfor
@@ -424,8 +469,8 @@ class RunBot(object):
                 % endif
             </td>
             <td>
-                <a href="http://${r.domain}/${i.subdomain}/logs/server.txt">server</a>
-                <a href="http://${r.domain}/${i.subdomain}/logs/web.txt">web</a>
+                <a href="http://${i.subdomain}.${r.domain}/${i.subdomain}/logs/server.txt">server</a>
+                <a href="http://${i.subdomain}.${r.domain}/${i.subdomain}/logs/web.txt">web</a>
             </td>
         </tr>
         % endfor
@@ -494,17 +539,6 @@ class RunBot(object):
             
         self.nginx_udpate()
 
-    def kill_runbot_processes(self):
-        running_path = os.path.join(self.wd,'running')
-        kill_script = os.path.join(self.wd, 'kill.sh')
-        cmd = ["/bin/sh",  kill_script, running_path]
-        
-        log("kill all running process of runbot")
-        out=open(os.path.join(self.wd,'nginx','access.log'),"w")
-        
-        #WHY IT IS NOT WORKING HERE?????
-        p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
-
         
     def init_folder(self, rbb):
 
@@ -545,13 +579,6 @@ class RunBot(object):
                 line = line.replace("PIDFILE", rbb.file_pidserver)
                 sys.stdout.write(line)
 
-    def copy_project(self, instance_path, project_name):
-        # create soft-link for unifield-XXX
-        project_path = os.path.join(instance_path, project_name)
-        if not os.path.exists(project_path):
-            common_project_path = os.path.join(self.common_path, project_name)
-            run(["cp","-r", common_project_path, instance_path])
-
     def create_module(self, rbb, module):
         project_path = os.path.join(rbb.instance_path, module)
         common_project_path = os.path.join(self.common_path, module)
@@ -563,81 +590,75 @@ class RunBot(object):
             else:
                 directory = LaunchpadDirectory()
                 d = directory._resolve(source_module)
-                branch = Branch.open(d)
+                log('bzr checkout %s'%(d, ))
+                br = Branch.open(d)
 
                 # for symlink
                 common_project_path = os.path.realpath(common_project_path)
                 orig = WorkingTree.open(common_project_path)
-                log('bzr checkout %s'%(d, ))
-                branch.create_checkout(project_path, lightweight=True, accelerator_tree=orig)
+                br.create_checkout(project_path, lightweight=True, accelerator_tree=orig)
+                br.repository._client._medium.disconnect()
 
 
-    def create_softlink_modules(self, instance_path, project_name):
-        # create soft-link of modules to unifield-server/bin/addons
-        project_path = os.path.join(instance_path, project_name)
-        server_addons_path = os.path.join(instance_path, "unifield-server", "bin", "addons")
-        
-        # if this module path does not exist in the current folder, then make a softlink to the one in common folder
-        if not os.path.exists(project_path):
-            project_path = os.path.join(self.common_path, project_name)
-            
-        project_path = os.path.join(project_path, "*")
-        run(["ln","-s", server_addons_path, project_path])
+def skel(o, r):
+    if o.instance in r.uf_instances:
+        sys.stderr.write("Error: %s exists\n"%(o.instance, ))
+    else:
+        new_folder = os.path.join(r.running_path, o.instance)
+        os.mkdir(new_folder)
+        new_ini = os.path.join(new_folder, 'config.ini')
+        shutil.copy(r.common_configfile, new_ini)
+        f = open(new_ini, "a")
+        f.write("start = 0")
+        f.close()
+        sys.stderr.write("Please edit %s , and change 'start',\nyou can use vi or a friendlier editor like nano\n"%(new_ini, ))
 
-def run_option(o):
-    r = RunBot(o.runbot_dir,o.runbot_port,o.runbot_nginx_port,o.runbot_nginx_domain)
-    if o.command == 'skel':
-        if not o.instance:
-            sys.stderr.write("Error: no instance !\n")
-        elif o.instance in r.uf_instances:
-            sys.stderr.write("Error: %s exists\n"%(o.instance, ))
-        else:
-            new_folder = os.path.join(r.running_path, o.instance)
-            os.mkdir(new_folder)
-            new_ini = os.path.join(new_folder, 'config.ini')
-            shutil.copy(r.common_configfile, new_ini)
-            f = open(new_ini, "a")
-            f.write("start = 0")
-            f.close()
-            sys.stderr.write("Please edit %s, and change 'start'\n"%(new_ini, ))
-        return
 
-    if o.command == 'killall':
-        for rbb in r.uf_instances.values():
-            rbb.stop()
-        return
+def killall(o, r):
+    for rbb in r.uf_instances.values():
+        rbb.stop()
     
-    if o.command == 'kill':
-        if o.instance not in r.uf_instances:
-            sys.stderr.write("%s not in instance\n"%o.instance)
-        else:
-            r.uf_instances[o.instance].stop()
-        return
+def kill_inst(o, r):
+    if o.instance not in r.uf_instances:
+        sys.stderr.write("%s not in instance\n"%o.instance)
+    else:
+        r.uf_instances[o.instance].stop()
     
-    if o.command == 'list':
-        sys.stderr.write("Nginx ")
-        pid = r.is_nginx_running()
-        if pid:
-            sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
-        else:
-            sys.stderr.write("isn't running\n")
+def list_inst(o, r):
+    sys.stderr.write("Nginx ")
+    pid = r.is_nginx_running()
+    if pid:
+        sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+    else:
+        sys.stderr.write("isn't running\n")
 
-        for rbb in r.uf_instances.values():
-            sys.stderr.write("Instance %s:\n"%(rbb.name, ))
-            sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
-            sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+    for rbb in r.uf_instances.values():
+        sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+        sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+        sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
     
-    elif o.command == 'restartall':
-        for rbb in r.uf_instances.values():
-            rbb.stop()
-    
-    elif o.command == 'restart':
-        if o.instance not in r.uf_instances:
-            sys.stderr.write("%s not in instance\n"%o.instance)
-        else:
-            r.uf_instances[o.instance].stop()
+def restartall(o, r):
+    for rbb in r.uf_instances.values():
+        rbb.stop()
+    time.sleep(1)
+    run_inst(o, r)
 
+def run_inst(o, r):
     r.process_instances()
+    
+def restart(o, r):
+    if o.instance not in r.uf_instances:
+        sys.stderr.write("%s not in instance\n"%o.instance)
+    else:
+        r.uf_instances[o.instance].stop()
+        run_inst(o, r)
+
+def del_inst(o, r):
+    if o.instance not in r.uf_instances:
+        sys.stderr.write("%s not in instance\n"%o.instance)
+    else:
+        r.uf_instances[o.instance].delete()
+        run_inst(o, r)
 
 def main():
 
@@ -649,18 +670,36 @@ def main():
     parser.add_argument("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (default: %(default)s)")
     parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.unifield.org", help="virtual host domain (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", default=False, help="print debug on stdout (default: %(default)s)")
+    parser.add_argument("--smtp-host", metavar="HOST", default='localhost', help="smtp server (default: %(default)s)")
     subparsers = parser.add_subparsers(dest='command')
-    run_parser = subparsers.add_parser('run', help='start new instances')
+    run_parser = subparsers.add_parser('run', help='start/init new instances')
+    run_parser.set_defaults(func=run_inst)
+
     killall_parser = subparsers.add_parser('killall', help='kill all instances')
+    killall_parser.set_defaults(func=killall)
+
     kill_parser = subparsers.add_parser('kill', help='kill an instance')
     kill_parser.add_argument('instance', action='store', help='instance to kill')
+    kill_parser.set_defaults(func=kill_inst)
+    
     restartall_parser = subparsers.add_parser('restartall', help='restart all instances')
+    restartall_parser.set_defaults(func=restartall)
+
     restart_parser = subparsers.add_parser('restart', help='restart an instance')
     restart_parser.add_argument('instance', action='store', help='instance to kill')
-    list_parser = subparsers.add_parser('list', help='list all instances')
-    skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
-    skel_parser.add_argument('instance', action='store', help='instance to kill')
+    restart_parser.set_defaults(func=restart)
     
+    list_parser = subparsers.add_parser('list', help='list all instances')
+    list_parser.set_defaults(func=list_inst)
+
+    skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
+    skel_parser.add_argument('instance', action='store', help='instance')
+    skel_parser.set_defaults(func=skel)
+    
+    delete_parser = subparsers.add_parser('delete', help='delete an instance')
+    delete_parser.add_argument('instance', action='store', help='instance')
+    delete_parser.set_defaults(func=del_inst)
+
     o = parser.parse_args()
     if (o.runbot_dir == '.'):
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
@@ -669,8 +708,9 @@ def main():
     if not o.debug:
         fsock = open('out.log', 'a')
         sys.stdout = fsock
-    run_option(o)
-
+    init = o.command == 'run'
+    r = RunBot(o.runbot_dir, o.runbot_port, o.runbot_nginx_port, o.runbot_nginx_domain, init, o.smtp_host)
+    o.func(o, r)
     if fsock:
         fsock.close()
     

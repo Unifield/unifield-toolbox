@@ -12,3 +12,5 @@ nginx/index.html
 !nginx/ok.png
 !nginx/nok.png
 nginx/*.png
+nginx/nginx.conf
+nginx/nginx.conf
