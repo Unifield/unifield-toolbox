@@ -378,7 +378,7 @@ class RunBot(object):
         if pid:
             os.kill(pid,1)
         else:
-            run(["nginx","-p", self.wd + "/", "-c", os.path.join(self.nginx_path,"nginx.conf")])
+            run(["/usr/sbin/nginx","-p", self.wd + "/", "-c", os.path.join(self.nginx_path,"nginx.conf")])
 
     def nginx_config(self):
         template="""
