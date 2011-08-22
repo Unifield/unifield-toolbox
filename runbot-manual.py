@@ -328,15 +328,20 @@ company.url = ''
         self.running=False
         self.running_port=None
 
-    def delete(self):
+    def delete(self, onlydb):
         self.stop()
+        log("Delete db %s"%self.subdomain.lower())
         run(['dropdb', self.subdomain.lower()])
-        log("Delete %s"%self.instance_path)
-        shutil.rmtree(self.instance_path)
-        try:
-            os.remove(os.path.join(self.runbot.nginx_path, '%s.png'%(self.name, )))
-        except OSError, e:
-            pass
+        if not onlydb:
+            log("Delete %s"%self.instance_path)
+            shutil.rmtree(self.instance_path)
+            try:
+                os.remove(os.path.join(self.runbot.nginx_path, '%s.png'%(self.name, )))
+            except OSError, e:
+                pass
+        else:
+            self.set_ini('data_already_loaded',0)
+            self.write_ini()
 
         del(self.runbot.uf_instances[self.name])
 
@@ -614,10 +619,27 @@ def skel(o, r):
         os.mkdir(new_folder)
         new_ini = os.path.join(new_folder, 'config.ini')
         shutil.copy(r.common_configfile, new_ini)
-        f = open(new_ini, "a")
-        f.write("start = 0")
-        f.close()
-        sys.stderr.write("Please edit %s , and change 'start',\nyou can use vi or a friendlier editor like nano\n"%(new_ini, ))
+        inf = open(r.common_configfile, 'r')
+        outf = open(new_ini, "w")
+        for line in inf:
+            if line.startswith('comment'):
+                outf.write("comment = %s\n"%(o.comment or ""))
+            elif line.startswith('email'):
+                outf.write("email = %s\n"%(o.email or ""))
+            elif line.startswith('unifield-wm'):
+                outf.write("unifield-wm = %s\n"%(o.unifield_wm or "link"))
+            else:
+                outf.write(line)
+        inf.close()
+        if o.start:
+            outf.close()
+            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance))
+            r.init_folder(rbb)
+            r.process_instances() 
+        else:
+            outf.write("start = 0")
+            sys.stderr.write("Please edit %s , and change 'start',\nyou can use vi or a friendlier editor like nano\n"%(new_ini, ))
+            outf.close()
 
 
 def killall(o, r):
@@ -665,7 +687,7 @@ def del_inst(o, r):
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
     else:
-        r.uf_instances[o.instance].delete()
+        r.uf_instances[o.instance].delete(o.only_db)
         run_inst(o, r)
 
 def main():
@@ -702,10 +724,15 @@ def main():
 
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
+    skel_parser.add_argument('--start', action='store_true', default=False, help='Start this instance')
+    skel_parser.add_argument('--unifield-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--comment')
+    skel_parser.add_argument('--email')
     skel_parser.set_defaults(func=skel)
     
     delete_parser = subparsers.add_parser('delete', help='delete an instance')
     delete_parser.add_argument('instance', action='store', help='instance')
+    delete_parser.add_argument("--only-db", action="store_true", default=False, help="delete the database and not the directory (default: delete db+directory)")
     delete_parser.set_defaults(func=del_inst)
 
     o = parser.parse_args()
