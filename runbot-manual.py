@@ -628,6 +628,10 @@ def skel(o, r):
                 outf.write("email = %s\n"%(o.email or ""))
             elif line.startswith('unifield-wm'):
                 outf.write("unifield-wm = %s\n"%(o.unifield_wm or "link"))
+            elif o.unit and line.startswith('load_demo'):
+                outf.write("load_demo = 1\n")
+            elif o.unit and line.startswith('load_data'):
+                outf.write("load_data = 0\n")
             else:
                 outf.write(line)
         inf.close()
@@ -725,6 +729,7 @@ def main():
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
     skel_parser.add_argument('--start', action='store_true', default=False, help='Start this instance')
+    skel_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
     skel_parser.add_argument('--unifield-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--comment')
     skel_parser.add_argument('--email')
