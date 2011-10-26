@@ -745,6 +745,12 @@ def main():
     o = parser.parse_args()
     if (o.runbot_dir == '.'):
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
+    
+    invalid_character = ['-']
+        
+    for char in invalid_character:
+        if char in o.instance:
+            raise Exception('\'%s\' is an invalid character in the name of the instance' % char)
 
     fsock = False
     if not o.debug:
