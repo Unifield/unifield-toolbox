@@ -362,7 +362,8 @@ class RunBot(object):
         self.nginx_path = os.path.join(self.wd,'nginx')
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
         self.smtp_host = smtp_host
-        
+        self.jira_url = 'http://jira.unifield.org/UF-'
+
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
 
@@ -482,7 +483,18 @@ class RunBot(object):
              % if i.get_ini('comment'):
                 <tr>
                    <td colspan="3" class="comment">${i.get_ini('comment')}</td>
+                </tr>
              % endif
+
+             % if i.get_ini('jira-id'):
+                <tr>
+                    <td colspan="3" class="comment">
+                    % for jid in i.get_ini('jira-id').split(','):
+                        <a href="${r.jira_url}${jid}>UF-${jid}</a>
+                    % endfor
+                    </td>
+                </tr>
+             %endif
         % endfor
         <tr>
             <td colspan='3'><hr/></td>
@@ -640,8 +652,11 @@ def skel(o, r):
                 outf.write("load_demo = 1\n")
             elif o.unit and line.startswith('load_data'):
                 outf.write("load_data = 0\n")
+            elif o.jira_id and line.startswith('jira-id'):
+                outf.write("jira-id = %s\n"%(o.jira_id,))
             else:
                 outf.write(line)
+
         inf.close()
         if o.start:
             outf.close()
@@ -741,6 +756,7 @@ def main():
     skel_parser.add_argument('--unifield-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--comment')
     skel_parser.add_argument('--email')
+    skel_parser.add_argument('--jira-id', help='List of jira-id (without UF-)')
     skel_parser.set_defaults(func=skel)
     
     delete_parser = subparsers.add_parser('delete', help='delete an instance')
