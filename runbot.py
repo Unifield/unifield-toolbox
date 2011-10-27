@@ -364,6 +364,7 @@ class RunBot(object):
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
+        self.bzr_url = 'https://code.launchpad.net/'
 
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
@@ -497,6 +498,15 @@ class RunBot(object):
                     </td>
                 </tr>
              %endif
+	<tr>
+            <td colspan="3" class="comment">
+            % for br in ['wm', 'data', 'server', 'web']:
+                % if i.get_ini('unifield-%s'%(br, )) != 'link':
+                         ${br}:<a href="${r.bzr_url}${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}">${i.get_ini('unifield-%s'%(br, )).split(':')[-1].split('/')[-1]}</a>
+                % endif
+            % endfor
+            </td>
+	</tr>
         % endfor
         <tr>
             <td colspan='3'><hr/></td>
