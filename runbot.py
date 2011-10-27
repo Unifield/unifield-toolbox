@@ -169,13 +169,13 @@ class RunBotBranch(object):
         return self._get_pid(self.file_pidserver)
 
     def start_createdb(self):
-        self.set_ini('db_created', time.strftime("%Y-%m-%d %H:%M:%S"))
         dbname = self.subdomain.lower()
         try:
             conn = psycopg2.connect(database=dbname)
             log("Database %s exists"%(dbname, ))
         except psycopg2.OperationalError:
             log("Creating database %s"%(dbname, ))
+            self.set_ini('db_created', time.strftime("%Y-%m-%d %H:%M:%S"))
             conn = psycopg2.connect(database='template1')
             conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
             c = conn.cursor()
