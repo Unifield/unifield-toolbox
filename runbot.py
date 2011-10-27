@@ -169,6 +169,7 @@ class RunBotBranch(object):
         return self._get_pid(self.file_pidserver)
 
     def start_createdb(self):
+        self.set_ini('db_created', time.strftime("%Y-%m-%d %H:%M:%S"))
         dbname = self.subdomain.lower()
         try:
             conn = psycopg2.connect(database=dbname)
@@ -469,11 +470,12 @@ class RunBot(object):
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
             </td>
             <td class="date">
-                % if t-i.running_t0 < 120:
-                    <span style="color:red;">${r.now}</span>
+                % if i.get_ini('db_created'):
+                    ${i.get_ini('db_created')}
                 % else:
-                    <span style="color:green;">${r.now}</span>
+                    <span style="color:red;">${r.now}</span>
                 % endif
+
             </td>
             <td>
                 <a href="http://${i.subdomain}.${r.domain}/${i.subdomain}/logs/server.txt">server</a>
