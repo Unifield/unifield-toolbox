@@ -614,6 +614,12 @@ class RunBot(object):
 
 
 def skel(o, r):
+    invalid_character = ['-']
+        
+    for char in invalid_character:
+        if char in o.instance:
+            raise Exception('\'%s\' is an invalid character in the name of the instance' % char)
+
     if o.instance in r.uf_instances:
         sys.stderr.write("Error: %s exists\n"%(o.instance, ))
     else:
@@ -745,6 +751,7 @@ def main():
     o = parser.parse_args()
     if (o.runbot_dir == '.'):
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
+    
 
     fsock = False
     if not o.debug:
