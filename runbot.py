@@ -362,7 +362,7 @@ class RunBot(object):
         self.nginx_path = os.path.join(self.wd,'nginx')
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
         self.smtp_host = smtp_host
-        self.jira_url = 'http://jira.unifield.org/UF-'
+        self.jira_url = 'http://jira.unifield.org/browse/UF-'
 
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
@@ -490,7 +490,7 @@ class RunBot(object):
                 <tr>
                     <td colspan="3" class="comment">
                     % for jid in i.get_ini('jira-id').split(','):
-                        <a href="${r.jira_url}${jid}>UF-${jid}</a>
+                        <a href="${r.jira_url}${jid}">UF-${jid}</a>
                     % endfor
                     </td>
                 </tr>
