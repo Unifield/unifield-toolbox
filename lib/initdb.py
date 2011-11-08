@@ -41,9 +41,17 @@ def wizard_init():
         return True
     return False
 
-def try_socket(sock, host, port, max_wait, start_time=False):
+def try_socket(sock, host, port, max_wait, start_time=False, pidfile=False):
     if not start_time:
         start_time = time.time()
+    if pidfile:
+        if os.path.isfile(pidfile):
+            return try_socket(sock, host, port, max_wait)
+        else:
+            if time.time()-start_time > max_wait:
+                return False
+            time.sleep(5)
+            return try_socket(sock, host, port, max_wait, start_time, pidfile)
     try:
         sock.connect((host, int(port)))
     except socket.error, e:
@@ -55,10 +63,10 @@ def try_socket(sock, host, port, max_wait, start_time=False):
     sock.close()
     return True
 
-def connect_db(user, pwd, dbname, host, port, path):
+def connect_db(user, pwd, dbname, host, port, path, pidfile=False):
     msg = []
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if try_socket(sock, host, port, 290):
+    if try_socket(sock, host, port, 450, pidfile=pidfile):
         utils.rpc.initialize(host, port, 'socket', storage=dict())
         utils.rpc.session.login(dbname, user, pwd)
         wiz = wizard_init()

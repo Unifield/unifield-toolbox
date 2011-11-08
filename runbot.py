@@ -218,7 +218,7 @@ class RunBotBranch(object):
             if not pid:
                 self._symlink_nginx_icon('nok')
                 try:
-                    msg = initdb.connect_db('admin', 'admin', dbname, '127.0.0.1', port, self.data_path)
+                    msg = initdb.connect_db('admin', 'admin', dbname, '127.0.0.1', port, self.data_path, self.file_pidserver+'_')
                 except Exception, e:
                     self._email(str(e), True)
                     log('init', self.name, str(e))
@@ -613,7 +613,7 @@ class RunBot(object):
             for line in fileinput.FileInput(config_file, inplace=1):
                 line = line.replace("UF_ADDONS_PATH", rbb.instance_path)
                 line = line.replace("UF_INSTANCE", rbb.name)
-                line = line.replace("PIDFILE", rbb.file_pidserver)
+                line = line.replace("PIDFILE", rbb.file_pidserver+'_')
                 sys.stdout.write(line)
 
     def create_module(self, rbb, module):
