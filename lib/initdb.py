@@ -46,7 +46,7 @@ def try_socket(sock, host, port, max_wait, start_time=False, pidfile=False):
         start_time = time.time()
     if pidfile:
         if os.path.isfile(pidfile):
-            return try_socket(sock, host, port, max_wait)
+            return try_socket(sock, host, port, 200)
         else:
             if time.time()-start_time > max_wait:
                 return False
@@ -66,7 +66,7 @@ def try_socket(sock, host, port, max_wait, start_time=False, pidfile=False):
 def connect_db(user, pwd, dbname, host, port, path, pidfile=False):
     msg = []
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if try_socket(sock, host, port, 450, pidfile=pidfile):
+    if try_socket(sock, host, port, 2000, pidfile=pidfile):
         utils.rpc.initialize(host, port, 'socket', storage=dict())
         utils.rpc.session.login(dbname, user, pwd)
         wiz = wizard_init()
@@ -75,7 +75,7 @@ def connect_db(user, pwd, dbname, host, port, path, pidfile=False):
             return 'Data successfully loaded'
         return 'Data not loaded: no init wizard to execute' 
     
-    raise Exception('Data not loaded: server is not ready')
+    raise Exception("Data not loaded: server is not ready. You can manually run:\n/opt/tools/runbot/lib/initdb.py -d %s -p %s %s"%(dbname, port, path))
 
 
 if __name__=="__main__":
