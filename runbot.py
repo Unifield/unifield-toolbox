@@ -224,8 +224,8 @@ class RunBotBranch(object):
                     log('init', self.name, str(e))
                     sys.exit(1)
                 self._symlink_nginx_icon('ok')
-		if self.get_ini('comment'):
-			msg += "\n\n%s"%(self.get_ini('comment'), )
+                if self.get_ini('comment'):
+                    msg += "\n\n%s"%(self.get_ini('comment'), )
                 self._email(msg)
                 sys.exit(1)
             self.set_ini('data_already_loaded', '1')
@@ -692,19 +692,19 @@ def kill_inst(o, r):
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
-    sys.stderr.write("Nginx ")
+    sys.stdout.write("Nginx ")
     pid = r.is_nginx_running()
     if pid:
-        sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+        sys.stdout.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
     else:
-        sys.stderr.write("isn't running\n")
+        sys.stdout.write("isn't running\n")
 
     for rbb in r.uf_instances.values():
-        sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+        sys.stdout.write("Instance %s:\n"%(rbb.name, ))
         if not rbb.get_bool_ini('start',True):
-            sys.stderr.write("    Disabled in config.ini\n")
-        sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
-        sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+            sys.stdout.write("    Disabled in config.ini\n")
+        sys.stdout.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+        sys.stdout.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
     
 def restartall(o, r):
     for rbb in r.uf_instances.values():
