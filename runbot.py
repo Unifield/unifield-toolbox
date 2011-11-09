@@ -465,7 +465,7 @@ class RunBot(object):
         </tr>
         </tfoot>
         <tbody>
-        % for i in r.running:
+        % for i in sorted(r.running, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
         <tr class="file">
             <td class="name left">
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
@@ -737,7 +737,7 @@ def main():
     parser.add_argument("--runbot-dir", metavar="DIR", default=".", help="runbot working dir (default: %(default)s)")
     parser.add_argument("--runbot-port", metavar="PORT", default=9200, help="starting port for servers (default: %(default)s)")
     parser.add_argument("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (default: %(default)s)")
-    parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.unifield.org", help="virtual host domain (default: %(default)s)")
+    parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.test.unifield.org", help="virtual host domain (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", default=False, help="print debug on stdout (default: %(default)s)")
     parser.add_argument("--smtp-host", metavar="HOST", default='localhost', help="smtp server (default: %(default)s)")
     subparsers = parser.add_subparsers(dest='command')
