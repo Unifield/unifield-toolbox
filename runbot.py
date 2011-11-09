@@ -692,19 +692,19 @@ def kill_inst(o, r):
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
-    sys.stdout.write("Nginx ")
+    sys.stderr.write("Nginx ")
     pid = r.is_nginx_running()
     if pid:
-        sys.stdout.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+        sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
     else:
-        sys.stdout.write("isn't running\n")
+        sys.stderr.write("isn't running\n")
 
     for rbb in r.uf_instances.values():
-        sys.stdout.write("Instance %s:\n"%(rbb.name, ))
+        sys.stderr.write("Instance %s:\n"%(rbb.name, ))
         if not rbb.get_bool_ini('start',True):
-            sys.stdout.write("    Disabled in config.ini\n")
-        sys.stdout.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
-        sys.stdout.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+            sys.stderr.write("    Disabled in config.ini\n")
+        sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+        sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
     
 def restartall(o, r):
     for rbb in r.uf_instances.values():
