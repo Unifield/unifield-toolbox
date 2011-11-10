@@ -14,7 +14,9 @@ from bzrlib.workingtree import WorkingTree
 from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
 import shutil
 import smtplib 
+from lib import jira_lib
 from email.mime.text import MIMEText
+import getpass
 
 #----------------------------------------------------------
 # OpenERP rdtools utils
@@ -491,9 +493,9 @@ class RunBot(object):
 
              % if i.get_ini('jira-id'):
                 <tr>
-                    <td colspan="3" class="comment">
+                    <td colspan="3" class="comment"> |
                     % for jid in i.get_ini('jira-id').split(','):
-                        <a href="${r.jira_url}${jid}">UF-${jid}</a>
+                        <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="Jira/${jid}.gif" />  | 
                     % endfor
                     </td>
                 </tr>
@@ -722,6 +724,27 @@ def restart(o, r):
         r.uf_instances[o.instance].stop()
         run_inst(o, r)
 
+def jira_state(o, r):
+    passwd = getpass.getpass('Jira Password : ')
+    jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
+    icon_path = os.path.join(r.nginx_path, 'Jira')
+    state_ok = ['Runbot Validated', 'Closed', 'Integrated', 'Dev Validated']
+    ok_icon = os.path.join(icon_path,'ok.gif')
+    nok_icon = os.path.join(icon_path,'nok.gif')
+    for rbb in r.uf_instances.values():
+        if rbb.get_ini('jira-id'):
+            for uf in rbb.get_ini('jira-id').split(','):
+                dest = os.path.join(icon_path, '%s.gif'%(uf, ))
+                os.path.exists(dest) and os.remove(dest)
+                icon = nok_icon
+                if jira.get_state('UF-%s'%uf) in state_ok:
+                    icon = ok_icon
+                os.symlink(icon, dest)
+    
+    # Touch file to disable cache
+    open(ok_icon, 'a').close() 
+    open(nok_icon, 'a').close()
+
 def del_inst(o, r):
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
@@ -760,6 +783,11 @@ def main():
     
     list_parser = subparsers.add_parser('list', help='list all instances')
     list_parser.set_defaults(func=list_inst)
+    
+    jira = subparsers.add_parser('jira', help='list all instances')
+    jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
+    jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://uf0001.unifield.org:8090/', help='Jira url (default: %(default)s)')
+    jira.set_defaults(func=jira_state)
 
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
