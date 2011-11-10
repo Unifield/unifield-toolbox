@@ -786,7 +786,7 @@ def main():
     
     jira = subparsers.add_parser('jira', help='list all instances')
     jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
-    jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://uf0001.unifield.org:8090/', help='Jira url (default: %(default)s)')
+    jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     jira.set_defaults(func=jira_state)
 
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
