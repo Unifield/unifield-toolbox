@@ -735,7 +735,7 @@ def jira_state(o, r):
                 dest = os.path.join(icon_path, '%s.gif'%(uf, ))
                 os.path.exists(dest) and os.remove(dest)
                 state = jira.get_state('UF-%s'%uf)
-                icon = os.path.join(icon_path, state_icon.get('state', 'nok.gif'))
+                icon = os.path.join(icon_path, state_icon.get(state, 'nok.gif'))
                 os.symlink(icon, dest)
     
     # Touch file to disable cache
