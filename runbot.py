@@ -728,7 +728,7 @@ def jira_state(o, r):
     passwd = getpass.getpass('Jira Password : ')
     jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
     icon_path = os.path.join(r.nginx_path, 'Jira')
-    state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif'}
+    state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif'}
     for rbb in r.uf_instances.values():
         if rbb.get_ini('jira-id'):
             for uf in rbb.get_ini('jira-id').split(','):
