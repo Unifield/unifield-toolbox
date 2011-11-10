@@ -728,22 +728,19 @@ def jira_state(o, r):
     passwd = getpass.getpass('Jira Password : ')
     jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
     icon_path = os.path.join(r.nginx_path, 'Jira')
-    state_ok = ['Runbot Validated', 'Closed', 'Integrated', 'Dev Validated']
-    ok_icon = os.path.join(icon_path,'ok.gif')
-    nok_icon = os.path.join(icon_path,'nok.gif')
+    state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif'}
     for rbb in r.uf_instances.values():
         if rbb.get_ini('jira-id'):
             for uf in rbb.get_ini('jira-id').split(','):
                 dest = os.path.join(icon_path, '%s.gif'%(uf, ))
                 os.path.exists(dest) and os.remove(dest)
-                icon = nok_icon
-                if jira.get_state('UF-%s'%uf) in state_ok:
-                    icon = ok_icon
+                state = jira.get_state('UF-%s'%uf)
+                icon = os.path.join(icon_path, state_icon.get('state', 'nok.gif'))
                 os.symlink(icon, dest)
     
     # Touch file to disable cache
-    open(ok_icon, 'a').close() 
-    open(nok_icon, 'a').close()
+    for ic in state_icon.values()+['nok.gif']:
+        open(os.path.join(icon_path, ic), 'a').close() 
 
 def del_inst(o, r):
     if o.instance not in r.uf_instances:
