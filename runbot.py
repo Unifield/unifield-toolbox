@@ -740,7 +740,7 @@ def jira_state(o, r):
     
     # Touch file to disable cache
     for ic in state_icon.values()+['nok.gif']:
-        open(os.path.join(icon_path, ic), 'a').close() 
+        os.utime(os.path.join(icon_path, ic), None)
 
 def del_inst(o, r):
     if o.instance not in r.uf_instances:
