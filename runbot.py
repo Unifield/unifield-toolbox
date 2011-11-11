@@ -709,9 +709,9 @@ class RunBot(object):
                 to_remove = 'bzr+ssh://bazaar.launchpad.net/'
                 if parent and parent.startswith(to_remove):
                     parent = parent.replace(to_remove,'lp:')
-                    rbb.set_ini(module, parent)
                     if parent[-1] == '/':
                         parent = parent[0:-1]
+                    rbb.set_ini(module, parent)
             if not rbb.get_ini('%s-revno'%(module, )):
                 newrevno = self.get_revno_from_path(project_path)
                 rbb.set_ini('%s-revno'%(module, ), newrevno)
