@@ -9,6 +9,7 @@ import ConfigParser
 import psycopg2
 import psycopg2.extensions
 from bzrlib.branch import Branch
+from bzrlib.branch import BzrBranch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.workingtree import WorkingTree
 from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
@@ -17,7 +18,7 @@ import smtplib
 from lib import jira_lib
 from email.mime.text import MIMEText
 import getpass
-
+from datetime import datetime 
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
@@ -79,6 +80,7 @@ class RunBotBranch(object):
         self.date_last_modified=0
         self.revision_count=0
         self.merge_count=0
+        self.revno = {}
 
         self.name = subfolder
         self.unique_name = subfolder
@@ -111,7 +113,11 @@ class RunBotBranch(object):
         self.ini.read(self.configfile)
         if not self.ini.has_section('global'):
             self.ini.add_section('global')
-       
+        
+
+    def get_revno(self, module):
+        return self.runbot.get_revno_from_path(os.path.join(self.instance_path,module))
+
     def write_ini(self):
         f = open(self.configfile, "w")
         self.ini.write(f)
@@ -308,14 +314,31 @@ company.url = ''
         '''
       
         self.start_createdb()
-        self.start_run_server(port)
-        self.start_run_web(port)
 
-        self.runbot.running.insert(0,self)
-        self.runbot.running.sort(key=lambda x:x.date_last_modified,reverse=1)
-        self.running_t0=time.time()
-        self.running=True
-        self.running_port=port
+        version = True
+        if not self.is_web_running() or not self.is_server_running(): 
+            for module in ['unifield-web', 'unifield-server', 'unifield-wm', 'unifield-addons']:
+                m_path = os.path.join(self.instance_path, module)
+                if os.path.islink(m_path):
+                    init_rev = self.get_int_ini('%s-revno'%(module, ))
+                    new_rev = self.get_revno(module)
+                    if init_rev != new_rev:
+                        sys.stderr.write("Instance %s, module %s: revno (%s) has changed since the last start (%s).\n\tDelete %s-revno in %s\n\tor replace the link by: bzr checkout  --lightweight lp:%s -r %s\n"%
+                            (self.name, module, new_rev, init_rev, module, self.configfile, module, init_rev));
+                        version = False
+
+        if version:
+            self.start_run_server(port)
+            self.start_run_web(port)
+
+            self.runbot.running.insert(0,self)
+            self.runbot.running.sort(key=lambda x:x.date_last_modified,reverse=1)
+            self.running_t0=time.time()
+            self.running=True
+            self.running_port=port
+        else:
+            sys.stderr.write("Instance %s not started\n"%(self.name,))
+
         self.write_ini()
 
     def stop(self):
@@ -367,14 +390,36 @@ class RunBot(object):
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
+        self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif'}
+        self.icon_jira_dir = 'Jira'
 
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
+
+        self.revno = {}
+        for br in ['wm', 'data', 'server', 'web', 'addons']:
+            self.revno[br] = self.get_revno_from_path(os.path.join(self.common_path, 'unifield-%s'%(br, )), True)
 
         for folder in allsubdirs:
             rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
             if init and rbb.get_bool_ini('start',True):
                 self.init_folder(rbb)
+
+    def get_revno_from_path(self, path, full=False):
+        print "Get revno", path
+        if os.path.islink(path):
+            path = os.path.realpath(path)
+        wt = WorkingTree.open(path)
+        lr = wt.last_revision()
+        try:
+            revno = wt.branch.revision_id_to_dotted_revno(lr)[0]
+        except:
+            revno = False
+
+        if not full:
+            return revno
+        rev = wt.branch.repository.get_revision(lr)
+        return {'revno': revno, 'lastmsg': rev.get_summary(), 'time': datetime.fromtimestamp(rev.timestamp).strftime("%d/%m/%y %H:%M")}
 
     def is_nginx_running(self):
         return _is_running(self.nginx_pid())
@@ -495,7 +540,7 @@ class RunBot(object):
                 <tr>
                     <td colspan="3" class="comment"> |
                     % for jid in i.get_ini('jira-id').split(','):
-                        <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="Jira/${jid}.gif" />  | 
+                        <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
                     % endfor
                     </td>
                 </tr>
@@ -504,7 +549,7 @@ class RunBot(object):
             <td colspan="3" class="comment">
             % for br in ['wm', 'data', 'server', 'web']:
                 % if i.get_ini('unifield-%s'%(br, )) != 'link':
-                         ${br}:<a href="${r.bzr_url}${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}">${i.get_ini('unifield-%s'%(br, )).split(':')[-1].split('/')[-1]}</a>
+                         ${br}:<a href="${r.bzr_url}${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}">${i.get_ini('unifield-%s'%(br, )).split(':')[-1].split('/')[-1]}</a>@<a href="https://bazaar.launchpad.net/${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}/changes">${i.get_int_ini('unifield-%s-revno'%(br,))}</a> |
                 % endif
             % endfor
             </td>
@@ -523,6 +568,20 @@ class RunBot(object):
             <div class="content">
                 <p><b>Last modification: ${r.now}.</b></p>
             </div>
+        </div>
+        <div class="comment">
+        % for ic in set(r.state_icon.values()):
+            <img  src="${r.icon_jira_dir}/${ic}">: ${','.join([x[0] for x in r.state_icon.items() if x[1] == ic])}
+        % endfor
+        </div>
+            % for br in ['wm', 'server', 'addons', 'web', 'data']:
+            <div class="comment">
+            <a href="${r.bzr_url}~unifield-team/unifield-${br}/trunk">${br}</a>: revno:${r.revno[br]['revno']} ${r.revno[br]['time']} 
+            <div class="comment">
+                ${r.revno[br]['lastmsg']}
+            </div>
+            </div>
+            % endfor
         </div>
         </body>
         """
@@ -621,8 +680,8 @@ class RunBot(object):
     def create_module(self, rbb, module):
         project_path = os.path.join(rbb.instance_path, module)
         common_project_path = os.path.join(self.common_path, module)
+        source_module = rbb.get_ini(module)
         if not os.path.exists(project_path):
-            source_module = rbb.get_ini(module)
             if not source_module or source_module == 'link':
                 log('Link module %s'%(module, ))
                 run(["ln","-s", common_project_path, project_path])
@@ -637,7 +696,29 @@ class RunBot(object):
                 orig = WorkingTree.open(common_project_path)
                 br.create_checkout(project_path, lightweight=True, accelerator_tree=orig)
                 br.repository._client._medium.disconnect()
+            
+            newrevno = self.get_revno_from_path(project_path)
+            rbb.set_ini('%s-revno'%(module, ), newrevno)
+        else:
+            if source_module == 'link' and not os.path.islink(project_path):
+                wk = WorkingTree.open(project_path)
+                if isinstance(wk.branch, BzrBranch):
+                    parent = wk.branch.get_parent()
+                else:
+                    parent = wk.branch.bzrdir.root_transport.base
+                to_remove = 'bzr+ssh://bazaar.launchpad.net/'
+                if parent and parent.startswith(to_remove):
+                    parent = parent.replace(to_remove,'lp:')
+                    rbb.set_ini(module, parent)
+                    if parent[-1] == '/':
+                        parent = parent[0:-1]
+            if not rbb.get_ini('%s-revno'%(module, )):
+                newrevno = self.get_revno_from_path(project_path)
+                rbb.set_ini('%s-revno'%(module, ), newrevno)
+            else:
+                newrevno = rbb.get_ini('%s-revno'%(module, ))
 
+        rbb.revno[module] = newrevno
 
 def skel(o, r):
     invalid_character = ['-']
@@ -727,19 +808,18 @@ def restart(o, r):
 def jira_state(o, r):
     passwd = getpass.getpass('Jira Password : ')
     jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
-    icon_path = os.path.join(r.nginx_path, 'Jira')
-    state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif'}
+    icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
     for rbb in r.uf_instances.values():
         if rbb.get_ini('jira-id'):
             for uf in rbb.get_ini('jira-id').split(','):
                 dest = os.path.join(icon_path, '%s.gif'%(uf, ))
                 os.path.exists(dest) and os.remove(dest)
                 state = jira.get_state('UF-%s'%uf)
-                icon = os.path.join(icon_path, state_icon.get(state, 'nok.gif'))
+                icon = os.path.join(icon_path, r.state_icon.get(state, 'nok.gif'))
                 os.symlink(icon, dest)
     
     # Touch file to disable cache
-    for ic in state_icon.values()+['nok.gif']:
+    for ic in r.state_icon.values()+['nok.gif']:
         os.utime(os.path.join(icon_path, ic), None)
 
 def del_inst(o, r):
