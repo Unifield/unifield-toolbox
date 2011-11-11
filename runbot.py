@@ -539,7 +539,7 @@ class RunBot(object):
              % if i.get_ini('jira-id'):
                 <tr>
                     <td colspan="3" class="comment"> |
-                    % for jid in i.get_ini('jira-id').split(','):
+                    % for jid in sorted(i.get_ini('jira-id').split(',')):
                         <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
                     % endfor
                     </td>
