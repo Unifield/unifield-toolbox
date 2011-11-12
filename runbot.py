@@ -559,6 +559,8 @@ class RunBot(object):
             % for br in ['wm', 'data', 'server', 'web']:
                 % if i.get_ini('unifield-%s'%(br, )) != 'link':
                          ${br}:<a href="${r.bzr_url}${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}">${i.get_ini('unifield-%s'%(br, )).split(':')[-1].split('/')[-1]}</a>@<a href="https://bazaar.launchpad.net/${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}/changes">${i.get_int_ini('unifield-%s-revno'%(br,))}</a> |
+                % elif br != 'data' and i.get_int_ini('unifield-%s-revno'%(br, )) != r.revno[br]['revno']:
+                        ${br}: <a href="https://bazaar.launchpad.net/~unifield-team/unifield-${br}/trunk/revision/${r.revno[br]['revno']}?compare_rev_id=${i.get_int_ini('unifield-%s-revno'%(br, ))}">@${i.get_ini('unifield-%s-revno'%(br, ))}</a> |
                 % endif
             % endfor
             </td>
