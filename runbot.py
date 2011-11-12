@@ -731,6 +731,9 @@ def skel(o, r):
     for char in invalid_character:
         if char in o.instance:
             raise Exception('\'%s\' is an invalid character in the name of the instance' % char)
+    if o.instance == 'testjfb':
+        sys.stderr.write("Stop au copier-coller des commandes !\nAu pire insere le caractere # avant de coller.\n") 
+        sys.exit(1)
 
     if o.instance in r.uf_instances:
         sys.stderr.write("Error: %s exists\n"%(o.instance, ))
