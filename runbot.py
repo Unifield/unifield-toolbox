@@ -836,11 +836,8 @@ def get_uf(o, r):
         conf_uf = []
         if jira_id:
             conf_uf = sorted(jira_id.split(','))
-        if conf_uf != detected_uf:
-            log("Set detected-uf %s: %s"%(rbb.instance_path, ','.join(detected_uf)))
-            rbb.set_ini('detected-uf', ','.join(detected_uf))
-        else:
-            rbb.set_ini('detected-uf', '')
+        log("Set detected-uf %s: %s"%(rbb.instance_path, ','.join(detected_uf)))
+        rbb.set_ini('detected-uf', ','.join(detected_uf))
         rbb.write_ini()
 
 
@@ -905,7 +902,7 @@ def main():
     list_parser = subparsers.add_parser('list', help='list all instances')
     list_parser.set_defaults(func=list_inst)
     
-    jira = subparsers.add_parser('jira', help='list all instances')
+    jira = subparsers.add_parser('jira', help='update jira status')
     jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     jira.set_defaults(func=jira_state)
