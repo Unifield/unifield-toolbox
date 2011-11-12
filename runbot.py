@@ -1,6 +1,8 @@
 #!/usr/bin/python
+import sys
+sys.path.insert(0,'/home/jf/Bzr24/lib/python/')
 
-import cgitb,os,re,subprocess,sys,time
+import cgitb,os,re,subprocess,time
 import argparse
 import fileinput
 import mako.template
@@ -13,6 +15,8 @@ from bzrlib.branch import BzrBranch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.workingtree import WorkingTree
 from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
+from bzrlib import log as bzlog
+from bzrlib.revisionspec import RevisionSpec, RevisionInfo
 import shutil
 import smtplib 
 from lib import jira_lib
@@ -323,7 +327,7 @@ company.url = ''
                     init_rev = self.get_int_ini('%s-revno'%(module, ))
                     new_rev = self.get_revno(module)
                     if init_rev != new_rev:
-                        sys.stderr.write("Instance %s, module %s: revno (%s) has changed since the last start (%s).\n\tDelete %s-revno in %s\n\tor replace the link by: bzr checkout  --lightweight lp:%s -r %s\n"%
+                        sys.stderr.write("Instance %s, module %s: revno (%s) has changed since the last start (%s).\n\tDelete %s-revno in %s\n\tor replace the link by: bzr checkout lp:%s -r %s\n"%
                             (self.name, module, new_rev, init_rev, module, self.configfile, module, init_rev));
                         version = False
 
@@ -406,7 +410,7 @@ class RunBot(object):
                 self.init_folder(rbb)
 
     def get_revno_from_path(self, path, full=False):
-        print "Get revno", path
+        log("Get revno %s"%(path,))
         if os.path.islink(path):
             path = os.path.realpath(path)
         wt = WorkingTree.open(path)
@@ -535,16 +539,18 @@ class RunBot(object):
                    <td colspan="3" class="comment">${i.get_ini('comment')}</td>
                 </tr>
              % endif
-
-             % if i.get_ini('jira-id'):
-                <tr>
-                    <td colspan="3" class="comment"> |
-                    % for jid in sorted(i.get_ini('jira-id').split(',')):
-                        <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
-                    % endfor
-                    </td>
-                </tr>
-             %endif
+             % for type_uf in ('jira-id','detected-uf'):
+                 % if i.get_ini(type_uf):
+                    <tr>
+                        <td colspan="3" class="comment ${type_uf}">
+                        |
+                        % for jid in sorted(i.get_ini(type_uf).split(',')):
+                            <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
+                        % endfor
+                        </td>
+                    </tr>
+                 %endif
+             % endfor
 	<tr>
             <td colspan="3" class="comment">
             % for br in ['wm', 'data', 'server', 'web']:
@@ -573,6 +579,7 @@ class RunBot(object):
         % for ic in set(r.state_icon.values()):
             <img  src="${r.icon_jira_dir}/${ic}">: ${','.join([x[0] for x in r.state_icon.items() if x[1] == ic])}
         % endfor
+        <div><span style="color:red">*</span>: detected UF</div>
         </div>
             % for br in ['wm', 'server', 'addons', 'web', 'data']:
             <div class="comment">
@@ -694,7 +701,7 @@ class RunBot(object):
                 # for symlink
                 common_project_path = os.path.realpath(common_project_path)
                 orig = WorkingTree.open(common_project_path)
-                br.create_checkout(project_path, lightweight=True, accelerator_tree=orig)
+                br.create_checkout(project_path, lightweight=module!='unifield-wm', accelerator_tree=orig)
                 br.repository._client._medium.disconnect()
             
             newrevno = self.get_revno_from_path(project_path)
@@ -805,18 +812,58 @@ def restart(o, r):
         r.uf_instances[o.instance].stop()
         run_inst(o, r)
 
+def get_uf(o, r):
+    for rbb in r.uf_instances.values():
+        wm_path = os.path.join(rbb.instance_path, 'unifield-wm')
+        if os.path.islink(wm_path) or not os.path.isdir(wm_path):
+            continue
+        wk = WorkingTree.open(wm_path)
+        branch = wk.branch
+        rev1 = RevisionSpec.from_string('ancestor:lp:unifield-wm').in_history(branch)
+        last_revno, last_revision_id = branch.last_revision_info()
+        rev2 = RevisionInfo(branch, last_revno, last_revision_id)
+        if rev1 == rev2:
+            continue
+        rqst = bzlog.make_log_request_dict(start_revision=rev1, end_revision=rev2, exclude_common_ancestry=True, levels=0)
+        generator = bzlog._DefaultLogGenerator(branch, rqst)
+        branch.lock_read()
+        all_uf = {}
+        try:
+            for lr in generator.iter_log_revisions():
+                for m in re.finditer("([0-9]{3,})",lr.rev.message):
+                    all_uf[m.group(1)] = True
+        finally:
+            branch.unlock()
+        detected_uf = sorted(all_uf.keys())
+        jira_id = rbb.get_ini('jira-id')
+        conf_uf = []
+        if jira_id:
+            conf_uf = sorted(jira_id.split(','))
+        if conf_uf != detected_uf:
+            log("Set detected-uf %s"%(rbb.instance_path,))
+            rbb.set_ini('detected-uf', ','.join(detected_uf))
+        else:
+            rbb.set_ini('detected-uf', '')
+        rbb.write_ini()
+
+
 def jira_state(o, r):
     passwd = getpass.getpass('Jira Password : ')
     jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
     icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
+    jira_seen = []
     for rbb in r.uf_instances.values():
-        if rbb.get_ini('jira-id'):
-            for uf in rbb.get_ini('jira-id').split(','):
-                dest = os.path.join(icon_path, '%s.gif'%(uf, ))
-                os.path.exists(dest) and os.remove(dest)
-                state = jira.get_state('UF-%s'%uf)
-                icon = os.path.join(icon_path, r.state_icon.get(state, 'nok.gif'))
-                os.symlink(icon, dest)
+        all_uf = (rbb.get_ini('jira-id') or "").split(',')
+        all_uf += (rbb.get_ini('detected-uf') or "").split(',')
+        for uf in all_uf:
+            if uf in jira_seen:
+                continue
+            dest = os.path.join(icon_path, '%s.gif'%(uf, ))
+            os.path.exists(dest) and os.remove(dest)
+            state = jira.get_state('UF-%s'%uf)
+            icon = os.path.join(icon_path, r.state_icon.get(state, 'nok.gif'))
+            os.symlink(icon, dest)
+            jira_seen.append(uf)
     
     # Touch file to disable cache
     for ic in r.state_icon.values()+['nok.gif']:
@@ -865,6 +912,9 @@ def main():
     jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     jira.set_defaults(func=jira_state)
+
+    get_jira_id = subparsers.add_parser('get-uf', help='Get jira-id from commit messages')
+    get_jira_id.set_defaults(func=get_uf)
 
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')

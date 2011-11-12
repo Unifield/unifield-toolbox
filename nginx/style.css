@@ -2,3 +2,9 @@
    font-size: 10px;
    padding-left: 20px;
 }
+.detected-uf {
+    color: red;
+}
+.detected-uf a {
+    color: red;
+}
