@@ -537,18 +537,23 @@ class RunBot(object):
                    <td colspan="3" class="comment">${i.get_ini('comment')}</td>
                 </tr>
              % endif
-             % for type_uf in ('jira-id','detected-uf'):
-                 % if i.get_ini(type_uf):
+             <% 
+                jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
+                detected_uf = i.get_ini('detected-uf') and i.get_ini('detected-uf').split(',') or []
+             %>
+             % if jira_id or detected_uf:
                     <tr>
-                        <td colspan="3" class="comment ${type_uf}">
+                        <td colspan="3" class="comment">
                         |
-                        % for jid in sorted(i.get_ini(type_uf).split(',')):
-                            <a href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
+                        % for jid in sorted(set(jira_id+detected_uf)):
+                            <% 
+                              color = jid in jira_id and jid not in detected_uf and 'black' or jid not in jira_id and jid in detected_uf and 'red' or 'blue'
+                            %>
+                            <a style="color:${color}" href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
                         % endfor
                         </td>
                     </tr>
-                 %endif
-             % endfor
+             % endif
 	<tr>
             <td colspan="3" class="comment">
             % for br in ['wm', 'data', 'server', 'web']:
@@ -579,7 +584,7 @@ class RunBot(object):
         % endfor
         <br />
         (to update the status run: <i>./runbot jira --jira-user user</i>)
-        <div><span style="color:red">In red: UF number from commit messages</span></div>
+        <div><span style="color:red">Red: UF number from commit messages but not declared</span>, <span style="color:black">Black: UF number declared but not found in commit</span></div>
         </div>
             % for br in ['wm', 'server', 'addons', 'web', 'data']:
             <div class="comment">
