@@ -577,7 +577,9 @@ class RunBot(object):
         % for ic in set(r.state_icon.values()):
             <img  src="${r.icon_jira_dir}/${ic}">: ${','.join([x[0] for x in r.state_icon.items() if x[1] == ic])}
         % endfor
-        <div><span style="color:red">*</span>: detected UF</div>
+        <br />
+        (to update the status run: <i>./runbot jira --jira-user user</i>)
+        <div><span style="color:red">In red: UF number from commit messages</span></div>
         </div>
             % for br in ['wm', 'server', 'addons', 'web', 'data']:
             <div class="comment">
