@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import sys
-sys.path.insert(0,'/home/jf/Bzr24/lib/python/')
 
 import cgitb,os,re,subprocess,time
 import argparse
@@ -15,8 +14,7 @@ from bzrlib.branch import BzrBranch
 from bzrlib.bzrdir import BzrDir
 from bzrlib.workingtree import WorkingTree
 from bzrlib.plugins.launchpad.lp_directory import LaunchpadDirectory
-from bzrlib import log as bzlog
-from bzrlib.revisionspec import RevisionSpec, RevisionInfo
+from bzrlib import missing
 import shutil
 import smtplib 
 from lib import jira_lib
@@ -813,34 +811,23 @@ def restart(o, r):
         run_inst(o, r)
 
 def get_uf(o, r):
+    remote = Branch.open(os.path.join(r.common_path, 'unifield-wm'))
     for rbb in r.uf_instances.values():
         wm_path = os.path.join(rbb.instance_path, 'unifield-wm')
         if os.path.islink(wm_path) or not os.path.isdir(wm_path):
             continue
-        wk = WorkingTree.open(wm_path)
-        branch = wk.branch
-        rev1 = RevisionSpec.from_string('ancestor:lp:unifield-wm').in_history(branch)
-        last_revno, last_revision_id = branch.last_revision_info()
-        rev2 = RevisionInfo(branch, last_revno, last_revision_id)
-        if rev1 == rev2:
-            continue
-        rqst = bzlog.make_log_request_dict(start_revision=rev1, end_revision=rev2, exclude_common_ancestry=True, levels=0)
-        generator = bzlog._DefaultLogGenerator(branch, rqst)
-        branch.lock_read()
+        wk = Branch.open(wm_path)
         all_uf = {}
-        try:
-            for lr in generator.iter_log_revisions():
-                for m in re.finditer("([0-9]{3,})",lr.rev.message):
+        for miss in missing.find_unmerged(wk, remote, restrict='local', include_merges=True)[0]:
+                for m in re.finditer("([0-9]{3,})", wk.repository.get_revision(miss[1]).message.encode('utf-8')):
                     all_uf[m.group(1)] = True
-        finally:
-            branch.unlock()
         detected_uf = sorted(all_uf.keys())
         jira_id = rbb.get_ini('jira-id')
         conf_uf = []
         if jira_id:
             conf_uf = sorted(jira_id.split(','))
         if conf_uf != detected_uf:
-            log("Set detected-uf %s"%(rbb.instance_path,))
+            log("Set detected-uf %s: %s"%(rbb.instance_path, ','.join(detected_uf)))
             rbb.set_ini('detected-uf', ','.join(detected_uf))
         else:
             rbb.set_ini('detected-uf', '')
