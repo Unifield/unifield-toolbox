@@ -584,7 +584,7 @@ class RunBot(object):
         % endfor
         <br />
         (to update the status run: <i>./runbot jira --jira-user user</i>)
-        <div><span style="color:red">Red: UF number from commit messages but not declared</span>, <span style="color:black">Black: UF number declared but not found in commit</span></div>
+        <div><span style="color:red">Red: UF number found in commit messages</span>, <span style="color:black">Black: UF number not found in commit</span></div>
         </div>
             % for br in ['wm', 'server', 'addons', 'web', 'data']:
             <div class="comment">
