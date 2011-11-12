@@ -910,12 +910,12 @@ def main():
 
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
-    skel_parser.add_argument('--start', action='store_true', default=False, help='Start this instance')
+    skel_parser.add_argument('--start', '-s', action='store_true', default=False, help='Start this instance')
     skel_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
-    skel_parser.add_argument('--unifield-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
-    skel_parser.add_argument('--comment')
-    skel_parser.add_argument('--email')
-    skel_parser.add_argument('--jira-id', help='List of jira-id (without UF-)')
+    skel_parser.add_argument('--unifield-wm', '-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--comment', '-c')
+    skel_parser.add_argument('--email', '-m')
+    skel_parser.add_argument('--jira-id', '-j', help='List of jira-id (without UF-)')
     skel_parser.set_defaults(func=skel)
     
     delete_parser = subparsers.add_parser('delete', help='delete an instance')
