@@ -91,7 +91,19 @@ class RunBotBranch(object):
 
         self.subdomain=subfolder
         self.instance_path=os.path.join(self.runbot.wd, "running", self.subdomain)
-
+        self.email_alias = {
+            'pam': 'patrick.amstutz@geneva.msf.org',
+            'pa': 'patrick.amstutz@geneva.msf.org',
+            'jfb': 'jfb@tempo-consulting.fr',
+            'mc': 'Matthias.CHARDON@geneva.msf.org',
+            'md': 'Matthieu.DIETRICH@geneva.msf.org',
+            'od': 'od@tempo-consulting.fr',
+            'ml': 'Magali.LAPIERE@geneva.msf.org',
+            'mm': 'mm@tempo-consulting.fr',
+            'sr': 'Sebastien.ROCHE@geneva.msf.org',
+            'qt': 'qt@tempo-consulting.fr',
+            'dv': 'Duy.VO@geneva.msf.org',
+        }
         self.server_path=os.path.join(self.instance_path,"unifield-server")
         self.server_bin_path=os.path.join(self.server_path,"openerp-server.py")
         if not os.path.exists(self.server_bin_path): # for 6.0 branches
@@ -265,16 +277,19 @@ class RunBotBranch(object):
             else:
                 data ="Your instance is ready: http://%s.%s\n%s\n\n"%(self.subdomain, self.runbot.domain, msg)
 
+            new_dest = []
+            for d in dest.split(','):
+                new_dest.append(self.email_alias.get(d, d))
 
             data += "http://%s"%(self.runbot.domain, )
             msg = MIMEText(data)
 
             msg['Subject'] = 'Runbot %s'%(self.name, )
-            msg['To'] = dest
+            msg['To'] = ','.join(new_dest)
             msg['From'] = 'noreply@%s'%(self.runbot.domain, )
 
             s = smtplib.SMTP(self.runbot.smtp_host)
-            s.sendmail(msg['From'], dest.split(','), msg.as_string())
+            s.sendmail(msg['From'], new_dest, msg.as_string())
 
 
 
