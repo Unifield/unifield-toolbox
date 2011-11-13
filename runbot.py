@@ -787,6 +787,12 @@ def skel(o, r):
                 outf.write("email = %s\n"%(o.email or ""))
             elif line.startswith('unifield-wm'):
                 outf.write("unifield-wm = %s\n"%(o.unifield_wm or "link"))
+            elif line.startswith('unifield-addons'):
+                outf.write("unifield-addons = %s\n"%(o.unifield_addons or "link"))
+            elif line.startswith('unifield-server'):
+                outf.write("unifield-server = %s\n"%(o.unifield_server or "link"))
+            elif line.startswith('unifield-web'):
+                outf.write("unifield-web = %s\n"%(o.unifield_web or "link"))
             elif o.unit and line.startswith('load_demo'):
                 outf.write("load_demo = 1\n")
             elif o.unit and line.startswith('load_data'):
@@ -928,6 +934,9 @@ def main():
     skel_parser.add_argument('--start', '-s', action='store_true', default=False, help='Start this instance')
     skel_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
     skel_parser.add_argument('--unifield-wm', '-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--unifield-addons', '-ad', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--unifield-server', '-se', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--unifield-web', '-we', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--comment', '-c')
     skel_parser.add_argument('--email', '-m')
     skel_parser.add_argument('--jira-id', '-j', help='List of jira-id (without UF-)')
