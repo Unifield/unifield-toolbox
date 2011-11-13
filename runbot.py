@@ -115,7 +115,22 @@ class RunBotBranch(object):
         self.ini.read(self.configfile)
         if not self.ini.has_section('global'):
             self.ini.add_section('global')
-        
+
+    def get_uf_from_log(self):
+        remote = Branch.open(os.path.join(self.runbot.common_path, 'unifield-wm'))
+        wm_path = os.path.join(self.instance_path, 'unifield-wm')
+        if os.path.islink(wm_path) or not os.path.isdir(wm_path):
+            return 
+        wk = Branch.open(wm_path)
+        all_uf = {}
+        for miss in missing.find_unmerged(wk, remote, restrict='local', include_merges=True)[0]:
+            for m in re.finditer("([0-9]{3,})", wk.repository.get_revision(miss[1]).message.encode('utf-8')):
+                all_uf[m.group(1)] = True
+        detected_uf = sorted(all_uf.keys())
+        conf_uf = []
+        log("Set detected-uf %s: %s"%(self.instance_path, ','.join(detected_uf)))
+        self.set_ini('detected-uf', ','.join(detected_uf))
+        self.write_ini()
 
     def get_revno(self, module):
         return self.runbot.get_revno_from_path(os.path.join(self.instance_path,module))
@@ -267,7 +282,11 @@ class RunBotBranch(object):
         # assert itype in ['ok', 'nok']
         dest = os.path.join(self.runbot.nginx_path, '%s.png'%(self.name,))
         os.path.exists(dest) and os.remove(dest)
-        os.symlink(os.path.join(self.runbot.nginx_path,'%s.png'%(itype, )), dest)
+        src = os.path.join(self.runbot.nginx_path,'%s.png'%(itype, ))
+        os.symlink(src, dest)
+        # Touch file to disable cache
+        os.utime(src, None)
+
 
     def start_run_web(self,port):
         if self.is_web_running():
@@ -374,6 +393,99 @@ company.url = ''
             self.write_ini()
 
         del(self.runbot.uf_instances[self.name])
+    
+    def init_folder(self):
+
+        ''' To do the following things if not exist
+            - create the logs folder for storing log files
+            - create soft-link to: unifield-server, unifield-addons, unifield-web if not exist (in case no change has been made)
+        '''
+        
+        logs_dir = os.path.join(self.instance_path, "logs")
+        if not os.path.exists(logs_dir):
+            os.mkdir(logs_dir)
+
+        # copy the unifield-server project from 'common' folder if not existed
+        self.create_module("unifield-server")
+        self.create_module("unifield-web")
+        # copy the folder 'etc' from 'common' folder, then fill the instance path
+        self.process_folder_etc()
+
+        # create softlinks for these 3 projects if not existed
+        self.create_module("unifield-addons")
+        if self.create_module("unifield-wm"):
+            self.get_uf_from_log()
+
+        self.create_module("unifield-data")
+
+
+    def process_folder_etc(self):
+        # delete and recopy the folder "etc"
+        project_path = self.etc_path
+        #run(["rm","-r", project_path]) # delete first
+        
+        if not os.path.exists(os.path.join(project_path)):
+            run(["cp","-r", self.runbot.common_etc, self.instance_path])
+        
+            # replace the UF_ADDONS_PATH with the modules path of the current instance 
+            config_file = os.path.join(project_path, 'openerprc')
+            for line in fileinput.FileInput(config_file, inplace=1):
+                line = line.replace("UF_ADDONS_PATH", self.instance_path)
+                line = line.replace("UF_INSTANCE", self.name)
+                line = line.replace("PIDFILE", self.file_pidserver+'_')
+                sys.stdout.write(line)
+
+    def create_module(self, module):
+        project_path = os.path.join(self.instance_path, module)
+        common_project_path = os.path.join(self.runbot.common_path, module)
+        source_module = self.get_ini(module)
+        first = True
+        if not os.path.exists(project_path):
+            if not source_module or source_module == 'link':
+                log('Link module %s'%(module, ))
+                run(["ln","-s", common_project_path, project_path])
+            else:
+                directory = LaunchpadDirectory()
+                d = directory._resolve(source_module)
+                log('bzr checkout %s'%(d, ))
+                br = Branch.open(d)
+
+                # for symlink
+                common_project_path = os.path.realpath(common_project_path)
+                orig = WorkingTree.open(common_project_path)
+                br.create_checkout(project_path, lightweight=module!='unifield-wm', accelerator_tree=orig)
+                br.repository._client._medium.disconnect()
+             
+            newrevno = self.runbot.get_revno_from_path(project_path)
+            self.set_ini('%s-revno'%(module, ), newrevno)
+        else:
+            if source_module == 'link' and not os.path.islink(project_path):
+                wk = WorkingTree.open(project_path)
+                if isinstance(wk.branch, BzrBranch):
+                    parent = wk.branch.get_parent()
+                    if parent is None:
+                        parent = wk.branch.get_bound_location()
+                else:
+                    parent = wk.branch.bzrdir.root_transport.base
+                to_remove = 'bzr+ssh://bazaar.launchpad.net/'
+                if parent and parent.startswith(to_remove):
+                    parent = parent.replace(to_remove,'lp:')
+                    if parent[-1] == '/':
+                        parent = parent[0:-1]
+                    remove_bis = '%2Bbranch/'
+                    if parent.startswith('lp:'+remove_bis):
+                        parent = parent.replace(remove_bis, '')
+                    self.set_ini(module, parent)
+            if not self.get_ini('%s-revno'%(module, )):
+                newrevno = self.runbot.get_revno_from_path(project_path)
+                self.set_ini('%s-revno'%(module, ), newrevno)
+            else:
+                newrevno = self.get_ini('%s-revno'%(module, ))
+                first = False
+
+        self.revno[module] = newrevno
+        return first
+
 
 class RunBot(object):
     def __init__(self, wd, server_port, nginx_port, domain, init, smtp_host):
@@ -405,7 +517,7 @@ class RunBot(object):
         for folder in allsubdirs:
             rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
             if init and rbb.get_bool_ini('start',True):
-                self.init_folder(rbb)
+                rbb.init_folder()
 
     def get_revno_from_path(self, path, full=False):
         log("Get revno %s"%(path,))
@@ -628,8 +740,6 @@ class RunBot(object):
             if os.path.isdir(os.path.join(dir, name)) and not name.startswith('.')]
 
     def process_instances(self):
-        log("runbot-folder")
-
         ''' 
         Get the sub folders and build a list of instances to be run 
         '''
@@ -650,89 +760,6 @@ class RunBot(object):
                 rbb.start()
             
         self.nginx_udpate()
-
-        
-    def init_folder(self, rbb):
-
-        ''' To do the following things if not exist
-            - create the logs folder for storing log files
-            - create soft-link to: unifield-server, unifield-addons, unifield-web if not exist (in case no change has been made)
-        '''
-        
-        logs_dir = os.path.join(rbb.instance_path, "logs")
-        if not os.path.exists(logs_dir):
-            os.mkdir(logs_dir)
-
-        # copy the unifield-server project from 'common' folder if not existed
-        self.create_module(rbb, "unifield-server")
-        self.create_module(rbb, "unifield-web")
-        # copy the folder 'etc' from 'common' folder, then fill the instance path
-        self.process_folder_etc(rbb)
-
-        # create softlinks for these 3 projects if not existed
-        self.create_module(rbb, "unifield-addons")
-        self.create_module(rbb, "unifield-wm")
-        self.create_module(rbb, "unifield-data")
-
-
-    def process_folder_etc(self, rbb):
-        # delete and recopy the folder "etc"
-        project_path = rbb.etc_path
-        #run(["rm","-r", project_path]) # delete first
-        
-        if not os.path.exists(os.path.join(project_path)):
-            run(["cp","-r", self.common_etc, rbb.instance_path])
-        
-            # replace the UF_ADDONS_PATH with the modules path of the current instance 
-            config_file = os.path.join(project_path, 'openerprc')
-            for line in fileinput.FileInput(config_file, inplace=1):
-                line = line.replace("UF_ADDONS_PATH", rbb.instance_path)
-                line = line.replace("UF_INSTANCE", rbb.name)
-                line = line.replace("PIDFILE", rbb.file_pidserver+'_')
-                sys.stdout.write(line)
-
-    def create_module(self, rbb, module):
-        project_path = os.path.join(rbb.instance_path, module)
-        common_project_path = os.path.join(self.common_path, module)
-        source_module = rbb.get_ini(module)
-        if not os.path.exists(project_path):
-            if not source_module or source_module == 'link':
-                log('Link module %s'%(module, ))
-                run(["ln","-s", common_project_path, project_path])
-            else:
-                directory = LaunchpadDirectory()
-                d = directory._resolve(source_module)
-                log('bzr checkout %s'%(d, ))
-                br = Branch.open(d)
-
-                # for symlink
-                common_project_path = os.path.realpath(common_project_path)
-                orig = WorkingTree.open(common_project_path)
-                br.create_checkout(project_path, lightweight=module!='unifield-wm', accelerator_tree=orig)
-                br.repository._client._medium.disconnect()
-            
-            newrevno = self.get_revno_from_path(project_path)
-            rbb.set_ini('%s-revno'%(module, ), newrevno)
-        else:
-            if source_module == 'link' and not os.path.islink(project_path):
-                wk = WorkingTree.open(project_path)
-                if isinstance(wk.branch, BzrBranch):
-                    parent = wk.branch.get_parent()
-                else:
-                    parent = wk.branch.bzrdir.root_transport.base
-                to_remove = 'bzr+ssh://bazaar.launchpad.net/'
-                if parent and parent.startswith(to_remove):
-                    parent = parent.replace(to_remove,'lp:')
-                    if parent[-1] == '/':
-                        parent = parent[0:-1]
-                    rbb.set_ini(module, parent)
-            if not rbb.get_ini('%s-revno'%(module, )):
-                newrevno = self.get_revno_from_path(project_path)
-                rbb.set_ini('%s-revno'%(module, ), newrevno)
-            else:
-                newrevno = rbb.get_ini('%s-revno'%(module, ))
-
-        rbb.revno[module] = newrevno
 
 def skel(o, r):
     invalid_character = ['-']
@@ -773,7 +800,7 @@ def skel(o, r):
         if o.start:
             outf.close()
             rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance))
-            r.init_folder(rbb)
+            rbb.init_folder()
             r.process_instances() 
         else:
             outf.write("start = 0")
@@ -823,24 +850,8 @@ def restart(o, r):
         run_inst(o, r)
 
 def get_uf(o, r):
-    remote = Branch.open(os.path.join(r.common_path, 'unifield-wm'))
     for rbb in r.uf_instances.values():
-        wm_path = os.path.join(rbb.instance_path, 'unifield-wm')
-        if os.path.islink(wm_path) or not os.path.isdir(wm_path):
-            continue
-        wk = Branch.open(wm_path)
-        all_uf = {}
-        for miss in missing.find_unmerged(wk, remote, restrict='local', include_merges=True)[0]:
-                for m in re.finditer("([0-9]{3,})", wk.repository.get_revision(miss[1]).message.encode('utf-8')):
-                    all_uf[m.group(1)] = True
-        detected_uf = sorted(all_uf.keys())
-        jira_id = rbb.get_ini('jira-id')
-        conf_uf = []
-        if jira_id:
-            conf_uf = sorted(jira_id.split(','))
-        log("Set detected-uf %s: %s"%(rbb.instance_path, ','.join(detected_uf)))
-        rbb.set_ini('detected-uf', ','.join(detected_uf))
-        rbb.write_ini()
+        rbb.get_uf_from_log()
 
 
 def jira_state(o, r):
