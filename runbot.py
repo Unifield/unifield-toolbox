@@ -132,15 +132,7 @@ class RunBotBranch(object):
             self.ini.add_section('global')
         self.detected_uf = []
         self.committer = {}
-        ini_uf = self.get_ini('detected-uf') and self.get_ini('detected-uf').split(',') or []
-        for i in ini_uf:
-            comm = False
-            if ':' in i:
-                uf, comm = i.split(':')
-            else:
-                uf = i
-            self.detected_uf.append(uf)
-            self.committer[uf] = comm
+        self.update_uf()
 
     def get_uf_from_log(self):
         remote = Branch.open(os.path.join(self.runbot.common_path, 'unifield-wm'))
@@ -159,6 +151,18 @@ class RunBotBranch(object):
         log("Set detected-uf %s: %s"%(self.instance_path, ','.join(detected_uf)))
         self.set_ini('detected-uf', ','.join(detected_uf))
         self.write_ini()
+        self.update_uf()
+        
+    def update_uf(self):
+        ini_uf = self.get_ini('detected-uf') and self.get_ini('detected-uf').split(',') or []
+        for i in ini_uf:
+            comm = False
+            if ':' in i:
+                uf, comm = i.split(':')
+            else:
+                uf = i
+            self.detected_uf.append(uf)
+            self.committer[uf] = comm
 
     def get_revno(self, module):
         return self.runbot.get_revno_from_path(os.path.join(self.instance_path,module))
