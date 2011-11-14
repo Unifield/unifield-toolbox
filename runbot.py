@@ -707,7 +707,7 @@ class RunBot(object):
              % endif
 	<tr>
             <td colspan="3" class="comment">
-            % for br in ['wm', 'data', 'server', 'web']:
+            % for br in ['wm', 'data', 'server', 'web', 'addons']:
                 % if i.get_ini('unifield-%s'%(br, )) != 'link':
                          ${br}:<a href="${r.bzr_url}${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}">${i.get_ini('unifield-%s'%(br, )).split(':')[-1].split('/')[-1]}</a>@<a href="https://bazaar.launchpad.net/${i.get_ini('unifield-%s'%(br, )).split(':')[-1]}/changes">${i.get_int_ini('unifield-%s-revno'%(br,))}</a> |
                 % elif br != 'data' and i.get_int_ini('unifield-%s-revno'%(br, )) != r.revno[br]['revno']:
