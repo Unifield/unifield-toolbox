@@ -104,6 +104,9 @@ class RunBotBranch(object):
             'qt': 'qt@tempo-consulting.fr',
             'dv': 'Duy.VO@geneva.msf.org',
         }
+        self.committer_alias = {
+            'chloups208 <chloups208@chloups208-laptop>': 'P',
+        }
         self.server_path=os.path.join(self.instance_path,"unifield-server")
         self.server_bin_path=os.path.join(self.server_path,"openerp-server.py")
         if not os.path.exists(self.server_bin_path): # for 6.0 branches
@@ -127,6 +130,17 @@ class RunBotBranch(object):
         self.ini.read(self.configfile)
         if not self.ini.has_section('global'):
             self.ini.add_section('global')
+        self.detected_uf = []
+        self.committer = {}
+        ini_uf = self.get_ini('detected-uf') or ""
+        for i in ini_uf.split(','):
+            comm = False
+            if ':' in i:
+                uf, comm = i.split(':')
+            else:
+                uf = i
+            self.detected_uf.append(uf)
+            self.committer[uf] = comm
 
     def get_uf_from_log(self):
         remote = Branch.open(os.path.join(self.runbot.common_path, 'unifield-wm'))
@@ -136,10 +150,12 @@ class RunBotBranch(object):
         wk = Branch.open(wm_path)
         all_uf = {}
         for miss in missing.find_unmerged(wk, remote, restrict='local', include_merges=True)[0]:
-            for m in re.finditer("([0-9]{3,})", wk.repository.get_revision(miss[1]).message.encode('utf-8')):
-                all_uf[m.group(1)] = True
-        detected_uf = sorted(all_uf.keys())
-        conf_uf = []
+            rev = wk.repository.get_revision(miss[1])
+            for m in re.finditer("([0-9]{3,})", rev.message.encode('utf-8')):
+                all_uf[m.group(1)] = self.committer_alias.get(rev.committer, rev.committer)[0]
+        detected_uf = []
+        for uf in sorted(all_uf.keys()):
+            detected_uf.append("%s:%s"%(uf, all_uf[uf]))
         log("Set detected-uf %s: %s"%(self.instance_path, ','.join(detected_uf)))
         self.set_ini('detected-uf', ','.join(detected_uf))
         self.write_ini()
@@ -666,7 +682,7 @@ class RunBot(object):
              % endif
              <% 
                 jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
-                detected_uf = i.get_ini('detected-uf') and i.get_ini('detected-uf').split(',') or []
+                detected_uf = i.detected_uf
              %>
              % if jira_id or detected_uf:
                     <tr>
@@ -676,7 +692,11 @@ class RunBot(object):
                             <% 
                               color = jid in jira_id and jid not in detected_uf and 'black' or jid not in jira_id and jid in detected_uf and 'red' or 'blue'
                             %>
-                            <a style="color:${color}" href="${r.jira_url}${jid}">UF-${jid}</a><img src="${r.icon_jira_dir}/${jid}.gif" />  | 
+                            <a style="color:${color}" href="${r.jira_url}${jid}">UF-${jid}</a>
+                            % if jid in i.committer:
+                                <span style="font-size:7px">${i.committer[jid]}</span>
+                            % endif
+                            <img src="${r.icon_jira_dir}/${jid}.gif" />  | 
                         % endfor
                         </td>
                     </tr>
@@ -882,7 +902,7 @@ def jira_state(o, r):
     jira_seen = []
     for rbb in r.uf_instances.values():
         all_uf = (rbb.get_ini('jira-id') or "").split(',')
-        all_uf += (rbb.get_ini('detected-uf') or "").split(',')
+        all_uf += rbb.detected_uf
         for uf in all_uf:
             if uf in jira_seen:
                 continue
