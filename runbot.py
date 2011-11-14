@@ -132,8 +132,8 @@ class RunBotBranch(object):
             self.ini.add_section('global')
         self.detected_uf = []
         self.committer = {}
-        ini_uf = self.get_ini('detected-uf') or ""
-        for i in ini_uf.split(','):
+        ini_uf = self.get_ini('detected-uf') and self.get_ini('detected-uf').split(',') or []
+        for i in ini_uf:
             comm = False
             if ':' in i:
                 uf, comm = i.split(':')
