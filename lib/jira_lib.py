@@ -3,7 +3,7 @@
 import httplib2
 import urllib
 import json
-
+import re
 class Jira():
     jira_url = False
     headers = {'Content-Type' : 'application/json'}    
@@ -29,4 +29,9 @@ class Jira():
         resp, content = self.cnx.request("%srest/api/latest/issue/%s"%(self.jira_url, key),
                 "GET", headers=self.headers)
         issue = json.loads(content)
-        return issue.get('fields', {}).get('status', {}).get('value', {}).get('name')
+        runbot = issue.get('fields', {}).get('customfield_10050', {}).get('value', "")
+        m = re.match('(http://)?(\w+)',runbot)
+        declared_runbot = False
+        if m:
+            declared_runbot = m.group(2)
+        return (issue.get('fields', {}).get('status', {}).get('value', {}).get('name'), declared_runbot)

@@ -542,7 +542,8 @@ class RunBot(object):
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
         self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif'}
-        self.icon_jira_dir = 'Jira'
+        self.icon_jira_dir = 'JiraStatic'
+        self.icon_jira_dir_link = 'Jira'
 
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
@@ -702,7 +703,7 @@ class RunBot(object):
                             % if jid in i.committer:
                                 <span style="font-size:7px">${i.committer[jid]}</span>
                             % endif
-                            <img src="${r.icon_jira_dir}/${jid}.gif" />  | 
+                            <img src="${r.icon_jira_dir_link}/${jid}.gif" /><img src="${r.icon_jira_dir_link}/${jid}-${i.subdomain}.png" alt="" width="8" />  | 
                         % endfor
                         </td>
                     </tr>
@@ -735,8 +736,9 @@ class RunBot(object):
         </div>
         <div class="comment">
         % for ic in set(r.state_icon.values()):
-            <img  src="${r.icon_jira_dir}/${ic}">: ${','.join([x[0] for x in r.state_icon.items() if x[1] == ic])}
+            <img  src="${r.icon_jira_dir}/${ic}" />: ${','.join([x[0] for x in r.state_icon.items() if x[1] == ic])}
         % endfor
+        <img src="${r.icon_jira_dir}/certified.png" width="8"/>: Runbot instance in Jira
         <br />
         (to update the status run: <i>./runbot jira --jira-user user</i>)
         <div><span style="color:red">Red: UF number found in commit messages</span>, <span style="color:black">Black: UF number not found in commit</span></div>
@@ -905,6 +907,14 @@ def jira_state(o, r):
     passwd = getpass.getpass('Jira Password : ')
     jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
     icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
+    icon_path_link = os.path.join(r.nginx_path, r.icon_jira_dir_link)
+
+    # delete symlink
+    for mlink in os.listdir(icon_path_link):
+        l = os.path.join(icon_path_link, mlink)
+        if os.path.islink(l):
+            os.remove(l)
+
     jira_seen = []
     for rbb in r.uf_instances.values():
         all_uf = (rbb.get_ini('jira-id') or "").split(',')
@@ -912,10 +922,13 @@ def jira_state(o, r):
         for uf in all_uf:
             if uf in jira_seen:
                 continue
-            dest = os.path.join(icon_path, '%s.gif'%(uf, ))
+            dest = os.path.join(icon_path_link, '%s.gif'%(uf, ))
             os.path.exists(dest) and os.remove(dest)
-            state = jira.get_state('UF-%s'%uf)
+            state, declared_runbot = jira.get_state('UF-%s'%uf)
             icon = os.path.join(icon_path, r.state_icon.get(state, 'nok.gif'))
+            if declared_runbot:
+                icon_declared_link = os.path.join(icon_path_link, "%s-%s.png"%(uf, declared_runbot.lower()))
+                os.symlink(os.path.join(icon_path, 'certified.png'), icon_declared_link)
             os.symlink(icon, dest)
             jira_seen.append(uf)
     
