@@ -294,8 +294,10 @@ class RunBotBranch(object):
         if self.runbot.smtp_host and dest:
             if err:
                 data ="Unable to initialize %s.\n\n%s\n\n"%(self.name, msg)
+                subj = "[KO]"
             else:
                 data ="Your instance is ready: http://%s.%s\n%s\n\n"%(self.subdomain, self.runbot.domain, msg)
+                subj = "[OK]"
 
             new_dest = []
             for d in dest.split(','):
@@ -304,7 +306,7 @@ class RunBotBranch(object):
             data += "http://%s"%(self.runbot.domain, )
             msg = MIMEText(data)
 
-            msg['Subject'] = 'Runbot %s'%(self.name, )
+            msg['Subject'] = '%s Runbot %s'%(subj, self.name, )
             msg['To'] = ','.join(new_dest)
             msg['From'] = 'noreply@%s'%(self.runbot.domain, )
 
