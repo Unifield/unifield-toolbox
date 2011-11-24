@@ -30,7 +30,7 @@ class Jira():
                 "GET", headers=self.headers)
         issue = json.loads(content)
         runbot = issue.get('fields', {}).get('customfield_10050', {}).get('value', "")
-        m = re.match('(http://)?(\w+)',runbot)
+        m = re.match('\s*(http://)?(\w+)',runbot)
         declared_runbot = False
         if m:
             declared_runbot = m.group(2)

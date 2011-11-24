@@ -143,7 +143,7 @@ class RunBotBranch(object):
         all_uf = {}
         for miss in missing.find_unmerged(wk, remote, restrict='local', include_merges=True)[0]:
             rev = wk.repository.get_revision(miss[1])
-            for m in re.finditer("([0-9]{3,})", rev.message.encode('utf-8')):
+            for m in re.finditer("UF-([0-9]{3,})", rev.message.encode('utf-8'), re.I):
                 all_uf[m.group(1)] = self.committer_alias.get(rev.committer, rev.committer)[0]
         detected_uf = []
         for uf in sorted(all_uf.keys()):
@@ -541,7 +541,7 @@ class RunBot(object):
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
-        self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif'}
+        self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif', 'Open': 'reop.gif'}
         self.icon_jira_dir = 'JiraStatic'
         self.icon_jira_dir_link = 'Jira'
 
@@ -703,7 +703,7 @@ class RunBot(object):
                             % if jid in i.committer:
                                 <span style="font-size:7px">${i.committer[jid]}</span>
                             % endif
-                            <img src="${r.icon_jira_dir_link}/${jid}.gif" /><img src="${r.icon_jira_dir_link}/${jid}-${i.subdomain}.png" alt="" width="8" />  | 
+                            <img src="${r.icon_jira_dir_link}/${jid}.gif" /><img src="${r.icon_jira_dir_link}/${jid}-${i.subdomain.lower()}.png" alt="" width="8" />  | 
                         % endfor
                         </td>
                     </tr>
