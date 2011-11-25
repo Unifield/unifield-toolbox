@@ -72,7 +72,7 @@ def underscorize(n):
 #----------------------------------------------------------
 
 class RunBotBranch(object):
-    def __init__(self,runbot, subfolder):
+    def __init__(self,runbot, subfolder, jira_url=False, jira_user=False, jira_passwd=False, noupdate_jira=True):
         self.runbot=runbot
         self.running=False
         self.running_port=None
@@ -83,7 +83,10 @@ class RunBotBranch(object):
         self.revision_count=0
         self.merge_count=0
         self.revno = {}
-
+        self.jira_url = jira_url
+        self.jira_user = jira_user
+        self.jira_passwd = jira_passwd
+        self.noupdate_jira = noupdate_jira
         self.name = subfolder
         self.unique_name = subfolder
         self.project_name = subfolder
@@ -281,9 +284,23 @@ class RunBotBranch(object):
                     log('init', self.name, str(e))
                     sys.exit(1)
                 self._symlink_nginx_icon('ok')
+                
+                jira_failed = False
+                if self.jira_url and self.jira_user and self.jira_passwd and self.get_ini('jira-id'):
+                    try:
+                        sjira = jira_lib.Jira_Soap(self.jira_url, self.jira_user, self.jira_passwd)
+                        for jid in self.get_ini('jira-id').split(','):
+                            if self.noupdate_jira:
+                                sjira.write_runbot('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
+                            else:
+                                sjira.click_deploy('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
+                    except:
+                        jira_failed = True
+                        msg += "\nJIRA NOT UPDATED"
+                
                 if self.get_ini('comment'):
                     msg += "\n\n%s"%(self.get_ini('comment'), )
-                self._email(msg)
+                self._email(msg, jira_failed)
                 sys.exit(1)
             self.set_ini('data_already_loaded', '1')
         else:
@@ -848,7 +865,7 @@ def skel(o, r):
         inf.close()
         if o.start:
             outf.close()
-            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance))
+            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=o.jira_url, jira_user=o.jira_user, jira_passwd=o.passwd, noupdate_jira=o.no_update))
             rbb.init_folder()
             r.process_instances() 
         else:
@@ -901,6 +918,30 @@ def restart(o, r):
 def get_uf(o, r):
     for rbb in r.uf_instances.values():
         rbb.get_uf_from_log()
+
+
+def deploy(o, r):
+    uf_numbers = o.number.split(',')
+    instance = '%s_uf_%s'%(o.jira_user[0:3], '_'.join(uf_numbers))
+    if instance in r.uf_instances:
+        sys.stderr.write("Error: %s exixts!\n"%instance)
+        sys.exit(1)
+
+    passwd = getpass.getpass('Jira Password : ')
+    jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
+    o.passwd = passwd
+    ret = jira.get_branches('UF-%s'%o.number.split(',')[0])
+    o.start = 1
+    o.instance = instance
+    o.unit = False
+    o.email = ret.get('email')
+    o.comment = ret.get('comment')
+    for custom in ['web', 'wm', 'addons', 'server']:
+        if ret[custom]:
+            sys.stderr.write("%s-branch: %s\n"%(custom, ret[custom],))
+        setattr(o, 'unifield_%s'%custom, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
+    o.jira_id= o.number
+    skel(o, r)
 
 
 def jira_state(o, r):
@@ -995,6 +1036,15 @@ def main():
     skel_parser.add_argument('--email', '-m')
     skel_parser.add_argument('--jira-id', '-j', help='List of jira-id (without UF-)')
     skel_parser.set_defaults(func=skel)
+    
+    deploy_parser = subparsers.add_parser('deploy', help='Deploy an issue')
+    deploy_parser.add_argument('number', action='store', help='UF Numbers separated by comma  (without the string UF-)\nThe first id will be used to retrieve launchpad url')
+    deploy_parser.add_argument('--jira-user', '-u', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
+    deploy_parser.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
+    deploy_parser.add_argument('--no-update', '-n', action='store_true', default=False, help='DO NOT update Jira')
+    deploy_parser.set_defaults(func=deploy)
+
+
     
     delete_parser = subparsers.add_parser('delete', help='delete an instance')
     delete_parser.add_argument('instance', action='store', help='instance')

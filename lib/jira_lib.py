@@ -4,9 +4,13 @@ import httplib2
 import urllib
 import json
 import re
+import SOAPpy
+import SOAPpy.Types
+
 class Jira():
     jira_url = False
-    headers = {'Content-Type' : 'application/json'}    
+    headers = {'Content-Type' : 'application/json'}
+    custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062'}
     def __init__(self, jira_url, username, password):
         self.jira_url = jira_url
 
@@ -25,13 +29,47 @@ class Jira():
     def __del__(self):
         self.cnx.request(self.auth_url, 'DELETE', headers=self.headers )
 
-    def get_state(self, key):
+    def get_info(self, key):
         resp, content = self.cnx.request("%srest/api/latest/issue/%s"%(self.jira_url, key),
                 "GET", headers=self.headers)
-        issue = json.loads(content)
+        return json.loads(content)
+
+    def get_state(self, key):
+        issue = self.get_info(key)
         runbot = issue.get('fields', {}).get('customfield_10050', {}).get('value', "")
         m = re.match('\s*(http://)?(\w+)',runbot)
         declared_runbot = False
         if m:
             declared_runbot = m.group(2)
         return (issue.get('fields', {}).get('status', {}).get('value', {}).get('name'), declared_runbot)
+
+    def get_user_mail(self, user):
+        if not user:
+            return False
+        resp, content = self.cnx.request("%srest/api/latest/user?username=%s"%(self.jira_url, user),
+                "GET", headers=self.headers)
+        ret = json.loads(content)
+        return ret.get('emailAddress', False)
+
+    def get_branches(self, key):
+        issue = self.get_info(key)
+        ret = {}
+        for t in self.custom:
+            ret[t] = issue.get('fields', {}).get(self.custom[t], {}).get('value', False)
+        ret['comment'] = issue.get('fields', {}).get('summary', {}).get('value', False)
+        user = issue.get('fields', {}).get('assignee', {}).get('value', {}).get('name', False)
+        ret['email'] = self.get_user_mail(user)
+        return ret
+
+class Jira_Soap():
+
+    def __init__(self, jira_url, username, password):
+        self.soap = SOAPpy.WSDL.Proxy(jira_url+'rpc/soap/jirasoapservice-v2?wsdl')
+        self.auth = self.soap.login(username, password)
+
+    def write_runbot(self, key, runbot_url):
+        self.soap.updateIssue(self.auth, key, [{'id': 'customfield_10050', 'values': runbot_url}])
+
+    def click_deploy(self, key, runbot_url):
+        self.write_runbot(key, runbot_url)
+        self.soap.progressWorkflowAction(self.auth, key, '711', [])
