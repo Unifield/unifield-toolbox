@@ -937,6 +937,8 @@ def deploy(o, r):
     o.email = ret.get('email')
     o.comment = ret.get('comment')
     for custom in ['web', 'wm', 'addons', 'server']:
+        if custom == 'wm' and ret['groupedwm']:
+            custom = 'groupedwm'
         if ret[custom]:
             sys.stderr.write("%s-branch: %s\n"%(custom, ret[custom],))
         setattr(o, 'unifield_%s'%custom, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))

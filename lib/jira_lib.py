@@ -10,7 +10,7 @@ import SOAPpy.Types
 class Jira():
     jira_url = False
     headers = {'Content-Type' : 'application/json'}
-    custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062'}
+    custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065'}
     def __init__(self, jira_url, username, password):
         self.jira_url = jira_url
 
