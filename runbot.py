@@ -942,7 +942,17 @@ def deploy(o, r):
         if ret[custom]:
             sys.stderr.write("%s-branch: %s\n"%(custom, ret[custom],))
         setattr(o, 'unifield_%s'%custom, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
+    sys.stderr.write("email: %s\n"%(o.email, ))
+    sys.stderr.write("Jira status %s updated\n"%(o.no_update and "NOT" or "",))
     o.jira_id= o.number
+    while True:
+        sys.stderr.write("Do you want to continue ? [Y/n] ")
+        ans = raw_input()
+        if ans in ['Y','y', '']:
+            break
+        if ans in ['n','N']:
+            sys.stderr.write("Abort.\n")
+            sys.exit(1)
     skel(o, r)
 
 
