@@ -865,7 +865,7 @@ def skel(o, r):
         inf.close()
         if o.start:
             outf.close()
-            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=o.jira_url, jira_user=o.jira_user, jira_passwd=o.passwd, noupdate_jira=o.no_update))
+            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'passwd', False), noupdate_jira=getattr(o, 'no_update', False)))
             rbb.init_folder()
             r.process_instances() 
         else:
