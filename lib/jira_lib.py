@@ -10,7 +10,7 @@ import SOAPpy.Types
 class Jira():
     jira_url = False
     headers = {'Content-Type' : 'application/json'}
-    custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065'}
+    custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050'}
     def __init__(self, jira_url, username, password):
         self.jira_url = jira_url
 
@@ -36,7 +36,7 @@ class Jira():
 
     def get_state(self, key):
         issue = self.get_info(key)
-        runbot = issue.get('fields', {}).get('customfield_10050', {}).get('value', "")
+        runbot = issue.get('fields', {}).get(self.custom['runbot_url'], {}).get('value', "")
         m = re.match('\s*(http://)?(\w+)',runbot)
         declared_runbot = False
         if m:
@@ -54,10 +54,12 @@ class Jira():
     def get_branches(self, key):
         issue = self.get_info(key)
         ret = {}
-        for t in self.custom:
+        for t in ['web', 'wm', 'addons', 'server', 'groupedwm']:
             ret[t] = issue.get('fields', {}).get(self.custom[t], {}).get('value', False)
         ret['comment'] = issue.get('fields', {}).get('summary', {}).get('value', False)
-        user = issue.get('fields', {}).get('assignee', {}).get('value', {}).get('name', False)
+        user = issue.get('fields', {}).get(self.custom['developer'], {}).get('value', False)
+        if not user:
+            user = issue.get('fields', {}).get('assignee', {}).get('value', {}).get('name', False)
         ret['email'] = self.get_user_mail(user)
         return ret
 
@@ -68,7 +70,7 @@ class Jira_Soap():
         self.auth = self.soap.login(username, password)
 
     def write_runbot(self, key, runbot_url):
-        self.soap.updateIssue(self.auth, key, [{'id': 'customfield_10050', 'values': runbot_url}])
+        self.soap.updateIssue(self.auth, key, [{'id': self.custom['runbot_url'], 'values': runbot_url}])
 
     def click_deploy(self, key, runbot_url):
         self.write_runbot(key, runbot_url)
