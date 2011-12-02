@@ -938,11 +938,12 @@ def deploy(o, r):
     o.email = ret.get('email')
     o.comment = ret.get('comment')
     for custom in ['web', 'wm', 'addons', 'server']:
+        branch = custom
         if custom == 'wm' and ret['groupedwm']:
             custom = 'groupedwm'
         if ret[custom]:
-            sys.stderr.write("%s-branch: %s\n"%(custom, ret[custom],))
-        setattr(o, 'unifield_%s'%custom, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
+            sys.stderr.write("%s-branch: %s\n"%(branch, ret[custom],))
+        setattr(o, 'unifield_%s'%branch, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
     sys.stderr.write("email: %s\n"%(o.email, ))
     sys.stderr.write("Jira workflow %s updated\n"%(o.no_update and "NOT" or "",))
     sys.stderr.write("Jira Runbot %s updated\n"%(o.no_url and "NOT" or "",))
