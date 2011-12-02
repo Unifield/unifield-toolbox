@@ -937,7 +937,6 @@ def deploy(o, r):
     o.unit = False
     o.email = ret.get('email')
     o.comment = ret.get('comment')
-    sys.exit(1)
     for custom in ['web', 'wm', 'addons', 'server']:
         branch = custom
         if custom == 'wm' and ret['groupedwm']:

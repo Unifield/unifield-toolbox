@@ -57,7 +57,7 @@ class Jira():
         for t in ['web', 'wm', 'addons', 'server', 'groupedwm']:
             ret[t] = issue.get('fields', {}).get(self.custom[t], {}).get('value', False)
         ret['comment'] = issue.get('fields', {}).get('summary', {}).get('value', False)
-        user = issue.get('fields', {}).get(self.custom['developer'], {}).get('value', False)
+        user = issue.get('fields', {}).get(self.custom['developer'], {}).get('value', {}).get('name', False)
         if not user:
             user = issue.get('fields', {}).get('assignee', {}).get('value', {}).get('name', False)
         ret['email'] = self.get_user_mail(user)
