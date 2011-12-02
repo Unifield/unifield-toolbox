@@ -1007,14 +1007,15 @@ def del_inst(o, r):
         run_inst(o, r)
 
 def main():
-
+    sys.stderr.write("GET OUT !! SYSTEM IN MAINTENANCE")
+    sys.exit(1)
     os.chdir(os.path.normpath(os.path.dirname(__file__)))
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--runbot-dir", metavar="DIR", default=".", help="runbot working dir (default: %(default)s)")
     parser.add_argument("--runbot-port", metavar="PORT", default=9200, help="starting port for servers (default: %(default)s)")
     parser.add_argument("--runbot-nginx-port", metavar="PORT", default=9100, help="starting port for nginx server (default: %(default)s)")
-    parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.test.unifield.org", help="virtual host domain (default: %(default)s)")
+    parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.uf3.unifield.org", help="virtual host domain (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", default=False, help="print debug on stdout (default: %(default)s)")
     parser.add_argument("--smtp-host", metavar="HOST", default='localhost', help="smtp server (default: %(default)s)")
     subparsers = parser.add_subparsers(dest='command')
