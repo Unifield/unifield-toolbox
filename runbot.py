@@ -72,7 +72,7 @@ def underscorize(n):
 #----------------------------------------------------------
 
 class RunBotBranch(object):
-    def __init__(self,runbot, subfolder, jira_url=False, jira_user=False, jira_passwd=False, noupdate_jira=True):
+    def __init__(self,runbot, subfolder, jira_url=False, jira_user=False, jira_passwd=False, noupdate_jira=True, nourl_jira=True):
         self.runbot=runbot
         self.running=False
         self.running_port=None
@@ -87,6 +87,7 @@ class RunBotBranch(object):
         self.jira_user = jira_user
         self.jira_passwd = jira_passwd
         self.noupdate_jira = noupdate_jira
+        self.nourl_jira = nourl_jira
         self.name = subfolder
         self.unique_name = subfolder
         self.project_name = subfolder
@@ -290,7 +291,7 @@ class RunBotBranch(object):
                     try:
                         sjira = jira_lib.Jira_Soap(self.jira_url, self.jira_user, self.jira_passwd)
                         for jid in self.get_ini('jira-id').split(','):
-                            if self.noupdate_jira:
+                            if self.noupdate_jira and not self.nourl_jira:
                                 sjira.write_runbot('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
                             else:
                                 sjira.click_deploy('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
@@ -865,7 +866,7 @@ def skel(o, r):
         inf.close()
         if o.start:
             outf.close()
-            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'passwd', False), noupdate_jira=getattr(o, 'no_update', False)))
+            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'passwd', False), noupdate_jira=getattr(o, 'no_update', False), nourl_jira=getattr(o, 'no_url', False)))
             rbb.init_folder()
             r.process_instances() 
         else:
@@ -943,7 +944,8 @@ def deploy(o, r):
             sys.stderr.write("%s-branch: %s\n"%(custom, ret[custom],))
         setattr(o, 'unifield_%s'%custom, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
     sys.stderr.write("email: %s\n"%(o.email, ))
-    sys.stderr.write("Jira status %s updated\n"%(o.no_update and "NOT" or "",))
+    sys.stderr.write("Jira workflow %s updated\n"%(o.no_update and "NOT" or "",))
+    sys.stderr.write("Jira Runbot %s updated\n"%(o.no_url and "NOT" or "",))
     o.jira_id= o.number
     while True:
         sys.stderr.write("Do you want to continue ? [Y/n] ")
@@ -1053,7 +1055,8 @@ def main():
     deploy_parser.add_argument('number', action='store', help='UF Numbers separated by comma  (without the string UF-)\nThe first id will be used to retrieve launchpad url')
     deploy_parser.add_argument('--jira-user', '-u', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     deploy_parser.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
-    deploy_parser.add_argument('--no-update', '-n', action='store_true', default=False, help='DO NOT update Jira')
+    deploy_parser.add_argument('--no-update', '-nw', action='store_true', default=False, help='DO NOT update Jira Workflow')
+    deploy_parser.add_argument('--no-url', '-nu', action='store_true', default=False, help='DO NOT update Jira Runbot URL')
     deploy_parser.set_defaults(func=deploy)
 
 
