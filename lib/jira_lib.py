@@ -73,5 +73,4 @@ class Jira_Soap():
         self.soap.updateIssue(self.auth, key, [{'id': self.custom['runbot_url'], 'values': runbot_url}])
 
     def click_deploy(self, key, runbot_url):
-        self.write_runbot(key, runbot_url)
         self.soap.progressWorkflowAction(self.auth, key, '711', [])

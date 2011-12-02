@@ -287,13 +287,13 @@ class RunBotBranch(object):
                 self._symlink_nginx_icon('ok')
                 
                 jira_failed = False
-                if self.jira_url and self.jira_user and self.jira_passwd and self.get_ini('jira-id'):
+                if self.jira_url and self.jira_user and self.jira_passwd and self.get_ini('jira-id') and (not self.nourl_jira or not self.noupdate_jira):
                     try:
                         sjira = jira_lib.Jira_Soap(self.jira_url, self.jira_user, self.jira_passwd)
                         for jid in self.get_ini('jira-id').split(','):
-                            if self.noupdate_jira and not self.nourl_jira:
+                            if not self.nourl_jira:
                                 sjira.write_runbot('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
-                            else:
+                            if not self.noupdate_jira:
                                 sjira.click_deploy('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
                     except:
                         jira_failed = True
