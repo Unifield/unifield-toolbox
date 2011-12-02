@@ -406,6 +406,17 @@ company.url = ''
                     init_rev = self.get_int_ini('%s-revno'%(module, ))
                     new_rev = self.get_revno(module)
                     if init_rev != new_rev:
+#                        log("remove %s, old revno: %s"%(m_path, init_rev))
+#                        os.remove(m_path)
+#                        directory = LaunchpadDirectory()
+#                        d = directory._resolve('lp:%s'%module)
+#                        br = Branch.open(d)
+#                        revid=br.get_rev_id(init_rev)
+#                        orig = WorkingTree.open(os.path.join(self.runbot.common_path, module))
+#                        br.create_checkout(m_path, revision_id=revid,lightweight=module!='unifield-wm', accelerator_tree=orig)
+#                        br.repository._client._medium.disconnect()
+                        
+                        
                         sys.stderr.write("Instance %s, module %s: revno (%s) has changed since the last start (%s).\n\tDelete %s-revno in %s\n\tor replace the link by: bzr checkout lp:%s -r %s\n"%
                             (self.name, module, new_rev, init_rev, module, self.configfile, module, init_rev));
                         version = False
@@ -654,7 +665,7 @@ class RunBot(object):
         </head>
         <body id="indexfile">
         <div id="header">
-            <div class="content"><h1>UniField Manual Runbot</h1> </div>
+            <div class="content"><h1>UniField Manual Runbot (on uf0003)</h1> </div>
         </div>
         <div id="index">
         <table class="index">
@@ -1007,8 +1018,6 @@ def del_inst(o, r):
         run_inst(o, r)
 
 def main():
-    sys.stderr.write("GET OUT !! SYSTEM IN MAINTENANCE")
-    sys.exit(1)
     os.chdir(os.path.normpath(os.path.dirname(__file__)))
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -1018,6 +1027,7 @@ def main():
     parser.add_argument("--runbot-nginx-domain", metavar="DOMAIN", default="runbot.uf3.unifield.org", help="virtual host domain (default: %(default)s)")
     parser.add_argument("--debug", action="store_true", default=False, help="print debug on stdout (default: %(default)s)")
     parser.add_argument("--smtp-host", metavar="HOST", default='localhost', help="smtp server (default: %(default)s)")
+#    parser.add_argument("--checkout", "-co", action="store_true", default=False, help="checkout if link to common is newer (default: %(default)s)")
     subparsers = parser.add_subparsers(dest='command')
     run_parser = subparsers.add_parser('run', help='start/init new instances')
     run_parser.set_defaults(func=run_inst)
