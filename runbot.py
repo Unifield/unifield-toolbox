@@ -302,9 +302,9 @@ class RunBotBranch(object):
                                 jira_id_failed.append(jid)
                     except:
                         jira_failed = True
-                        msg += "\nJIRA NOT UPDATED"
+                        msg += "\nJIRA NOT UPDATED\n"
                 if jira_id_failed:
-                    msg += "Can't update %s"%(','.join(jira_id_failed),)
+                    msg += "Can't update %s\n"%(','.join(jira_id_failed),)
 
                 if self.get_ini('comment'):
                     msg += "\n\n%s"%(self.get_ini('comment'), )
@@ -328,7 +328,7 @@ class RunBotBranch(object):
             for d in dest.split(','):
                 new_dest.append(self.email_alias.get(d, d))
 
-            data += "http://%s"%(self.runbot.domain, )
+            data += "http://index.%s"%(self.runbot.domain, )
             msg = MIMEText(data)
 
             msg['Subject'] = '%s Runbot %s'%(subj, self.name, )
