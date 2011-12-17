@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys
-
+import logging
 import bzrlib.decorators
 bzrlib.decorators.use_fast_decorators()
 import bzrlib.ui
@@ -38,14 +38,13 @@ def write_pid(pidfile, pid):
     pidf.close()
 
 def log(*l,**kw):
-    out=[time.strftime("%Y-%m-%d %H:%M:%S")]
+    out=[]
     for i in l:
         if not isinstance(i,basestring):
             i=repr(i)
         out.append(i)
     out+=["%s=%r"%(k,v) for k,v in kw.items()]
-    sys.stdout.write(" ".join(out))
-    sys.stdout.write("\n")
+    logging.info(" ".join(out))
 
 def run(l):
     log("run",*l)
@@ -917,20 +916,21 @@ def kill_inst(o, r):
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
-    sys.stderr.write("Nginx ")
+    sys.stdout.write("Nginx ")
     pid = r.is_nginx_running()
     if pid:
-        sys.stderr.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
+        sys.stdout.write("running on port: %s, pid: %s\n"%(r.nginx_port, pid))
     else:
-        sys.stderr.write("isn't running\n")
+        sys.stdout.write("isn't running\n")
 
     for rbb in r.uf_instances.values():
-        sys.stderr.write("Instance %s:\n"%(rbb.name, ))
+        sys.stdout.write("Instance %s:\n"%(rbb.name, ))
         if not rbb.get_bool_ini('start',True):
-            sys.stderr.write("    Disabled in config.ini\n")
-        sys.stderr.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
-        sys.stderr.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
-    
+            sys.stdout.write("    Disabled in config.ini\n")
+        sys.stdout.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
+        sys.stdout.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
+    sys.stdout.flush() 
+
 def restartall(o, r):
     for rbb in r.uf_instances.values():
         rbb.stop()
@@ -958,7 +958,7 @@ def deploy(o, r):
     if o.suffix:
         instance = '%s_%s'%(instance, o.suffix)
     if instance in r.uf_instances:
-        sys.stderr.write("Error: %s exixts!\n"%instance)
+        sys.stderr.write("Error: %s exists, please use -s option\n"%instance)
         sys.exit(1)
 
     passwd = getpass.getpass('Jira Password : ')
@@ -976,19 +976,19 @@ def deploy(o, r):
         if custom == 'wm' and ret['groupedwm']:
             custom = 'groupedwm'
         if ret[custom]:
-            sys.stderr.write("%s-branch: %s\n"%(branch, ret[custom],))
+            sys.stdout.write("%s-branch: %s\n"%(branch, ret[custom],))
         setattr(o, 'unifield_%s'%branch, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
-    sys.stderr.write("email: %s\n"%(o.email, ))
-    sys.stderr.write("Jira workflow %s updated\n"%(o.no_update and "NOT" or "",))
-    sys.stderr.write("Jira Runbot %s updated\n"%(o.no_url and "NOT" or "",))
+    sys.stdout.write("email: %s\n"%(o.email, ))
+    sys.stdout.write("Jira workflow %s updated\n"%(o.no_update and "NOT" or "",))
+    sys.stdout.write("Jira Runbot %s updated\n"%(o.no_url and "NOT" or "",))
     o.jira_id= o.number
     while True:
-        sys.stderr.write("Do you want to continue ? [Y/n] ")
+        sys.stdout.write("Do you want to continue ? [Y/n] ")
         ans = raw_input()
         if ans in ['Y','y', '']:
             break
         if ans in ['n','N']:
-            sys.stderr.write("Abort.\n")
+            sys.stdout.write("Abort.\n")
             sys.exit(1)
     skel(o, r)
 
@@ -1109,15 +1109,15 @@ def main():
         o.runbot_dir = os.getcwd() #get the full path for the current working directory
     
 
-    fsock = False
+    filename = None
+    logformat = '%(levelname)s:%(message)s'
     if not o.debug:
-        fsock = open('out.log', 'a')
-        sys.stdout = fsock
+        filename = 'out.log'
+        logformat = '%(asctime)s '+logformat
+    logging.basicConfig(filename=filename, level=logging.INFO, format=logformat)
     init = o.command == 'run'
     r = RunBot(o.runbot_dir, o.runbot_port, o.runbot_nginx_port, o.runbot_nginx_domain, init, o.smtp_host)
     o.func(o, r)
-    if fsock:
-        fsock.close()
     os._exit(0) 
 
 if __name__ == '__main__':
