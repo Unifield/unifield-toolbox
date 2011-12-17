@@ -440,7 +440,7 @@ company.url = ''
         else:
             sys.stderr.write("Instance %s not started\n"%(self.name,))
 
-        sys.stderr.write("\n")
+        bzrlib.ui.ui_factory.clear_term()
         self.write_ini()
 
     def stop(self):
