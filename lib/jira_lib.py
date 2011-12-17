@@ -7,7 +7,7 @@ import re
 import SOAPpy
 import SOAPpy.Types
 
-custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050'}
+custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070'}
 class Jira():
     jira_url = False
     headers = {'Content-Type' : 'application/json'}
@@ -54,7 +54,7 @@ class Jira():
     def get_branches(self, key):
         issue = self.get_info(key)
         ret = {}
-        for t in ['web', 'wm', 'addons', 'server', 'groupedwm']:
+        for t in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data']:
             ret[t] = issue.get('fields', {}).get(custom[t], {}).get('value', False)
         ret['comment'] = issue.get('fields', {}).get('summary', {}).get('value', False)
         user = issue.get('fields', {}).get(custom['developer'], {}).get('value', {}).get('name', False)

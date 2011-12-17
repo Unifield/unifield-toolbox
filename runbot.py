@@ -297,14 +297,15 @@ class RunBotBranch(object):
                                     sjira.write_runbot('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
                                 if not self.noupdate_jira:
                                     sjira.click_deploy('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
-                            except:
+                            except Exception, e:
+                                print e
                                 jira_failed = True
                                 jira_id_failed.append(jid)
                     except:
                         jira_failed = True
                         msg += "\nJIRA NOT UPDATED\n"
                 if jira_id_failed:
-                    msg += "Can't update %s\n"%(','.join(jira_id_failed),)
+                    msg += "\nCan't update %s\n"%(','.join(jira_id_failed),)
 
                 if self.get_ini('comment'):
                     msg += "\n\n%s"%(self.get_ini('comment'), )
@@ -872,6 +873,8 @@ def skel(o, r):
                 outf.write("unifield-server = %s\n"%(o.unifield_server or "link"))
             elif line.startswith('unifield-web'):
                 outf.write("unifield-web = %s\n"%(o.unifield_web or "link"))
+            elif line.startswith('unifield-data'):
+                outf.write("unifield-data = %s\n"%(o.unifield_data or "link"))
             elif o.unit and line.startswith('load_demo'):
                 outf.write("load_demo = 1\n")
             elif o.unit and line.startswith('load_data'):
@@ -901,6 +904,8 @@ def kill_inst(o, r):
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
     else:
+        r.uf_instances[o.instance].set_ini('start', 0)
+        r.uf_instances[o.instance].write_ini()
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
@@ -942,6 +947,8 @@ def get_uf(o, r):
 def deploy(o, r):
     uf_numbers = o.number.split(',')
     instance = '%s_uf_%s'%(o.jira_user[0:3], '_'.join(uf_numbers))
+    if o.suffix:
+        instance = '%s_%s'%(instance, o.suffix)
     if instance in r.uf_instances:
         sys.stderr.write("Error: %s exixts!\n"%instance)
         sys.exit(1)
@@ -953,9 +960,10 @@ def deploy(o, r):
     o.start = 1
     o.instance = instance
     o.unit = False
-    o.email = ret.get('email')
+    if not o.email:
+        o.email = ret.get('email')
     o.comment = ret.get('comment')
-    for custom in ['web', 'wm', 'addons', 'server']:
+    for custom in ['web', 'wm', 'addons', 'server', 'data']:
         branch = custom
         if custom == 'wm' and ret['groupedwm']:
             custom = 'groupedwm'
@@ -1065,6 +1073,7 @@ def main():
     skel_parser.add_argument('--unifield-addons', '-ad', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-server', '-se', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-web', '-we', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--unifield-data', '-ud', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--comment', '-c')
     skel_parser.add_argument('--email', '-m')
     skel_parser.add_argument('--jira-id', '-j', help='List of jira-id (without UF-)')
@@ -1076,6 +1085,8 @@ def main():
     deploy_parser.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     deploy_parser.add_argument('--no-update', '-nw', action='store_true', default=False, help='DO NOT update Jira Workflow')
     deploy_parser.add_argument('--no-url', '-nu', action='store_true', default=False, help='DO NOT update Jira Runbot URL')
+    deploy_parser.add_argument('--suffix', '-s', metavar='RUBOT_SUFFIX', default=False, help='rubot suffix (added after uf n)')
+    deploy_parser.add_argument('--email', '-m', metavar='email', default=False, help='override Jira email address')
     deploy_parser.set_defaults(func=deploy)
 
 
