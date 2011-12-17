@@ -1,6 +1,12 @@
 #!/usr/bin/python
 import sys
 
+import bzrlib.decorators
+bzrlib.decorators.use_fast_decorators()
+import bzrlib.ui
+bzrlib.ui.ui_factory = bzrlib.ui.make_ui_for_terminal(
+             sys.stdin, sys.stdout, sys.stderr)
+
 import cgitb,os,re,subprocess,time
 import argparse
 import fileinput
@@ -24,6 +30,7 @@ from datetime import datetime
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
+#bzrlib.decorators.use_pretty_decorators()
 
 def write_pid(pidfile, pid):
     pidf = open(pidfile, "w")
@@ -149,6 +156,7 @@ class RunBotBranch(object):
             rev = wk.repository.get_revision(miss[1])
             for m in re.finditer("UF-([0-9]{3,})", rev.message.encode('utf-8'), re.I):
                 all_uf[m.group(1)] = self.committer_alias.get(rev.committer, rev.committer)[0]
+
         detected_uf = []
         for uf in sorted(all_uf.keys()):
             detected_uf.append("%s:%s"%(uf, all_uf[uf]))
@@ -298,7 +306,6 @@ class RunBotBranch(object):
                                 if not self.noupdate_jira:
                                     sjira.click_deploy('UF-%s'%jid, 'http://%s.%s'%(self.subdomain, self.runbot.domain))
                             except Exception, e:
-                                print e
                                 jira_failed = True
                                 jira_id_failed.append(jid)
                     except:
@@ -434,6 +441,7 @@ company.url = ''
         else:
             sys.stderr.write("Instance %s not started\n"%(self.name,))
 
+        sys.stderr.write("\n")
         self.write_ini()
 
     def stop(self):
@@ -529,7 +537,7 @@ company.url = ''
                 orig = WorkingTree.open(common_project_path)
                 br.create_checkout(project_path, lightweight=module!='unifield-wm', accelerator_tree=orig)
                 br.repository._client._medium.disconnect()
-             
+                
             newrevno = self.runbot.get_revno_from_path(project_path)
             self.set_ini('%s-revno'%(module, ), newrevno)
         else:
@@ -1110,7 +1118,7 @@ def main():
     o.func(o, r)
     if fsock:
         fsock.close()
-    
+    os._exit(0) 
 
 if __name__ == '__main__':
     main()
