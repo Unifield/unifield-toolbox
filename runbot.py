@@ -7,7 +7,7 @@ import bzrlib.ui
 bzrlib.ui.ui_factory = bzrlib.ui.make_ui_for_terminal(
              sys.stdin, sys.stdout, sys.stderr)
 
-import cgitb,os,re,subprocess,time
+import os,re,subprocess,time
 import argparse
 import fileinput
 import mako.template
@@ -28,6 +28,7 @@ from email.mime.text import MIMEText
 import getpass
 from datetime import datetime 
 import json
+import httplib2
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
@@ -70,6 +71,18 @@ def _is_running(pid):
         return pid
     except OSError:
         return False
+    
+def _get_pid(pidfile):
+    if not os.path.isfile(pidfile):
+        return False
+    try:
+        pf = file(pidfile,'r')
+        pid = int(pf.read().strip())
+        pf.close()
+        return pid
+    except (IOError, ValueError):
+        return False
+    return False
 
 def underscorize(n):
     return n.replace("~","").replace(":","_").replace("/","_")
@@ -219,23 +232,12 @@ class RunBotBranch(object):
         pid = self.pidserver()
         return _is_running(pid)
 
-    def _get_pid(self, pidfile):
-        if not os.path.isfile(pidfile):
-            return False
-        try:
-            pf = file(pidfile,'r')
-            pid = int(pf.read().strip())
-            pf.close()
-            return pid
-        except IOError:
-            return False
-        return False
 
     def pidweb(self):
-        return self._get_pid(self.file_pidweb)
+        return _get_pid(self.file_pidweb)
 
     def pidserver(self):
-        return self._get_pid(self.file_pidserver)
+        return _get_pid(self.file_pidserver)
 
     def start_createdb(self):
         dbname = self.subdomain.lower()
@@ -585,10 +587,6 @@ class RunBot(object):
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
         self.nginx_uf_data = 'uf_data.js'
         self.nginx_uf_path_data = os.path.join(self.nginx_path, self.nginx_uf_data)
-        if os.path.exists(self.nginx_uf_path_data):
-            self.nginx_uf_data_last_mod = 'info upd: %s'%(time.strftime('%d/%m/%Y %H:%M', time.localtime(os.path.getmtime(self.nginx_uf_path_data))),)
-        else:
-            self.nginx_uf_data_last_mod = ""
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
@@ -701,7 +699,9 @@ class RunBot(object):
                     content += '<span class="devinfo"><b>'+key+'</b>: ' +uf[key]+"</span><br/>";
                 }
             });
-            content += '<div class="lastmod">${r.nginx_uf_data_last_mod}</div>'
+            if (uf_last_update) { 
+                content += '<div class="lastmod">info upd: '+uf_last_update+'</div>'
+            }
             $(self).simpletip({
                 'content': content,
                 'offset': [15,20],
@@ -1029,16 +1029,47 @@ def deploy(o, r):
             sys.stdout.write("Abort.\n")
             sys.exit(1)
     skel(o, r)
-    jira_state(o, r)
 
 
 def jira_state(o, r):
-    if not o.jira_passwd:
-        o.jira_passwd = getpass.getpass('Jira Password : ')
+    if o.daemon or o.kill_daemon:
+        jira_state_pid_file = os.path.join(r.common_path, 'jira_state.pid')
+        pid = _get_pid(jira_state_pid_file)
+        is_running = _is_running(pid)
+        if o.kill_daemon:
+            if not is_running:
+                sys.stderr.write("Nothing to kill\n")
+                sys.exit(0)
+            kill(pid)
+            sys.exit(0)
+        if is_running:
+            sys.stderr.write("Jira state daemon is already running on pid %s\n"%(pid, ))
+            os._exit(0)
+        if not o.jira_passwd:
+            o.jira_passwd = getpass.getpass('Jira Password : ')
+        newpid = os.fork()
+        if not newpid:
+            write_pid(jira_state_pid_file, os.getpid())
+            while True:
+                log("Jira daemon wake up")
+                try:
+                    r = RunBot(o.runbot_dir, o.runbot_port, o.runbot_nginx_port, o.runbot_nginx_domain, False, o.smtp_host)
+                    _jira_state(o, r)
+                    del(r)
+                except (ValueError, httplib2.ServerNotFoundError), e:
+                    log("Jira daemon in trouble:", e)
+
+                time.sleep(60*20)
+    else:
+        if not o.jira_passwd:
+            o.jira_passwd = getpass.getpass('Jira Password : ')
+        return _jira_state(o, r)
+
+def _jira_state(o, r):
     jira = jira_lib.Jira(o.jira_url, o.jira_user, o.jira_passwd)
     icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
     icon_path_link = os.path.join(r.nginx_path, r.icon_jira_dir_link)
-    uf_data_fd = open(r.nginx_uf_path_data, 'w')
+    uf_data_fd = open(r.nginx_uf_path_data+'new', 'w')
 
     # delete symlink
     for mlink in os.listdir(icon_path_link):
@@ -1063,8 +1094,10 @@ def jira_state(o, r):
             os.symlink(icon, dest)
             jira_seen.append(uf)
             uf_data_fd.write("uf_%s=%s;\n"%(uf, json.dumps(other_info)))
-    
+   
+    uf_data_fd.write("uf_last_update='%s';\n"%(time.strftime('%d/%m/%Y %H:%M'),))
     uf_data_fd.close()
+    os.rename(r.nginx_uf_path_data+'new', r.nginx_uf_path_data)
     # Touch file to disable cache
     for ic in r.state_icon.values()+['nok.gif']:
         os.utime(os.path.join(icon_path, ic), None)
@@ -1112,6 +1145,8 @@ def main():
     jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     jira.add_argument('--jira-passwd', '-p',  metavar='JIRA_PASSWOR', default=False, help='Jira password')
+    jira.add_argument('--daemon', '-d',  action='store_true', default=False, help='Daemonize')
+    jira.add_argument('--kill-daemon', '-k',  action='store_true', default=False, help='Kill daemon')
     jira.set_defaults(func=jira_state)
 
     get_jira_id = subparsers.add_parser('get-uf', help='Get jira-id from commit messages')

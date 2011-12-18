@@ -10,22 +10,19 @@ from mx import DateTime
 
 custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070', 'Release Priority': 'customfield_10040'}
 class Jira():
-    jira_url = False
-    headers = {'Content-Type' : 'application/json'}
-    cache = {}
 
     def __init__(self, jira_url, username, password):
         self.jira_url = jira_url
+        self.headers = {'Content-Type' : 'application/json'}
+        self.cache = {}
 
         if self.jira_url[-1] != '/':
             self.jira_url += '/'
 
         self.auth_url = "%srest/auth/latest/session"%(self.jira_url)
         auth = {'username': username, 'password': password}
-
         self.cnx = httplib2.Http()
         resp, content = self.cnx.request(self.auth_url, "POST", body=json.dumps(auth), headers=self.headers )
-
         ct = json.loads(content)
         self.headers['Cookie'] = "%s=%s"%(ct['session']['name'], ct['session']['value'])
 
