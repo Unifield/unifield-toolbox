@@ -593,6 +593,7 @@ class RunBot(object):
         self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif', 'Open': 'reop.gif'}
         self.icon_jira_dir = 'JiraStatic'
         self.icon_jira_dir_link = 'Jira'
+        self.jira_state_pid_file = os.path.join(self.common_path, 'jira_state.pid')
 
         self.running_path=os.path.join(self.wd, "running")
         allsubdirs = self.subdirs(self.running_path) # in consumption that the sub-folder NAMES are valid
@@ -943,6 +944,7 @@ def skel(o, r):
 def killall(o, r):
     for rbb in r.uf_instances.values():
         rbb.stop()
+    kill(_get_pid(r.jira_state_pid_file))
     
 def kill_inst(o, r):
     if o.instance not in r.uf_instances:
@@ -960,6 +962,13 @@ def list_inst(o, r):
     else:
         sys.stdout.write("isn't running\n")
 
+    jira_state_pid = _get_pid(r.jira_state_pid_file)
+    jira_state_status = _is_running(jira_state_pid)
+    sys.stdout.write("Jira state daemon ")
+    if jira_state_status:
+        sys.stdout.write("running pid: %s\n"%(jira_state_pid, ))
+    else:
+        sys.stdout.write("isn't running\n")
     for rbb in r.uf_instances.values():
         sys.stdout.write("Instance %s:\n"%(rbb.name, ))
         if not rbb.get_bool_ini('start',True):
@@ -1033,7 +1042,7 @@ def deploy(o, r):
 
 def jira_state(o, r):
     if o.daemon or o.kill_daemon:
-        jira_state_pid_file = os.path.join(r.common_path, 'jira_state.pid')
+        jira_state_pid_file = r.jira_state_pid_file
         pid = _get_pid(jira_state_pid_file)
         is_running = _is_running(pid)
         if o.kill_daemon:
