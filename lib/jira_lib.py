@@ -106,9 +106,9 @@ class Jira_Soap():
         self.soap.progressWorkflowAction(self.auth, key, '711', [])
     
     def search_runbot(self, name):
-        cond = 'Runbot ~ "%s*"'%(name, )
+        cond = 'Runbot ~ "%s~"'%(name, )
         ret = []
         for issue in self.soap.getIssuesFromJqlSearch(self.auth, cond, 10):
-            ret.append(issuer['key'])
+            ret.append(issue['key'])
         return ret
 
