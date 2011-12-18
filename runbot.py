@@ -27,6 +27,7 @@ from lib import jira_lib
 from email.mime.text import MIMEText
 import getpass
 from datetime import datetime 
+import json
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
@@ -582,6 +583,12 @@ class RunBot(object):
         self.running=[]
         self.nginx_path = os.path.join(self.wd,'nginx')
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
+        self.nginx_uf_data = 'uf_data.js'
+        self.nginx_uf_path_data = os.path.join(self.nginx_path, self.nginx_uf_data)
+        if os.path.exists(self.nginx_uf_path_data):
+            self.nginx_uf_data_last_mod = 'info upd: %s'%(time.strftime('%d/%m/%Y %H:%M', time.localtime(os.path.getmtime(self.nginx_uf_path_data))),)
+        else:
+            self.nginx_uf_data_last_mod = ""
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
@@ -670,8 +677,37 @@ class RunBot(object):
         <title>UniField Runbot</title>
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="stylesheet" href="style.css" type="text/css">
+        <script type="text/javascript" src="jquery.js"></script>
+        <script type="text/javascript" src="simpletip.js"></script>
+        <script type="text/javascript" src="${r.nginx_uf_data}"></script>
         </head>
         <body id="indexfile">
+        <script type="text/javascript">
+        function showtip(self,uf) {
+            content = ""
+            content = '<h1>'+uf['key']+': '+uf['Summary']+'</h1>';
+            $.each(['Parent', 'Fix Version','Release Prio', 'Reporter', 'Developer', 'Assignee', 'Updated'], function(index, key) {
+                if (uf[key]) {
+                    content += '<b>'+key+'</b>: ' +uf[key]+" <br/>";
+                }
+            });
+            content += '<hr/>'
+            if (uf['last_comment_header']) {
+                content += uf['last_comment_header']+'<br />';
+                content += '<div class="last_comment">'+uf['last_comment'] + '</div><hr />';
+            }
+            $.each(['wm', 'web', 'addons', 'server', 'groupedwm', 'data', 'runbot_url'], function(index, key) {
+                if (uf[key]) {
+                    content += '<span class="devinfo"><b>'+key+'</b>: ' +uf[key]+"</span><br/>";
+                }
+            });
+            content += '<div class="lastmod">${r.nginx_uf_data_last_mod}</div>'
+            $(self).simpletip({
+                'content': content,
+            });
+            $(self).eq(0).simpletip().show();
+        };
+        </script>
         <div id="header">
             <div class="content"><h1>UniField Manual Runbot (on uf0003)</h1> </div>
         </div>
@@ -743,7 +779,7 @@ class RunBot(object):
                             <% 
                               color = jid in jira_id and jid not in detected_uf and 'black' or jid not in jira_id and jid in detected_uf and 'red' or 'blue'
                             %>
-                            <a style="color:${color}" href="${r.jira_url}${jid}">UF-${jid}</a>
+                            <a style="color:${color}" href="${r.jira_url}${jid}" onmouseover="showtip(this, uf_${jid})">UF-${jid}</a>
                             % if jid in i.committer:
                                 <span style="font-size:7px">${i.committer[jid]}</span>
                             % endif
@@ -894,7 +930,7 @@ def skel(o, r):
         inf.close()
         if o.start:
             outf.close()
-            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'passwd', False), noupdate_jira=getattr(o, 'no_update', False), nourl_jira=getattr(o, 'no_url', False)))
+            rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'jira_passwd', False), noupdate_jira=getattr(o, 'no_update', False), nourl_jira=getattr(o, 'no_url', False)))
             rbb.init_folder()
             r.process_instances() 
         else:
@@ -961,9 +997,10 @@ def deploy(o, r):
         sys.stderr.write("Error: %s exists, please use -s option\n"%instance)
         sys.exit(1)
 
-    passwd = getpass.getpass('Jira Password : ')
-    jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
-    o.passwd = passwd
+    if not o.jira_passwd:
+        o.jira_passwd = getpass.getpass('Jira Password : ')
+    
+    jira = jira_lib.Jira(o.jira_url, o.jira_user, o.jira_passwd)
     ret = jira.get_branches('UF-%s'%o.number.split(',')[0])
     o.start = 1
     o.instance = instance
@@ -991,13 +1028,16 @@ def deploy(o, r):
             sys.stdout.write("Abort.\n")
             sys.exit(1)
     skel(o, r)
+    jira_state(o, r)
 
 
 def jira_state(o, r):
-    passwd = getpass.getpass('Jira Password : ')
-    jira = jira_lib.Jira(o.jira_url, o.jira_user, passwd)
+    if not o.jira_passwd:
+        o.jira_passwd = getpass.getpass('Jira Password : ')
+    jira = jira_lib.Jira(o.jira_url, o.jira_user, o.jira_passwd)
     icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
     icon_path_link = os.path.join(r.nginx_path, r.icon_jira_dir_link)
+    uf_data_fd = open(r.nginx_uf_path_data, 'w')
 
     # delete symlink
     for mlink in os.listdir(icon_path_link):
@@ -1014,14 +1054,16 @@ def jira_state(o, r):
                 continue
             dest = os.path.join(icon_path_link, '%s.gif'%(uf, ))
             os.path.exists(dest) and os.remove(dest)
-            state, declared_runbot = jira.get_state('UF-%s'%uf)
+            state, declared_runbot, other_info = jira.get_state('UF-%s'%uf)
             icon = os.path.join(icon_path, r.state_icon.get(state, 'nok.gif'))
             if declared_runbot:
                 icon_declared_link = os.path.join(icon_path_link, "%s-%s.png"%(uf, declared_runbot.lower()))
                 os.symlink(os.path.join(icon_path, 'certified.png'), icon_declared_link)
             os.symlink(icon, dest)
             jira_seen.append(uf)
+            uf_data_fd.write("uf_%s=%s;\n"%(uf, json.dumps(other_info)))
     
+    uf_data_fd.close()
     # Touch file to disable cache
     for ic in r.state_icon.values()+['nok.gif']:
         os.utime(os.path.join(icon_path, ic), None)
@@ -1068,6 +1110,7 @@ def main():
     jira = subparsers.add_parser('jira', help='update jira status')
     jira.add_argument('--jira-user', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     jira.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
+    jira.add_argument('--jira-passwd', '-p',  metavar='JIRA_PASSWOR', default=False, help='Jira password')
     jira.set_defaults(func=jira_state)
 
     get_jira_id = subparsers.add_parser('get-uf', help='Get jira-id from commit messages')
@@ -1091,6 +1134,7 @@ def main():
     deploy_parser.add_argument('number', action='store', help='UF Numbers separated by comma  (without the string UF-)\nThe first id will be used to retrieve launchpad url')
     deploy_parser.add_argument('--jira-user', '-u', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     deploy_parser.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
+    deploy_parser.add_argument('--jira-passwd', '-p',  metavar='JIRA_PASSWOR', default=False, help='Jira password')
     deploy_parser.add_argument('--no-update', '-nw', action='store_true', default=False, help='DO NOT update Jira Workflow')
     deploy_parser.add_argument('--no-url', '-nu', action='store_true', default=False, help='DO NOT update Jira Runbot URL')
     deploy_parser.add_argument('--suffix', '-s', metavar='RUBOT_SUFFIX', default=False, help='rubot suffix (added after uf n)')

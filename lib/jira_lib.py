@@ -6,11 +6,14 @@ import json
 import re
 import SOAPpy
 import SOAPpy.Types
+from mx import DateTime
 
-custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070'}
+custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070', 'Release Priority': 'customfield_10040'}
 class Jira():
     jira_url = False
     headers = {'Content-Type' : 'application/json'}
+    cache = {}
+
     def __init__(self, jira_url, username, password):
         self.jira_url = jira_url
 
@@ -30,9 +33,12 @@ class Jira():
         self.cnx.request(self.auth_url, 'DELETE', headers=self.headers )
 
     def get_info(self, key):
-        resp, content = self.cnx.request("%srest/api/latest/issue/%s"%(self.jira_url, key),
-                "GET", headers=self.headers)
-        return json.loads(content)
+        if key not in self.cache:
+            resp, content = self.cnx.request("%srest/api/latest/issue/%s"%(self.jira_url, key),
+                    "GET", headers=self.headers)
+            self.cache[key] = json.loads(content)
+        return self.cache[key]
+
 
     def get_state(self, key):
         issue = self.get_info(key)
@@ -41,7 +47,35 @@ class Jira():
         declared_runbot = False
         if m:
             declared_runbot = m.group(2)
-        return (issue.get('fields', {}).get('status', {}).get('value', {}).get('name'), declared_runbot)
+        other_info = {}
+        other_info['Assignee'] = issue.get('fields', {}).get('assignee',{}).get('value',{}).get('displayName')
+        other_info['Developer'] = issue.get('fields', {}).get(custom['developer'],{}).get('value',{}).get('displayName')
+        other_info['Reporter'] = issue.get('fields', {}).get('reporter',{}).get('value',{}).get('displayName')
+        other_info['Summary'] = issue.get('fields', {}).get('summary', {}).get('value')
+        other_info['Updated'] = ''
+        other_info['Fix Version'] = issue.get('fields', {}).get('fixVersions', {}).get('value',[{}])[-1].get('name','')
+        other_info['Release Prio'] = issue.get('fields', {}).get(custom.get('Release Priority'), {}).get('value','')
+        lastupdate = issue.get('fields', {}).get('updated', {}).get('value','')
+        if lastupdate:
+            other_info['Updated'] = DateTime.DateFrom(lastupdate).strftime('%d/%m/%Y %H:%M')
+        other_info['Parent'] = False
+
+        parent = issue.get('fields', {}).get('parent', {}).get('value',{}).get('issueKey')
+        if parent:
+            other_info['Parent'] = "%s %s"%(parent, self.get_info(parent).get('fields', {}).get('summary', {}).get('value'))
+        for k in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data', 'runbot_url']:
+            v = issue.get('fields', {}).get(custom[k], {}).get('value', '')
+            if v:
+                other_info[k] = v
+        last_comment = issue.get('fields', {}).get('comment',{}).get('value', [])
+        if last_comment:
+            other_info['last_comment_header'] = '%s %s'%(last_comment[-1].get('author',{}).get('displayName', ''),DateTime.DateFrom(last_comment[-1].get('updated')).strftime('%d/%m/%Y %H:%M'))
+            content = last_comment[-1].get('body', '')
+            if len(content) > 300:
+                content = content[0:300]+'...'
+            other_info['last_comment'] = content
+        other_info['key'] = key
+        return (issue.get('fields', {}).get('status', {}).get('value', {}).get('name'), declared_runbot, other_info)
 
     def get_user_mail(self, user):
         if not user:
