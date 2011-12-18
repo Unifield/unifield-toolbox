@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python -W ignore::DeprecationWarning
+
 import sys
 import logging
 import bzrlib.decorators
@@ -682,6 +683,19 @@ class RunBot(object):
         </head>
         <body id="indexfile">
         <script type="text/javascript">
+        function tooltip2(self, rb) {
+            if (rb) {
+                content = rb.join(', ')
+                if (content) {
+                    $(self).simpletip({
+                        'content': content,
+                        'offset': [15,20],
+                        'baseClass': 'tooltip2',
+                    });
+                    $(self).eq(0).simpletip().show();
+                }
+            }
+        }
         function showtip(self,uf) {
             content = ""
             content = '<h1>'+uf['key']+': '+uf['Summary']+'</h1>';
@@ -749,7 +763,7 @@ class RunBot(object):
         % for i in sorted(r.running, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
         <tr class="file">
             <td class="name left">
-                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
+                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank" onmouseover="tooltip2(this, runbot_${i.subdomain})">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
             </td>
             <td class="date">
                 % if i.get_ini('db_created'):
@@ -1075,6 +1089,7 @@ def jira_state(o, r):
         return _jira_state(o, r)
 
 def _jira_state(o, r):
+    sjira = jira_lib.Jira_Soap(o.jira_url, o.jira_user, o.jira_passwd)
     jira = jira_lib.Jira(o.jira_url, o.jira_user, o.jira_passwd)
     icon_path = os.path.join(r.nginx_path, r.icon_jira_dir)
     icon_path_link = os.path.join(r.nginx_path, r.icon_jira_dir_link)
@@ -1088,6 +1103,9 @@ def _jira_state(o, r):
 
     jira_seen = []
     for rbb in r.uf_instances.values():
+        decrun = sjira.search_runbot(rbb.uname+'.')
+        uf_data_fd.write("runbot_%s=%s;\n"%(rbb.uname, json.dumps(decrun)))
+
         all_uf = (rbb.get_ini('jira-id') or "").split(',')
         all_uf += rbb.detected_uf
         for uf in all_uf:

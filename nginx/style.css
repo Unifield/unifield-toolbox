@@ -40,3 +40,18 @@ max-width: 400px;
 .last_comment {
    width: 400px;
 }
+.tooltip2{ 
+position: absolute;
+z-index: 3;
+display: none;
+-moz-border-radius:5px 5px 5px 5px;
+background-color:#FFFFA3;
+border-color:#FFEF93;
+border-style:solid;
+border-width:1px 1px 1px 5px;
+margin:0px 0 10px 15px;
+padding: 0 5px 5px 5px;
+color: black;
+font-size: 10px;
+max-width: 400px;
+}

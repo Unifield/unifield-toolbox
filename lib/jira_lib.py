@@ -36,7 +36,6 @@ class Jira():
             self.cache[key] = json.loads(content)
         return self.cache[key]
 
-
     def get_state(self, key):
         issue = self.get_info(key)
         runbot = issue.get('fields', {}).get(custom['runbot_url'], {}).get('value', "")
@@ -105,3 +104,11 @@ class Jira_Soap():
 
     def click_deploy(self, key, runbot_url):
         self.soap.progressWorkflowAction(self.auth, key, '711', [])
+    
+    def search_runbot(self, name):
+        cond = 'Runbot ~ "%s*"'%(name, )
+        ret = []
+        for issue in self.soap.getIssuesFromJqlSearch(self.auth, cond, 10):
+            ret.append(issuer['key'])
+        return ret
+
