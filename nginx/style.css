@@ -8,7 +8,7 @@
 .detected-uf a {
     color: red;
 }
-.tooltip{ position: absolute; top: 0; left: 0; z-index: 3; display: none; 
+.tooltip{ position: absolute;  z-index: 3; display: none; 
 -moz-border-radius:5px 5px 5px 5px;
 background-color:#F7F7F7;
 border-color:#6699CC;

@@ -704,6 +704,7 @@ class RunBot(object):
             content += '<div class="lastmod">${r.nginx_uf_data_last_mod}</div>'
             $(self).simpletip({
                 'content': content,
+                'position': ["15","20"],
             });
             $(self).eq(0).simpletip().show();
         };
