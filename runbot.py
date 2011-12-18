@@ -676,7 +676,7 @@ class RunBot(object):
         <head>
         <title>UniField Runbot</title>
         <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="stylesheet" href="style.css" type="text/css">
+        <link rel="stylesheet" href="style1.css" type="text/css">
         <script type="text/javascript" src="jquery.js"></script>
         <script type="text/javascript" src="simpletip.js"></script>
         <script type="text/javascript" src="${r.nginx_uf_data}"></script>
