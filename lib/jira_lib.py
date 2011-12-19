@@ -51,9 +51,12 @@ class Jira():
         other_info['Updated'] = ''
         other_info['Fix Version'] = issue.get('fields', {}).get('fixVersions', {}).get('value',[{}])[-1].get('name','')
         other_info['Release Prio'] = issue.get('fields', {}).get(custom.get('Release Priority'), {}).get('value','')
+        other_info['uf'] = key
         lastupdate = issue.get('fields', {}).get('updated', {}).get('value','')
         if lastupdate:
-            other_info['Updated'] = DateTime.DateFrom(lastupdate).strftime('%d/%m/%Y %H:%M')
+            last_updated = DateTime.DateFrom(lastupdate)
+            other_info['updated_ticks'] = last_updated.ticks()
+            other_info['Updated'] = last_updated.strftime('%d/%m/%Y %H:%M')
         other_info['Parent'] = False
 
         parent = issue.get('fields', {}).get('parent', {}).get('value',{}).get('issueKey')
@@ -65,7 +68,8 @@ class Jira():
                 other_info[k] = v
         last_comment = issue.get('fields', {}).get('comment',{}).get('value', [])
         if last_comment:
-            other_info['last_comment_header'] = '%s %s'%(last_comment[-1].get('author',{}).get('displayName', ''),DateTime.DateFrom(last_comment[-1].get('updated')).strftime('%d/%m/%Y %H:%M'))
+            date_last_upd = DateTime.DateFrom(last_comment[-1].get('updated'))
+            other_info['last_comment_header'] = '%s %s'%(last_comment[-1].get('author',{}).get('displayName', ''),date_last_upd.strftime('%d/%m/%Y %H:%M'))
             content = last_comment[-1].get('body', '')
             if len(content) > 300:
                 content = content[0:300]+'...'

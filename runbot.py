@@ -825,6 +825,15 @@ class RunBot(object):
         </tbody>
         </table>
         </div>
+        <div>Last mod.</div>
+        <div>
+        <script type="text/javascript">
+            $.each(last_up, function(index, key) {
+                document.write(key['Summary']+'<br />');
+            });
+        </script>
+        
+        </div>
         <div id="footer">
             <div class="content">
                 <p><b>Last modification: ${r.now}.</b></p>
@@ -1102,6 +1111,7 @@ def _jira_state(o, r):
             os.remove(l)
 
     jira_seen = []
+    update = []
     for rbb in r.uf_instances.values():
         #decrun = sjira.search_runbot(rbb.uname+'.')
         #uf_data_fd.write("runbot_%s=%s;\n"%(rbb.uname, json.dumps(decrun)))
@@ -1121,7 +1131,12 @@ def _jira_state(o, r):
             os.symlink(icon, dest)
             jira_seen.append(uf)
             uf_data_fd.write("uf_%s=%s;\n"%(uf, json.dumps(other_info)))
-   
+            update.append((other_info['updated_ticks'], "uf_%s"%(uf,)))
+
+    last = []
+    for d, nuf in sorted(update, cmp=lambda x,y: cmp(y[0], x[0]))[0:10]:
+        last.append(nuf)
+    uf_data_fd.write("last_up=[%s];\n"%(','.join(last),))
     uf_data_fd.write("uf_last_update='%s';\n"%(time.strftime('%d/%m/%Y %H:%M'),))
     uf_data_fd.close()
     os.rename(r.nginx_uf_path_data+'new', r.nginx_uf_path_data)
