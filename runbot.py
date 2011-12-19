@@ -974,8 +974,9 @@ def kill_inst(o, r):
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
     else:
-        r.uf_instances[o.instance].set_ini('start', 0)
-        r.uf_instances[o.instance].write_ini()
+        if o.disable:
+            r.uf_instances[o.instance].set_ini('start', 0)
+            r.uf_instances[o.instance].write_ini()
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
@@ -1173,6 +1174,7 @@ def main():
 
     kill_parser = subparsers.add_parser('kill', help='kill an instance')
     kill_parser.add_argument('instance', action='store', help='instance to kill')
+    kill_parser.add_argument("--disable", "-d", action="store_true", default=False, help="disable instance (default: %(default)s)")
     kill_parser.set_defaults(func=kill_inst)
     
     restartall_parser = subparsers.add_parser('restartall', help='restart all instances')
