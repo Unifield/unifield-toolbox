@@ -51,7 +51,7 @@ class Jira():
         other_info['Updated'] = ''
         other_info['Fix Version'] = issue.get('fields', {}).get('fixVersions', {}).get('value',[{}])[-1].get('name','')
         other_info['Release Prio'] = issue.get('fields', {}).get(custom.get('Release Priority'), {}).get('value','')
-        other_info['uf'] = key
+        other_info['uf'] = key.replace('UF-','')
         lastupdate = issue.get('fields', {}).get('updated', {}).get('value','')
         if lastupdate:
             last_updated = DateTime.DateFrom(lastupdate)

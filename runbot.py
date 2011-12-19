@@ -825,11 +825,12 @@ class RunBot(object):
         </tbody>
         </table>
         </div>
-        <div>Last mod.</div>
-        <div>
+        <div onclick="$('#lasmod').toggle()" style="text-decoration:underline; cursor: pointer;"><b>Activity Stream</b></div>
+        <div id="lasmod" style="display:none">
         <script type="text/javascript">
             $.each(last_up, function(index, key) {
-                document.write(key['Summary']+'<br />');
+                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a><img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
+
             });
         </script>
         
@@ -1131,7 +1132,8 @@ def _jira_state(o, r):
             os.symlink(icon, dest)
             jira_seen.append(uf)
             uf_data_fd.write("uf_%s=%s;\n"%(uf, json.dumps(other_info)))
-            update.append((other_info['updated_ticks'], "uf_%s"%(uf,)))
+            if other_info.get('updated_ticks'):
+                update.append((other_info['updated_ticks'], "uf_%s"%(uf,)))
 
     last = []
     for d, nuf in sorted(update, cmp=lambda x,y: cmp(y[0], x[0]))[0:10]:
