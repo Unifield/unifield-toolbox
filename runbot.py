@@ -826,10 +826,10 @@ class RunBot(object):
         </table>
         </div>
         <div onclick="$('#lasmod').toggle()" style="text-decoration:underline; cursor: pointer;"><b>Activity Stream</b></div>
-        <div id="lasmod" style="display:none">
+        <div id="lasmod">
         <script type="text/javascript">
             $.each(last_up, function(index, key) {
-                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a><img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
+                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a> <img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
 
             });
         </script>
