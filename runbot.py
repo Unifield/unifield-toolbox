@@ -683,6 +683,21 @@ class RunBot(object):
         </head>
         <body id="indexfile">
         <script type="text/javascript">
+        var global_max = 0;
+        function update_activity() {
+            global_max += 10;
+            num = 1;
+            $('#lasmod').html('');
+            $.each(last_up, function(index, key) {
+                if (num > global_max) { return; }
+                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a> <img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
+                num += 1;
+
+            });
+            if (num <= last_up.length) {
+                $('<div class="comment" style="cursor: pointer; text-decoration:underline;" onclick="update_activity()">More ...</div>').appendTo($('#lasmod'));
+            }
+        }
         function tooltip2(self, rb) {
             if (rb) {
                 content = rb.join(', ')
@@ -828,12 +843,8 @@ class RunBot(object):
         <div onclick="$('#lasmod').toggle()" style="text-decoration:underline; cursor: pointer;"><b>Activity Stream</b></div>
         <div id="lasmod">
         <script type="text/javascript">
-            $.each(last_up, function(index, key) {
-                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a> <img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
-
-            });
+        update_activity();
         </script>
-        
         </div>
         <div id="footer">
             <div class="content">
@@ -1137,7 +1148,7 @@ def _jira_state(o, r):
                 update.append((other_info['updated_ticks'], "uf_%s"%(uf,)))
 
     last = []
-    for d, nuf in sorted(update, cmp=lambda x,y: cmp(y[0], x[0]))[0:10]:
+    for d, nuf in sorted(update, cmp=lambda x,y: cmp(y[0], x[0]))[0:50]:
         last.append(nuf)
     uf_data_fd.write("last_up=[%s];\n"%(','.join(last),))
     uf_data_fd.write("uf_last_update='%s';\n"%(time.strftime('%d/%m/%Y %H:%M'),))
