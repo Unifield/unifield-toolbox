@@ -684,6 +684,11 @@ class RunBot(object):
         <body id="indexfile">
         <script type="text/javascript">
         var global_max = 0;
+        function reload_activity() {
+            jQuery.getScript("${r.nginx_uf_data}");
+            global_max = 0;
+            update_activity();
+        }
         function update_activity() {
             global_max += 10;
             num = 1;
@@ -694,9 +699,11 @@ class RunBot(object):
                 num += 1;
 
             });
+            $('<div id="menuactivity" class="comment"/>').appendTo($('#lasmod'));
             if (num <= last_up.length) {
-                $('<div class="comment" style="cursor: pointer; text-decoration:underline;" onclick="update_activity()">More ...</div>').appendTo($('#lasmod'));
+                $('<span style="cursor: pointer; text-decoration:underline;" onclick="update_activity()">More</span> ').appendTo($('#menuactivity'));
             }
+            $(' <span style="cursor: pointer; text-decoration:underline;" onclick="reload_activity()">Reload</span>').appendTo($('#menuactivity'));
         }
         function tooltip2(self, rb) {
             if (rb) {
