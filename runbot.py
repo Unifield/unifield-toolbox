@@ -703,7 +703,7 @@ class RunBot(object):
             });
             $('<div id="menuactivity" class="comment"/>').appendTo($('#lasmod'));
             if (num <= last_up.length) {
-                $('<span style="cursor: pointer; text-decoration:underline;" onclick="update_activity()">More</span> ').appendTo($('#menuactivity'));
+                $('<span style="cursor: pointer; text-decoration:underline;margin-right: 5px;" onclick="update_activity()">More</span>').appendTo($('#menuactivity'));
             }
             $(' <span style="cursor: pointer; text-decoration:underline;" onclick="reload_activity()">Reload</span>').appendTo($('#menuactivity'));
         }
