@@ -685,17 +685,19 @@ class RunBot(object):
         <script type="text/javascript">
         var global_max = 0;
         function reload_activity() {
-            jQuery.getScript("${r.nginx_uf_data}");
+            var now = new Date().getTime();
+            jQuery.getScript("${r.nginx_uf_data}?ts="+now);
             global_max = 0;
             update_activity();
         }
         function update_activity() {
+            var now = new Date().getTime();
             global_max += 10;
             num = 1;
             $('#lasmod').html('');
             $.each(last_up, function(index, key) {
                 if (num > global_max) { return; }
-                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a> <img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
+                newdiv = $('<div class="comment"><a href="${r.jira_url}'+key['uf']+'" onmouseover="showtip(this, uf_'+key['uf']+')">UF-'+key['uf']+'</a> <img src="${r.icon_jira_dir_link}/'+key['uf']+'.gif?ts='+now+'" />: '+key['Updated']+' - '+key['Summary']+'</div>').appendTo($('#lasmod'));
                 num += 1;
 
             });
