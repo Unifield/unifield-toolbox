@@ -21,6 +21,7 @@ margin:0px 0 10px 15px;
 padding: 0 5px 5px 5px;
 color: black;
 max-width: 400px;
+font-size: 10px;
 }
 .tooltip hr {
    color: #6699CC;
