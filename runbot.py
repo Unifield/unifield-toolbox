@@ -679,6 +679,7 @@ class RunBot(object):
         <link rel="stylesheet" href="style1.css" type="text/css">
         <script type="text/javascript" src="jquery.js"></script>
         <script type="text/javascript" src="simpletip.js"></script>
+        <script type="text/javascript" src="jquery.cookie.js"></script>
         <script type="text/javascript" src="${r.nginx_uf_data}"></script>
         </head>
         <body id="indexfile">
@@ -720,9 +721,15 @@ class RunBot(object):
                 }
             }
         }
+        function beforeShow() {
+            if ( $("#tipsdisable:checked").val() ) {
+                return false;
+            }
+            return true;
+        }
         function showtip(self,uf) {
             content = ""
-            content = '<h1>'+uf['key']+': '+uf['Summary']+'</h1>';
+            content = '<h1><a href="${r.jira_url}'+uf['key']+'">'+uf['key']+': '+uf['Summary']+'</a></h1>';
             $.each(['Parent', 'Fix Version','Release Prio', 'Reporter', 'Developer', 'Assignee', 'Updated'], function(index, key) {
                 if (uf[key]) {
                     content += '<b>'+key+'</b>: ' +uf[key]+" <br/>";
@@ -744,13 +751,20 @@ class RunBot(object):
             $(self).simpletip({
                 'content': content,
                 'offset': [15,20],
+                'onBeforeShow': beforeShow,
             });
             $(self).eq(0).simpletip().show();
         };
+        jQuery(document).ready(function () {
+              if ($.cookie('tipsdisable') == 1) {
+                $('#tipsdisable').attr('checked', 1);
+            }
+        });
         </script>
         <div id="header">
             <div class="content"><h1>UniField Manual Runbot (on uf0003)</h1> </div>
         </div>
+        <input type="checkbox" id="tipsdisable" accesskey="t" onclick="$.cookie('tipsdisable',$(this).is(':checked')?1:0)"><label for="tipsdisable" style="font-size:10px;">Disable Tips</label>
         <div id="index">
         <table class="index">
         <thead>
