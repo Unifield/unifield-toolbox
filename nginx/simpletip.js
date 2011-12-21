@@ -171,13 +171,20 @@
          
          boundryCheck: function(posX, posY)
          {
-            var newX = posX + tooltip.outerWidth();
+            var newX = posX + tooltip.outerWidth(true);
             var newY = posY + tooltip.outerHeight();
             
             var windowWidth = jQuery(window).width() + jQuery(window).scrollLeft();
             var windowHeight = jQuery(window).height() + jQuery(window).scrollTop();
-            
-            return [(newX >= windowWidth), (newY >= windowHeight)];
+            if (newX >= windowWidth && newY >= windowHeight) {
+                posX = posX - 2 * conf.offset[0] - tooltip.outerWidth(true) - 40;
+            } else if (newX >= windowWidth) {
+                posX = windowWidth - tooltip.outerWidth(true);
+            }
+            if (newY >= windowHeight) {
+                posY = posY - newY + windowHeight;
+            }
+            return [posX, posY];
          },
          
          updatePos: function(event)
@@ -248,9 +255,8 @@
                if(conf.boundryCheck)
                {
                   var overflow = self.boundryCheck(posX, posY);
-                                    
-                  if(overflow[0]) posX = posX - (tooltipWidth / 2) - (2 * conf.offset[0]);
-                  if(overflow[1]) posY = posY - (tooltipHeight / 2) - (2 * conf.offset[1]);
+                  posX = overflow[0];
+                  posY = overflow[1];
                }
             }
             else
