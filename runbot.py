@@ -651,6 +651,8 @@ class RunBot(object):
           server_names_hash_bucket_size 128;
           autoindex on;
           client_body_temp_path nginx; proxy_temp_path nginx; fastcgi_temp_path nginx; access_log nginx/access.log; index index.html;
+          proxy_buffers 16 16k;
+          proxy_buffer_size 32k;
           server { listen ${r.nginx_port} default; server_name _; root ./nginx/; }
           % for i in r.running:
              server {
