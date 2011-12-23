@@ -382,6 +382,10 @@ openerp.server.port = %d
 openerp.server.protocol = 'socket'
 openerp.server.timeout = 1500
 tools.proxy.on = True
+tools.cgitb.ignore=(
+    openobject.errors.Concurrency,
+    openobject.errors.TinyException
+)
 [openerp-web]
 dblist.filter = 'BOTH'
 dbbutton.visible = True
