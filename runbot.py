@@ -30,10 +30,25 @@ import getpass
 from datetime import datetime 
 import json
 import httplib2
+import Queue
+import threading
+
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
 #bzrlib.decorators.use_pretty_decorators()
+
+
+def start_threaded_test(queue):
+    while True:
+        try:
+            rbb = queue.get()
+            rbb.start_test()
+        except Exception, e:
+            log("Error unit test: %s"%(rbb.unique_name), e)
+        finally:
+            queue.task_done()
+        
 
 def write_pid(pidfile, pid):
     pidf = open(pidfile, "w")
@@ -402,6 +417,85 @@ company.url = ''
         self.running_web_pid=p.pid
         write_pid(self.file_pidweb, p.pid)
 
+    def load_json_result(self):
+        results = {}
+        unitfile = os.path.join(self.instance_path, 'unit.dump')
+        if os.path.exists(unitfile):
+            r_file = open(unitfile, 'r')
+            try:
+                results = json.load(r_file)
+            except ValueError, e:
+                results = {}
+            finally:
+                r_file.close()
+        return results
+
+    def dump_json_result(self, newresult):
+        unitfile = os.path.join(self.instance_path, 'unit.dump')
+        result = self.load_json_result()
+        result['lastrun'] = time.time()
+        test = result.get('test',[])[0:4]
+        for previous in result.get('test',[])[4:]:
+            log = previous['log']
+            if os.path.exists(log):
+                os.remove(log)
+        test.insert(0, newresult)
+        result['test'] = test
+        r_file = open(unitfile, 'w')
+        json.dump(result, r_file)
+        r_file.close()
+
+    def start_test(self):
+        pid = _get_pid(self.file_pidserver+'_')
+        if _is_running(pid):
+            log("Test %s is running"%(self.unique_name,))
+            return False
+        changes = []
+        version = {}
+        for module in ['unifield-server', 'unifield-wm', 'unifield-addons']:
+            m_path = os.path.join(self.instance_path, module)
+            init_rev = self.get_int_ini('%s-revno'%(module, ))
+            if not os.path.islink(m_path):
+                tree = WorkingTree.open_containing(m_path)[0]
+                tree.update()
+            new_rev = self.get_revno(module)
+            version[module] = new_rev
+            if init_rev != new_rev:
+                changes.append(module)
+                self.set_ini('%s-revno'%(module, ), new_rev)
+        if changes:
+            log('Test changes on %s, running test'%(self.unique_name,))
+            self.write_ini()
+            log_file = os.path.join(self.log_path,'server-%s.text'%time.time())
+            dbname = self.subdomain.lower()
+            run(['createdb', dbname])
+            config_file = os.path.join(self.instance_path,'etc', 'openerprc')
+            cmd=[self.server_bin_path,"-c", config_file, "-d",dbname,"--no-xmlrpc","--no-xmlrpcs","--no-netrpc", "--log-level=test", "--stop-after-init"]
+
+            modules = self.get_ini('modules')
+            if not modules:
+                modules = 'base'
+
+            cmd += ['-i', modules]
+             
+            out=open(log_file,"w")
+            log("run",*cmd,log=log_file)
+            subprocess.call(cmd, stdout=out, stderr=out)
+            run(['dropdb', dbname])
+            out = open(log_file, 'r')
+            error = False
+            for line in out:
+                if re.search('Traceback', line):
+                    error = True
+                    break
+                if re.search('WARNING:test', line):
+                    error = True
+                    break
+            self.dump_json_result({'version': version, 'error': error, 'log': log_file}) 
+        else:
+            log('Test %s: no change'%self.unique_name)
+
+
     def start(self):
         port = self.get_int_ini('port')
         log("branch-start",branch=self.unique_name,port=port)
@@ -545,7 +639,8 @@ company.url = ''
                 br.repository._client._medium.disconnect()
                 
             newrevno = self.runbot.get_revno_from_path(project_path)
-            self.set_ini('%s-revno'%(module, ), newrevno)
+            if not self.get_bool_ini('unittest'):
+                self.set_ini('%s-revno'%(module, ), newrevno)
         else:
             if source_module == 'link' and not os.path.islink(project_path):
                 wk = WorkingTree.open(project_path)
@@ -566,7 +661,8 @@ company.url = ''
                     self.set_ini(module, parent)
             if not self.get_ini('%s-revno'%(module, )):
                 newrevno = self.runbot.get_revno_from_path(project_path)
-                self.set_ini('%s-revno'%(module, ), newrevno)
+                if not self.get_bool_ini('unittest'):
+                    self.set_ini('%s-revno'%(module, ), newrevno)
             else:
                 newrevno = self.get_ini('%s-revno'%(module, ))
                 first = False
@@ -674,6 +770,82 @@ class RunBot(object):
             if t>=m:
                 return str(int(t/m))+u
         return str(int(t))+"s"
+    
+    def nginx_index_test(self):
+        template = """<!DOCTYPE html>
+        <html>
+        <head>
+        <title>UniField Unit Test Runbot</title>
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="stylesheet" href="style1.css" type="text/css">
+        </head>
+        <body id="indexfile">
+        <div id="header">
+            <div class="content"><h1>UniField Unit Test (on uf0003)</h1> </div>
+        </div>
+        <div id="index">
+        <table class="index">
+        <thead>
+        <tr>
+            <td colspan='6'><hr/></td>
+        </tr>
+        <tr class="tablehead">
+            <th class="name left" align="left">UniField test instance</th>
+            <th colspan="5"></th>
+        </tr>
+        <tr>
+            <td colspan='6'><hr/></td>
+        </tr>
+        <tr>
+            <td colspan='6'></td>
+        </tr>
+        </thead>
+        <tfoot>
+        <tr>
+            <td colspan='6'></td>
+        </tr>
+        <tr>
+            <td colspan='6'></td>
+        </tr>
+        <tr class="total">
+            <td colspan="3" class="name left"><b>${len(r.running)} UniField test instances</b></td>
+            <td colspan="3"></td>
+        </tr>
+        </tfoot>
+        <tbody>
+        % for i in sorted(r.unit_test_instances, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
+            <% result = i.load_json_result() %>
+        <tr class="file">
+            <td class="name left">
+                ${i.subdomain}
+            </td>
+            % for res in result.get('test',{}):
+            <td class="result-${res['error'] and 'error' or 'ok'}">
+                % for module in ['unifield-addons', 'unifield-server', 'unifield-wm']:
+                    % if module in res.get('version'):
+                        ${module} : ${res['version'][module]} <br />
+                    % endif
+                % endfor
+            </td>
+            % endfor
+        </tr>
+        % endfor
+        <tr>
+            <td colspan='6'><hr/></td>
+        </tr>
+        </tbody>
+        </table>
+        <div id="footer">
+            <div class="content">
+                <p><b>Last modification: ${r.now}.</b></p>
+            </div>
+        </div>
+        </body>
+        """
+        self.now = time.strftime("%Y-%m-%d %H:%M:%S")
+        index = open(os.path.join(self.wd,'nginx','test.html'),'w')
+        index.write(mako.template.Template(template).render(r=self,t=time.time(),re=re))
+        index.close()
 
     def nginx_index(self):
         template = """<!DOCTYPE html>
@@ -927,6 +1099,23 @@ class RunBot(object):
         return [name for name in os.listdir(dir)
             if os.path.isdir(os.path.join(dir, name)) and not name.startswith('.')]
 
+    def process_test_instances(self):
+        bzrlib.ui.ui_factory = bzrlib.ui.SilentUIFactory()
+        queue = Queue.Queue()
+        for i in range(5):
+            t = threading.Thread(target=start_threaded_test, args=(queue,))
+            t.daemon = True
+            t.start()
+
+        self.unit_test_instances = []
+        for rbb in self.uf_instances.values():
+            if rbb.get_bool_ini('unittest'):
+                self.unit_test_instances.append(rbb)
+                queue.put(rbb)
+
+        queue.join()
+        self.nginx_index_test()
+
     def process_instances(self):
         ''' 
         Get the sub folders and build a list of instances to be run 
@@ -939,12 +1128,12 @@ class RunBot(object):
                 self.ports.append(num_port+1)
         
         for rbb in self.uf_instances.values():
-            if not rbb.get_int_ini('port'):
+            if not rbb.get_int_ini('port') and not rbb.get_bool_ini('unittest', False):
                 new_port = self._get_port()
                 self.ports.append(new_port)
                 self.ports.append(new_port+1)
                 rbb.set_ini('port', new_port)
-            if rbb.get_bool_ini('start',True):
+            if rbb.get_bool_ini('start',True) and not rbb.get_bool_ini('unittest', False):
                 rbb.start()
             
         self.nginx_udpate()
@@ -987,6 +1176,8 @@ def skel(o, r):
                 outf.write("load_demo = 1\n")
             elif o.unit and line.startswith('load_data'):
                 outf.write("load_data = 0\n")
+            elif o.unit and line.startswith('unittest'):
+                outf.write("unittest = 1\n")
             elif o.jira_id and line.startswith('jira-id'):
                 outf.write("jira-id = %s\n"%(o.jira_id,))
             else:
@@ -1046,6 +1237,9 @@ def restartall(o, r):
         rbb.stop()
     time.sleep(1)
     run_inst(o, r)
+
+def run_test_inst(o, r):
+    r.process_test_instances()
 
 def run_inst(o, r):
     r.process_instances()
@@ -1207,6 +1401,9 @@ def main():
     subparsers = parser.add_subparsers(dest='command')
     run_parser = subparsers.add_parser('run', help='start/init new instances')
     run_parser.set_defaults(func=run_inst)
+
+    test_parser = subparsers.add_parser('test', help='start unit tests')
+    test_parser.set_defaults(func=run_test_inst)
 
     killall_parser = subparsers.add_parser('killall', help='kill all instances')
     killall_parser.set_defaults(func=killall)

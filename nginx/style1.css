@@ -56,3 +56,11 @@ color: black;
 font-size: 10px;
 max-width: 400px;
 }
+.result-error {
+    border: 5px solid red;
+    font-size: 10px;
+}
+.result-ok {
+    border: 5px solid green;
+    font-size: 10px;
+}
