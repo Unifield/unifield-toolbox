@@ -764,12 +764,46 @@ class RunBot(object):
               if ($.cookie('tipsdisable') == 1) {
                 $('#tipsdisable').attr('checked', 1);
             }
+            if ($.cookie('filter')) {
+                $('#search').val($.cookie('filter'));
+                filter();
+            }
         });
+
+        function hide(id) {
+            $('#'+id).hide();
+            $('#'+id+'-comment').hide();
+            $('#'+id+'-jira').hide();
+            $('#'+id+'-version').hide();
+        }
+        function show(id) {
+            $('#'+id).show();
+            $('#'+id+'-comment').show();
+            $('#'+id+'-jira').show();
+            $('#'+id+'-version').show();
+        }
+        function filter() {
+            search_txt = $('#search').val();
+            $.cookie('filter', search_txt);
+            pat = new RegExp(search_txt,'i')
+            $('tr.main').each(function(index) {
+                id = $(this).attr('id');
+                if (id.match(pat)) {
+                    show(id);
+                } else {
+                    hide(id);
+                }
+            });
+            return false;
+        }
         </script>
         <div id="header">
             <div class="content"><h1>UniField Manual Runbot (on uf0003)</h1> </div>
         </div>
-        <input type="checkbox" id="tipsdisable" accesskey="t" onclick="$.cookie('tipsdisable',$(this).is(':checked')?1:0)"><label for="tipsdisable" style="font-size:10px;">Disable Tips</label>
+        <form onsubmit="return filter()" style="font-size:10px;">
+        <input type="checkbox" id="tipsdisable" accesskey="t" onclick="$.cookie('tipsdisable',$(this).is(':checked')?1:0)"><label for="tipsdisable">Disable Tips</label> |
+        <label for="search">Filter instances : </label><input type="text" id="search" accesskey="s" /><button name="search" type="submit">Filter</button>
+        </form>
         <div id="index">
         <table class="index">
         <thead>
@@ -804,7 +838,7 @@ class RunBot(object):
         </tfoot>
         <tbody>
         % for i in sorted(r.running, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
-        <tr class="file">
+        <tr class="file main" id="${i.subdomain}">
             <td class="name left">
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
             </td>
@@ -822,7 +856,7 @@ class RunBot(object):
             </td>
         </tr>
              % if i.get_ini('comment'):
-                <tr>
+                <tr id="${i.subdomain}-comment">
                    <td colspan="3" class="comment">${i.get_ini('comment')}</td>
                 </tr>
              % endif
@@ -831,7 +865,7 @@ class RunBot(object):
                 detected_uf = i.detected_uf
              %>
              % if jira_id or detected_uf:
-                    <tr>
+                    <tr id="${i.subdomain}-jira">
                         <td colspan="3" class="comment">
                         |
                         % for jid in sorted(set(jira_id+detected_uf)):
@@ -847,7 +881,7 @@ class RunBot(object):
                         </td>
                     </tr>
              % endif
-	<tr>
+	    <tr id="${i.subdomain}-version">
             <td colspan="3" class="comment">
             % for br in ['wm', 'data', 'server', 'web', 'addons']:
                 % if i.get_ini('unifield-%s'%(br, )) != 'link':
