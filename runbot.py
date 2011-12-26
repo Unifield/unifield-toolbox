@@ -771,6 +771,11 @@ class RunBot(object):
             }
         });
 
+        function resetfilter() {
+            $('#search').val('');
+            $('#searchuf').val('');
+            filter();
+        }
         function filter() {
             search_txt = $('#search').val();
             uf_search_txt = $('#searchuf').val();
@@ -798,8 +803,9 @@ class RunBot(object):
         <label for="search">Filter by name : </label><input type="text" id="search" accesskey="s" />
         <label for="searchuf">Filter by uf : </label><input type="text" id="searchuf" accesskey="u" />
         
-        
+ 
         <button name="search" type="submit">Filter</button>
+        <button name="resetf" onclick="resetfilter()">Reset</button>
         </form>
         <div id="index">
         <table class="index">
