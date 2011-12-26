@@ -764,34 +764,27 @@ class RunBot(object):
               if ($.cookie('tipsdisable') == 1) {
                 $('#tipsdisable').attr('checked', 1);
             }
-            if ($.cookie('filter')) {
+            if ($.cookie('filter') || $.cookie('filteruf')) {
                 $('#search').val($.cookie('filter'));
+                $('#searchuf').val($.cookie('filteruf'));
                 filter();
             }
         });
 
-        function hide(id) {
-            $('#'+id).hide();
-            $('#'+id+'-comment').hide();
-            $('#'+id+'-jira').hide();
-            $('#'+id+'-version').hide();
-        }
-        function show(id) {
-            $('#'+id).show();
-            $('#'+id+'-comment').show();
-            $('#'+id+'-jira').show();
-            $('#'+id+'-version').show();
-        }
         function filter() {
             search_txt = $('#search').val();
+            uf_search_txt = $('#searchuf').val();
             $.cookie('filter', search_txt);
-            pat = new RegExp(search_txt,'i')
-            $('tr.main').each(function(index) {
+            $.cookie('filteruf', uf_search_txt);
+            pat = new RegExp(search_txt,'i');
+            patuf = new RegExp(uf_search_txt,'i');
+            $('tbody.tmain').each(function(index) {
                 id = $(this).attr('id');
-                if (id.match(pat)) {
-                    show(id);
+                uf = $(this).attr('uf');
+                if (id.match(pat) && uf.match(uf_search_txt)) {
+                    $(this).show()
                 } else {
-                    hide(id);
+                    $(this).hide();
                 }
             });
             return false;
@@ -802,7 +795,11 @@ class RunBot(object):
         </div>
         <form onsubmit="return filter()" style="font-size:10px;">
         <input type="checkbox" id="tipsdisable" accesskey="t" onclick="$.cookie('tipsdisable',$(this).is(':checked')?1:0)"><label for="tipsdisable">Disable Tips</label> |
-        <label for="search">Filter instances : </label><input type="text" id="search" accesskey="s" /><button name="search" type="submit">Filter</button>
+        <label for="search">Filter by name : </label><input type="text" id="search" accesskey="s" />
+        <label for="searchuf">Filter by uf : </label><input type="text" id="searchuf" accesskey="u" />
+        
+        
+        <button name="search" type="submit">Filter</button>
         </form>
         <div id="index">
         <table class="index">
@@ -836,9 +833,13 @@ class RunBot(object):
             <td class="right"></td>
         </tr>
         </tfoot>
-        <tbody>
         % for i in sorted(r.running, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
-        <tr class="file main" id="${i.subdomain}">
+             <% 
+                jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
+                detected_uf = i.detected_uf
+             %>
+        <tbody id="${i.subdomain}" class="tmain" uf="${' '.join(set(jira_id+detected_uf))}">
+        <tr class="file">
             <td class="name left">
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
             </td>
@@ -856,14 +857,10 @@ class RunBot(object):
             </td>
         </tr>
              % if i.get_ini('comment'):
-                <tr id="${i.subdomain}-comment">
+                <tr>
                    <td colspan="3" class="comment">${i.get_ini('comment')}</td>
                 </tr>
              % endif
-             <% 
-                jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
-                detected_uf = i.detected_uf
-             %>
              % if jira_id or detected_uf:
                     <tr id="${i.subdomain}-jira">
                         <td colspan="3" class="comment">
@@ -881,7 +878,7 @@ class RunBot(object):
                         </td>
                     </tr>
              % endif
-	    <tr id="${i.subdomain}-version">
+	    <tr>
             <td colspan="3" class="comment">
             % for br in ['wm', 'data', 'server', 'web', 'addons']:
                 % if i.get_ini('unifield-%s'%(br, )) != 'link':
@@ -892,6 +889,7 @@ class RunBot(object):
             % endfor
             </td>
 	</tr>
+    </tbody>
         % endfor
         <tr>
             <td colspan='3'><hr/></td>
