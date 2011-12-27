@@ -794,6 +794,25 @@ class RunBot(object):
             });
             return false;
         }
+
+        var sortorder = 1;
+        function sortbydate() {
+            alltbody = $('tbody.tmain').sort(function (x, y) {
+                xdate = $(x).attr('date');
+                ydate = $(y).attr('date');
+                return (xdate < ydate) ? sortorder : (xdate > ydate) ? -sortorder : 0;
+            });
+            sortorder = -1*sortorder;
+            $.each(alltbody, function(idx, el) {
+                $(el).detach();
+                $(el).appendTo($('#tableindex'));
+            });
+            hr = $('#tablehr');
+            hr.detach()
+            hr.appendTo($('#tableindex'));
+            src = sortorder==-1?'up.gif':'down.gif';
+            $("#sortimg").attr('src', src);
+        }
         </script>
         <div id="header">
             <div class="content"><h1>UniField Manual Runbot (on uf0003)</h1> </div>
@@ -808,14 +827,14 @@ class RunBot(object):
         <button name="resetf" onclick="resetfilter()">Reset</button>
         </form>
         <div id="index">
-        <table class="index">
+        <table class="index" id="tableindex">
         <thead>
         <tr>
             <td colspan='3'><hr/></td>
         </tr>
         <tr class="tablehead">
             <th class="name left" align="left">UniField test instance</th>
-            <th>Date</th>
+            <th onclick="sortbydate()"><span style="pointer:cursor;text-decoration:underline;">Date</span> <img id="sortimg" /></th>
             <th>Logs</th>
         </tr>
         <tr>
@@ -844,7 +863,7 @@ class RunBot(object):
                 jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
                 detected_uf = i.detected_uf
              %>
-        <tbody id="${i.subdomain}" class="tmain" uf="${' '.join(set(jira_id+detected_uf))}">
+        <tbody id="${i.subdomain}" class="tmain" uf="${' '.join(set(jira_id+detected_uf))}" date="${i.get_ini('db_created') or  r.now}" >
         <tr class="file">
             <td class="name left">
                 <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
@@ -897,6 +916,7 @@ class RunBot(object):
 	</tr>
     </tbody>
         % endfor
+        <tbody id="tablehr">
         <tr>
             <td colspan='3'><hr/></td>
         </tr>
