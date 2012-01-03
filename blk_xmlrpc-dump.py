@@ -396,9 +396,9 @@ class openerp_xml_file(object):
 global_fields = {
     'account.analytic.account': ['name', 'code', 'parent_id', 'type', 'cost_center_ids', 'account_ids', 'category'],
     'financing.contract.donor': ['code', 'name', 'format_id', 'active'],
-    'financing.contract.format.line': ['code', 'name', 'parent_id', 'line_type', 'account_ids', 'format_id'],
+    'financing.contract.format.line': ['code', 'name', 'parent_id', 'line_type', 'account_ids', 'format_id', 'project_budget_value', 'project_real_value', 'overhead_percentage', 'overhead_type', 'allocated_budget_value', 'allocated_real_value'],
     'financing.contract.format' : ['format_name', 'reporting_type', 'actual_line_ids', 'cost_center_ids', 'funding_pool_ids', 'eligibility_from_date', 'eligibility_to_date'],
-    'financing.contract.contract': ['code', 'donor_id', 'format_id', 'grant_amount', 'grant_name', 'name', 'open_date', 'state'],
+    'financing.contract.contract': ['code', 'donor_id', 'format_id', 'grant_amount', 'name', 'open_date', 'state', 'donor_grant_reference', 'hq_grant_reference', 'reporting_currency'],
 }
 oxf = openerp_xml_file(option, option.module)
 for model in args:
