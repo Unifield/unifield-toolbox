@@ -117,8 +117,8 @@ def get_remote_xmlid(model, id):
 
 class oomodel(object):
     @classmethod
-    def get_fields(cls, model):
-        fields_info = z_exec(model, 'fields_get')
+    def get_fields(cls, model, fields=[]):
+        fields_info = z_exec(model, 'fields_get', fields)
         #print("FIELDS_INFO ::")
         #pprint(fields_info)
         return fields_info
@@ -163,7 +163,7 @@ class oomodel(object):
         except AttributeError:
             pass
         try:
-            rec_name = z_exec(self.model, 'name_get', self.id)
+            rec_name = z_exec(self.model, 'name_get', [self.id])
         except xmlrpclib.Fault, e:
             # TODO: Is there a better way to handle fault on name_get() call ?
             rec_name = False
@@ -171,7 +171,9 @@ class oomodel(object):
             uuid.append(rec_name[0][1])
         else:
             uuid.append(self.id)
-        self._uuid = ('_'.join(('%s' for x in range(len(uuid)))) % tuple(uuid)).replace('.', '_').replace(' ','_').lower()
+        self._uuid = ('_'.join(('%s' for x in range(len(uuid)))) % tuple(uuid)).replace('.', '_').replace(' ','_').replace('/','_').lower()
+        maxlength = 62-len(str(self.id))
+        self._uuid = self._uuid[0:maxlength]
         self._uuid += '_%d' % (self.id)
         return self._uuid
 
@@ -180,7 +182,7 @@ class oomodel(object):
     def get_base_fields(self):
         """Return non relational fields"""
         for fname in self.fields:
-            if self.fields[fname]['type'] in ('boolean','char','integer','selection','text'):
+            if self.fields[fname]['type'] in ('boolean','char','integer','selection','text', 'float', 'date', 'datetime'):
                 yield fname
         raise StopIteration
 
@@ -240,20 +242,19 @@ class openerp_xml_file(object):
                 value = value[len(module_prefix):]
         return value
 
-    def dump(self, model, ids, prefix='', parent=None):
+    def dump(self, model, ids, prefix='', parent=None, ignore_xml_id=False):
         if isinstance(ids, (int,long)):
             ids = [ ids ]
 
         #print(">>> DUMPING: %s, %s" % (model, ids))
-        model_fields = oomodel.get_fields(model)
-
+        model_fields = oomodel.get_fields(model, global_fields.get(model,[]))
         for id in ids:
+            if not id:
+                continue
             remote_xmlid = self.get_remote_xmlid(model, id)
-            #if remote_xmlid is not None:
-                #print("--- BREAK found remote xmlid '%s' for ressource %s, %s" % (remote_xmlid, model, id))
-                #continue
-
-            #print("--- %s" % (id))
+            if remote_xmlid and ignore_xml_id:
+                continue
+            
             record = oomodel(model, id, fields=model_fields, module=self.module)
             self.req_ids[(model, record.id)] = record.uuid
             self.xml_ids[(model, record.id)] = record.uuid
@@ -265,8 +266,6 @@ class openerp_xml_file(object):
 
             if not option.without_relation:
                 for field in record.int_rel_fields:
-                    #print("::: DEBUG (INT REL FIELD): %s" % (field))
-                    #print("          %s" % (record.data[field]))
                     if record.data[field]:
                         # try getting xml ref
                         frel = record.fields[field]['relation']
@@ -317,7 +316,7 @@ class openerp_xml_file(object):
                     felem.set('eval', fdata and '1' or '0')
                 else:
                     try:
-                        if isinstance(fdata, (int,long,list)):
+                        if isinstance(fdata, (int,long,list,float)):
                             fdata = str(fdata)
                         if not isinstance(fdata, unicode):
                             fdata = unicode(fdata, 'utf-8')
@@ -394,16 +393,18 @@ class openerp_xml_file(object):
 #        print(prettyPrint(etree))
 
 
+global_fields = {
+    'account.analytic.account': ['name', 'code', 'parent_id', 'type', 'cost_center_ids', 'account_ids', 'category'],
+    'financing.contract.donor': ['code', 'name', 'format_id', 'active'],
+    'financing.contract.format.line': ['code', 'name', 'parent_id', 'line_type', 'account_ids', 'format_id'],
+    'financing.contract.format' : ['format_name', 'reporting_type', 'actual_line_ids', 'cost_center_ids', 'funding_pool_ids', 'eligibility_from_date', 'eligibility_to_date'],
+    'financing.contract.contract': ['code', 'donor_id', 'format_id', 'grant_amount', 'grant_name', 'name', 'open_date', 'state'],
+}
 oxf = openerp_xml_file(option, option.module)
-model = args.pop(0)
-if option.all:
+for model in args:
     ids = z_exec(model, 'search', [])
     total = 0
     for id in ids:
-        oxf.dump(model, int(id))
+        oxf.dump(model, int(id), ignore_xml_id=True)
         total += 1
-    print "%s elements to be written." % total
-else:
-    for model_id in args:
-        oxf.dump(model, int(model_id))
 oxf.save(option.output)
