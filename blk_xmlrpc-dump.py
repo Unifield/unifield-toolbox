@@ -426,6 +426,21 @@ class openerp_xml_file(object):
                     data.append(node)
             else:
                 data.append(new_node)
+
+        for record in self.xml_elements:
+            for act in action.get(record.model,[]):
+                xml_act = etree.Element('function')
+                xml_act.set('model', record.model)
+                xml_act.set('name', act)
+                fct = etree.Element('function')
+                fct.set('model', record.model)
+                fct.set('name', 'search')
+                fct.set("eval","[('id', '=', ref('%s'))]"%(self.xml_ids[(record.model, record.id)],))
+                xml_act.append(fct)
+                data.append(xml_act)
+
+
+                print act
 #        print(etree.tostring(root, pretty_print=True))
         indent(root)
         data = etree.tostring(root)
@@ -466,6 +481,10 @@ object_search = {
 }
 
 domain = {'sale.order': [('procurement_request', 'in', ('t','f'))]}
+
+action = {
+    'stock.inventory': ['action_confirm', 'action_done']
+}
 oxf = openerp_xml_file(option, option.module)
 # supply:
 #   ./blk_xmlrpc-dump.py  -d jfb_data_supply_magali -a purchase.order purchase.order.line tender tender.line sale.order sale.order.line stock.production.lot stock.inventory stock.inventory.line stock.picking --output /tmp/out.xml
