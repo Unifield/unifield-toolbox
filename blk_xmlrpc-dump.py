@@ -435,7 +435,7 @@ class openerp_xml_file(object):
                 fct = etree.Element('function')
                 fct.set('model', record.model)
                 fct.set('name', 'search')
-                fct.set("eval","[('id', '=', [ref('%s')])]"%(self.xml_ids[(record.model, record.id)],))
+                fct.set("eval","[[('id', '=', ref('%s'))]]"%(self.xml_ids[(record.model, record.id)],))
                 xml_act.append(fct)
                 data.append(xml_act)
 
