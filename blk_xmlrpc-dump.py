@@ -171,7 +171,7 @@ class oomodel(object):
             uuid.append(rec_name[0][1])
         else:
             uuid.append(self.id)
-        self._uuid = ('_'.join(('%s' for x in range(len(uuid)))) % tuple(uuid)).replace('.', '_').replace(' ','_').replace('/','_').replace(',','_').replace('(','').replace(')','').lower()
+        self._uuid = ('_'.join(('%s' for x in range(len(uuid)))) % tuple(uuid)).replace('.', '_').replace(' ','_').replace('/','_').replace(',','_').replace('(','').replace(')','').encode("ascii", "ignore").lower()
         maxlength = 62-len(str(self.id))
         self._uuid = self._uuid[0:maxlength]
         self._uuid += '_%d' % (self.id)
@@ -243,6 +243,34 @@ class openerp_xml_file(object):
                 value = value[len(module_prefix):]
         return value
 
+
+    def _search_rel(self, frel, fid):
+        if (frel, fid) not in self.search_ids:
+            domain = []
+            extended = {}
+            f_toread = []
+            for f in object_search[frel]:
+                if '.' in f:
+                    relfield, newfield = f.split('.')
+                    extended.setdefault(relfield, []).append(newfield)
+                else:
+                    f_toread.append(f)
+
+            new_record = z_exec(frel, 'read', fid, f_toread+extended.keys())
+            for f in f_toread:
+                domain.append(('%s'%f, '=', '%s'%new_record[f]))
+
+            if extended:
+                fields_info = z_exec(frel, 'fields_get', extended.keys())
+                for key in extended:
+                    info = z_exec(fields_info[key]['relation'], 'read', new_record[key][0], extended[key])
+                    for f in extended[key]:
+                         domain.append(('%s.%s'%(key,f), '=', '%s'%info[f]))
+            for i in range(0, len(domain)-1):
+                domain.insert(0, '&')
+            self.search_ids[(frel, fid)] = domain
+        return self.search_ids[(frel, fid)]
+
     def dump(self, model, ids, prefix='', parent=None, ignore_xml_id=False):
         if isinstance(ids, (int,long)):
             ids = [ ids ]
@@ -287,27 +315,7 @@ class openerp_xml_file(object):
                                     # we need to dump this resource
                                     self.dump(frel, fid)
                                 elif (frel, fid) not in self.search_ids:
-                                    domain = []
-                                    extended = {}
-                                    f_toread = []
-                                    for f in object_search[frel]:
-                                        if '.' in f:
-                                            relfield, newfield = f.split('.')
-                                            extended.setdefault(relfield, []).append(newfield)
-                                        else:
-                                            f_toread.append(f)
-
-                                    new_record = z_exec(frel, 'read', fid, f_toread+extended.keys())
-                                    for f in f_toread:
-                                        domain.append(('%s'%f, '=', '%s'%new_record[f]))
-
-                                    if extended:
-                                        fields_info = z_exec(frel, 'fields_get', extended.keys())
-                                        for key in extended:
-                                            info = z_exec(fields_info[key]['relation'], 'read', new_record[key][0], extended[key])
-                                            for f in extended[key]:
-                                                 domain.append(('%s.%s'%(key,f), '=', '%s'%info[f]))
-                                    self.search_ids[(frel, fid)] = domain
+                                    self._search_rel(frel, fid)
 
 
             if (model, record.id) not in self.xml_ids:
@@ -333,7 +341,7 @@ class openerp_xml_file(object):
         for field in record.base_fields:
             fdesc = record.fields[field]
             fdata = record.data[field]
-            if fdesc.get('required', False) or fdata:
+            if fdata or fdesc['type'] == 'boolean':
                 felem = etree.Element('field')
                 felem.set('name', field)
                 if fdesc['type'] == 'boolean':
@@ -360,11 +368,21 @@ class openerp_xml_file(object):
                         return self.get_absolute_xmlid(self.xml_ids[(relation, fid)])
 
                     if record.fields[field]['type'] == 'many2many':
-                        felem_value = "[(6,0,[%s])]" % (','.join([ "ref('%s')" % (get_ref_value(fdesc['relation'], fid)) for fid in record.data[field] if fid]))
-                        felem.set('eval', felem_value)
+                        if fdesc['relation'] not in object_search: 
+                            felem_value = "[(6,0,[%s])]" % (','.join([ "ref('%s')" % (get_ref_value(fdesc['relation'], fid)) for fid in record.data[field] if fid]))
+                            felem.set('eval', felem_value)
+                        else:
+                            ret = [self._search_rel(fdesc['relation'], fid) for fid in record.data[field] if fid]
+                            if ret:
+                                dom = ret[0]
+                            for x in range(1, len(ret)):
+                                dom.insert(0, '|')
+                                dom += ret[x]
+                                
+                            felem.set('search', '%s'%dom)
                     else:
                         ref_value = u""
-                        if fdesc['relation'] in object_search and fdata[0]:
+                        if (fdesc['relation'], fdata[0]) not in self.xml_ids and fdesc['relation'] in object_search and fdata[0]:
                             felem.set('model', fdesc['relation'])
                             felem.set('search', '%s'%self.search_ids[(fdesc['relation'], fdata[0])])
                         else:
@@ -427,31 +445,32 @@ global_fields = {
     'financing.contract.format.line': ['code', 'name', 'parent_id', 'line_type', 'account_ids', 'format_id', 'project_budget_value', 'project_real_value', 'overhead_percentage', 'overhead_type', 'allocated_budget_value', 'allocated_real_value'],
     'financing.contract.format' : ['format_name', 'reporting_type', 'actual_line_ids', 'cost_center_ids', 'funding_pool_ids', 'eligibility_from_date', 'eligibility_to_date'],
     'financing.contract.contract': ['code', 'donor_id', 'format_id', 'grant_amount', 'name', 'open_date', 'state', 'donor_grant_reference', 'hq_grant_reference', 'reporting_currency'],
-    'purchase.order': ['warehouse_id', 'partner_ref', 'date_order', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_address_id', 'pricelist_id', 'origin', 'transport_mode', 'transport_cost', 'transport_currency_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'arrival_date', 'dest_address_id', 'invoice_method', 'location_id', 'incoterm_id', 'order_line'],
-    'purchase.order.line': ['product_id', 'product_qty', 'product_uom', 'date_planned', 'confirmed_delivery_date', 'price_unit', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5'],
-    'tender': ['warehouse_id', 'location_id', 'categ', 'piority', 'details', 'tender_line_ids'], #supplier_ids
-    'tender.line': ['product_id', 'qty', 'product_uom'],
-    'sale.order': ['client_order_ref', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_invoice_id', 'partner_shipping_id', 'partner_order_id', 'pricelist_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'ready_to_ship_date', 'picking_policy', 'order_line', 'procurement_request'],
-    'sale.order.line': ['product_id', 'product_uom_qty', 'product_uom', 'price_unit', 'discount', 'type', 'date_planned', 'confirmed_delivery_date', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5'],
+    'purchase.order': ['warehouse_id', 'partner_ref', 'date_order', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_address_id', 'pricelist_id', 'origin', 'transport_mode', 'transport_cost', 'transport_currency_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'arrival_date', 'dest_address_id', 'invoice_method', 'location_id', 'incoterm_id', 'from_yml_test'],
+    'purchase.order.line': ['product_id', 'product_qty', 'product_uom', 'date_planned', 'confirmed_delivery_date', 'price_unit', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5', 'order_id', 'name'],
+    'tender': ['warehouse_id', 'location_id', 'categ', 'piority', 'details', 'name', 'supplier_ids'],
+    'tender.line': ['product_id', 'qty', 'product_uom', 'tender_id'],
+    'sale.order': ['client_order_ref', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_invoice_id', 'partner_shipping_id', 'partner_order_id', 'pricelist_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'ready_to_ship_date', 'picking_policy', 'procurement_request', 'from_yml_test'],
+    'sale.order.line': ['product_id', 'product_uom_qty', 'product_uom', 'price_unit', 'discount', 'type', 'date_planned', 'confirmed_delivery_date', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5', 'order_id'],
 #internal request
     'stock.inventory': ['name', 'inventory_line_id'],
     'stock.inventory.line': ['product_id', 'product_uom', 'product_qty', 'location_id', 'reason_type_id', 'comment', 'hidden_perishable_mandatory', 'hidden_batch_management_mandatory', 'prod_lot_id', 'expiry_date', 'type_check'],
     'stock.production.lot': ['product_id', 'name', 'type', 'date', 'life_date'],
-    'stock.picking': ['origin', 'reason_type_id', 'type', 'move_lines', 'state'],
-    'stock.move': ['product_id', 'location_id', 'location_dest_id', 'product_uom', 'reason_type_id', 'product_qty', 'prodlot_id', 'expired_date', 'state'],
+    'stock.picking': ['origin', 'reason_type_id', 'type', 'move_lines', 'state', 'from_yml_test'],
+    'stock.move': ['product_id', 'location_id', 'location_dest_id', 'product_uom', 'reason_type_id', 'product_qty', 'prodlot_id', 'expired_date', 'state', 'name'],
 }
 
 object_search = {
-    'product.product': ['default_code', 'name'],
+    'product.product': ['default_code'],
     'res.partner': ['name', 'ref'],
     'res.partner.address': ['partner_id.name', 'partner_id.ref', 'type'],
 }
 
+domain = {'sale.order': [('procurement_request', 'in', ('t','f'))]}
 oxf = openerp_xml_file(option, option.module)
 for model in args:
-    ids = z_exec(model, 'search', [])
+    ids = z_exec(model, 'search', domain.get(model, []))
+    print model, ids
     total = 0
-    print ids
     for id in ids:
         oxf.dump(model, int(id), ignore_xml_id=True)
         total += 1
