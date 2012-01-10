@@ -460,13 +460,16 @@ global_fields = {
 }
 
 object_search = {
-    'product.product': ['default_code'],
+    'product.product': ['default_code', 'name'],
     'res.partner': ['name', 'ref'],
     'res.partner.address': ['partner_id.name', 'partner_id.ref', 'type'],
 }
 
 domain = {'sale.order': [('procurement_request', 'in', ('t','f'))]}
 oxf = openerp_xml_file(option, option.module)
+# supply:
+#   ./blk_xmlrpc-dump.py  -d jfb_data_supply_magali -a purchase.order purchase.order.line tender tender.line sale.order sale.order.line stock.production.lot stock.inventory stock.picking --output /tmp/out.xml
+
 for model in args:
     ids = z_exec(model, 'search', domain.get(model, []))
     print model, ids
