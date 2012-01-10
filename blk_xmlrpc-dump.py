@@ -452,8 +452,8 @@ global_fields = {
     'sale.order': ['client_order_ref', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_invoice_id', 'partner_shipping_id', 'partner_order_id', 'pricelist_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'ready_to_ship_date', 'picking_policy', 'procurement_request', 'from_yml_test'],
     'sale.order.line': ['product_id', 'product_uom_qty', 'product_uom', 'price_unit', 'discount', 'type', 'date_planned', 'confirmed_delivery_date', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5', 'order_id'],
 #internal request
-    'stock.inventory': ['name', 'inventory_line_id'],
-    'stock.inventory.line': ['product_id', 'product_uom', 'product_qty', 'location_id', 'reason_type_id', 'comment', 'hidden_perishable_mandatory', 'hidden_batch_management_mandatory', 'prod_lot_id', 'expiry_date', 'type_check'],
+    'stock.inventory': ['name'],
+    'stock.inventory.line': ['product_id', 'product_uom', 'product_qty', 'location_id', 'reason_type_id', 'comment', 'hidden_perishable_mandatory', 'hidden_batch_management_mandatory', 'prod_lot_id', 'expiry_date', 'type_check', 'inventory_id'],
     'stock.production.lot': ['product_id', 'name', 'type', 'date', 'life_date'],
     'stock.picking': ['origin', 'reason_type_id', 'type', 'move_lines', 'state', 'from_yml_test'],
     'stock.move': ['product_id', 'location_id', 'location_dest_id', 'product_uom', 'reason_type_id', 'product_qty', 'prodlot_id', 'expired_date', 'state', 'name'],
@@ -468,7 +468,7 @@ object_search = {
 domain = {'sale.order': [('procurement_request', 'in', ('t','f'))]}
 oxf = openerp_xml_file(option, option.module)
 # supply:
-#   ./blk_xmlrpc-dump.py  -d jfb_data_supply_magali -a purchase.order purchase.order.line tender tender.line sale.order sale.order.line stock.production.lot stock.inventory stock.picking --output /tmp/out.xml
+#   ./blk_xmlrpc-dump.py  -d jfb_data_supply_magali -a purchase.order purchase.order.line tender tender.line sale.order sale.order.line stock.production.lot stock.inventory stock.inventory.line stock.picking --output /tmp/out.xml
 
 for model in args:
     ids = z_exec(model, 'search', domain.get(model, []))
