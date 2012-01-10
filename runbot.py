@@ -276,7 +276,10 @@ class RunBotBranch(object):
             self.set_ini('load_data',0)
 
         cmd += ['-i', modules]
-         
+        
+        if self.get_bool_ini('load_demo'):
+            cmd += ['--log-level=test']
+
         if self.get_bool_ini('load_data') or not self.get_bool_ini('load_demo'):
                 cmd.append("--without-demo=all")
 
@@ -997,12 +1000,12 @@ class RunBot(object):
                 self.ports.append(num_port+1)
         
         for rbb in self.uf_instances.values():
-            if not rbb.get_int_ini('port'):
-                new_port = self._get_port()
-                self.ports.append(new_port)
-                self.ports.append(new_port+1)
-                rbb.set_ini('port', new_port)
             if rbb.get_bool_ini('start',True):
+                if not rbb.get_int_ini('port'):
+                    new_port = self._get_port()
+                    self.ports.append(new_port)
+                    self.ports.append(new_port+1)
+                    rbb.set_ini('port', new_port)
                 rbb.start()
             
         self.nginx_udpate()
@@ -1073,6 +1076,7 @@ def kill_inst(o, r):
     else:
         if o.disable:
             r.uf_instances[o.instance].set_ini('start', 0)
+            r.uf_instances[o.instance].set_ini('port', 0)
             r.uf_instances[o.instance].write_ini()
         r.uf_instances[o.instance].stop()
     
