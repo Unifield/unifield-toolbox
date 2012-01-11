@@ -462,9 +462,9 @@ global_fields = {
     'financing.contract.contract': ['code', 'donor_id', 'format_id', 'grant_amount', 'name', 'open_date', 'state', 'donor_grant_reference', 'hq_grant_reference', 'reporting_currency'],
     'purchase.order': ['warehouse_id', 'partner_ref', 'date_order', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_address_id', 'pricelist_id', 'origin', 'transport_mode', 'transport_cost', 'transport_currency_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'arrival_date', 'dest_address_id', 'invoice_method', 'location_id', 'incoterm_id', 'from_yml_test'],
     'purchase.order.line': ['product_id', 'product_qty', 'product_uom', 'date_planned', 'confirmed_delivery_date', 'price_unit', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5', 'order_id', 'name'],
-    'tender': ['warehouse_id', 'location_id', 'categ', 'piority', 'details', 'name', 'supplier_ids'],
+    'tender': ['warehouse_id', 'location_id', 'categ', 'piority', 'details', 'name', 'supplier_ids', 'requested_date'],
     'tender.line': ['product_id', 'qty', 'product_uom', 'tender_id'],
-    'sale.order': ['client_order_ref', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_invoice_id', 'partner_shipping_id', 'partner_order_id', 'pricelist_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'ready_to_ship_date', 'picking_policy', 'procurement_request', 'from_yml_test'],
+    'sale.order': ['client_order_ref', 'order_type', 'priority', 'categ', 'details', 'partner_id', 'partner_invoice_id', 'partner_shipping_id', 'partner_order_id', 'pricelist_id', 'delivery_requested_date', 'delivery_confirmed_date', 'transport_type', 'est_transport_lead_time', 'ready_to_ship_date', 'picking_policy', 'procurement_request', 'from_yml_test', 'requested_date'],
     'sale.order.line': ['product_id', 'product_uom_qty', 'product_uom', 'price_unit', 'discount', 'type', 'date_planned', 'confirmed_delivery_date', 'comment', 'nomen_manda_0', 'nomen_manda_1', 'nomen_manda_2', 'nomen_manda_3', 'nomen_sub_0', 'nomen_sub_1', 'nomen_sub_2', 'nomen_sub_3', 'nomen_sub_4', 'nomen_sub_5', 'order_id'],
 #internal request
     'stock.inventory': ['name'],
@@ -489,6 +489,8 @@ oxf = openerp_xml_file(option, option.module)
 # supply:
 #   ./blk_xmlrpc-dump.py  -d jfb_data_supply_magali -a purchase.order purchase.order.line tender tender.line sale.order sale.order.line stock.production.lot stock.inventory stock.inventory.line stock.picking --output /tmp/out.xml
 
+# probleme confirmed_delivery_date False sur so line et po line
+# probleme picking_id sur stock.picking
 for model in args:
     ids = z_exec(model, 'search', domain.get(model, []))
     print model, ids
