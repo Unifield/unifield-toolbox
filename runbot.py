@@ -597,7 +597,7 @@ class RunBot(object):
         self.smtp_host = smtp_host
         self.jira_url = 'http://jira.unifield.org/browse/UF-'
         self.bzr_url = 'https://code.launchpad.net/'
-        self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif', 'Open': 'reop.gif'}
+        self.state_icon = {'Runbot Validated': 'ok.gif', 'Closed': 'close.gif', 'Integrated': 'close.gif', 'Dev Validated': 'close.gif', 'Runbot Available': 'wait.gif', 'Reopened': 'reop.gif', 'In Progress': 'reop.gif', 'Open': 'reop.gif', 'Stand By': 'pause.png'}
         self.icon_jira_dir = 'JiraStatic'
         self.icon_jira_dir_link = 'Jira'
         self.jira_state_pid_file = os.path.join(self.common_path, 'jira_state.pid')
@@ -837,7 +837,7 @@ class RunBot(object):
         </tr>
         <tr class="tablehead">
             <th class="name left" align="left">UniField test instance</th>
-            <th onclick="sortbydate()"><span style="pointer:cursor;text-decoration:underline;">Date</span> <img id="sortimg" /></th>
+            <th onclick="sortbydate()"><span style="cursor:pointer;text-decoration:underline;">Date</span> <img id="sortimg" /></th>
             <th>Logs</th>
         </tr>
         <tr>
