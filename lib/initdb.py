@@ -72,6 +72,11 @@ def connect_db(user, pwd, dbname, host, port, path, pidfile=False):
         wiz = wizard_init()
         if wiz:
             import_csv(path)
+            mod_obj = utils.rpc.RPCProxy('ir.module.module')
+            data_ids = mod_obj.search([('state', '!=', 'installed'), ('name', 'in', ['data_supply', 'data_finance'])])
+            if data_ids:
+                mod_obj.button_install(data_ids)
+                utils.rpc.RPCProxy('base.module.upgrade').upgrade_module(data_ids)
             return 'Data successfully loaded'
         return 'Data not loaded: no init wizard to execute' 
     
