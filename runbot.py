@@ -314,7 +314,7 @@ class RunBotBranch(object):
                 write_pid(self.file_pidserver, proc.pid)
                 proc.wait()
                 # copy log file on then parse it
-                tmpfile = "%s%s"%(self.log_server_path,random(1,100000))
+                tmpfile = "%s%s"%(self.log_server_path,random.randint(1,100000))
                 shutil.copy(self.log_server_path, tmpfile)
                 proc = subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
                 write_pid(self.file_pidserver, proc.pid)
