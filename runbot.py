@@ -30,6 +30,7 @@ import getpass
 from datetime import datetime 
 import json
 import httplib2
+import random
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
@@ -251,8 +252,30 @@ class RunBotBranch(object):
             conn = psycopg2.connect(database='template1')
             conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
             c = conn.cursor()
-            c.execute('CREATE DATABASE %s'%(dbname, ))
+            c.execute('CREATE DATABASE "%s"'%(dbname, ))
         conn.close()
+
+    def parselog(self, logfile):
+        f = open(logfile, 'r')
+        line = 0
+        error = []
+        reg = re.compile('(Traceback|WARNING:tests)', re.I)
+        newstart = re.compile('INFO:server:OpenERP version')
+        for l in f:
+            line += 1 
+            if re.search(reg, l): 
+                error.append('Line %s: %s'%(line, l.strip())) 
+            if re.search(newstart, l):
+                # new start 
+                error = [] 
+        f.close()
+        os.remove(logfile)
+        if error:
+            self._email("\n".join(msg), True)
+        else:
+            self._email('')
+
+
 
     def start_run_server(self,port):
         if self.is_server_running():
@@ -284,9 +307,22 @@ class RunBotBranch(object):
                 cmd.append("--without-demo=all")
 
         log("run",*cmd,log=self.log_server_path)
-        p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
-        self.running_server_pid=p.pid
-        write_pid(self.file_pidserver, p.pid)
+        if self.get_bool_ini('load_demo') and self.get_ini('email'):
+            pid = os.fork()
+            if not pid:
+                proc = subprocess.Popen(cmd+['--stop-after-init'], stdout=out, stderr=out)
+                write_pid(self.file_pidserver, proc.pid)
+                proc.wait()
+                # copy log file on then parse it
+                tmpfile = "%s%s"%(self.log_server_path,random(1,100000))
+                shutil.copy(self.log_server_path, tmpfile)
+                proc = subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
+                write_pid(self.file_pidserver, proc.pid)
+                self.parselog(tmpfile)
+        else:
+            p=subprocess.Popen(cmd, stdout=out, stderr=out, close_fds=True)
+            self.running_server_pid=p.pid
+            write_pid(self.file_pidserver, p.pid)
     
         if self.get_bool_ini('load_data') and not self.get_bool_ini('data_already_loaded'):
             pid = os.fork()
@@ -1011,15 +1047,11 @@ class RunBot(object):
         self.nginx_udpate()
 
 def skel(o, r):
-    invalid_character = ['-']
-        
-    for char in invalid_character:
-        if char in o.instance:
-            raise Exception('\'%s\' is an invalid character in the name of the instance' % char)
     if o.instance == 'testjfb':
         sys.stderr.write("Stop au copier-coller des commandes !\nAu pire insere le caractere # avant de coller.\n") 
         sys.exit(1)
 
+    o.instance = o.instance.replace('_','-')
     if o.instance in r.uf_instances:
         sys.stderr.write("Error: %s exists\n"%(o.instance, ))
     else:
@@ -1126,9 +1158,9 @@ def get_uf(o, r):
 
 def deploy(o, r):
     uf_numbers = o.number.split(',')
-    instance = '%s_uf_%s'%(o.jira_user[0:3], '_'.join(uf_numbers))
+    instance = '%s-uf-%s'%(o.jira_user[0:3], '-'.join(uf_numbers))
     if o.suffix:
-        instance = '%s_%s'%(instance, o.suffix)
+        instance = '%s-%s'%(instance, o.suffix)
     if instance in r.uf_instances:
         sys.stderr.write("Error: %s exists, please use -s option\n"%instance)
         sys.exit(1)
