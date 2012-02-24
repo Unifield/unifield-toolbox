@@ -1067,15 +1067,35 @@ def skel(o, r):
             elif line.startswith('email'):
                 outf.write("email = %s\n"%(o.email or ""))
             elif line.startswith('unifield-wm'):
-                outf.write("unifield-wm = %s\n"%(o.unifield_wm or "link"))
+                if not o.unifield_wm:
+                    o.unifield_wm = 'link'
+                if o.unifield_wm == 'link' and o.no_symlink:
+                    o.unifield_wm = "lp:unifield-wm"
+                outf.write("unifield-wm = %s\n"%(o.unifield_wm,))
             elif line.startswith('unifield-addons'):
-                outf.write("unifield-addons = %s\n"%(o.unifield_addons or "link"))
+                if not o.unifield_addons:
+                    o.unifield_addons = 'link'
+                if o.unifield_addons == 'link' and o.no_symlink:
+                    o.unifield_addons = 'lp:unifield-addons'
+                outf.write("unifield-addons = %s\n"%(o.unifield_addons, ))
             elif line.startswith('unifield-server'):
-                outf.write("unifield-server = %s\n"%(o.unifield_server or "link"))
+                if not o.unifield_server:
+                    o.unifield_server = 'link'
+                if o.unifield_server == 'link' and o.no_symlink:
+                    o.unifield_server = 'lp:unifield-server'
+                outf.write("unifield-server = %s\n"%(o.unifield_server, ))
             elif line.startswith('unifield-web'):
-                outf.write("unifield-web = %s\n"%(o.unifield_web or "link"))
+                if not o.unifield_web:
+                    o.unifield_web = 'link'
+                if o.unifield_web == 'link' and o.no_symlink:
+                    o.unifield_web = 'lp:unifield-web'
+                outf.write("unifield-web = %s\n"%(o.unifield_web, ))
             elif line.startswith('unifield-data'):
-                outf.write("unifield-data = %s\n"%(o.unifield_data or "link"))
+                if not o.unifield_data:
+                    o.unifield_data = 'link'
+                if o.unifield_data == 'link' and o.no_symlink:
+                    o.unifield_data = 'lp:~unifield-team/unifield-wm/unifield-data'
+                outf.write("unifield-data = %s\n"%(o.unifield_data, ))
             elif o.unit and line.startswith('load_demo'):
                 outf.write("load_demo = 1\n")
             elif o.unit and line.startswith('load_data'):
@@ -1334,6 +1354,7 @@ def main():
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
     skel_parser.add_argument('--start', '-s', action='store_true', default=False, help='Start this instance')
+    skel_parser.add_argument('--no-symlink', '-ns', action='store_true', default=False, help='Don\'t use symlink')
     skel_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
     skel_parser.add_argument('--unifield-wm', '-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-addons', '-ad', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
@@ -1354,6 +1375,7 @@ def main():
     deploy_parser.add_argument('--no-url', '-nu', action='store_true', default=False, help='DO NOT update Jira Runbot URL')
     deploy_parser.add_argument('--suffix', '-s', metavar='RUBOT_SUFFIX', default=False, help='rubot suffix (added after uf n)')
     deploy_parser.add_argument('--email', '-m', metavar='email', default=False, help='override Jira email address')
+    deploy_parser.add_argument('--no-symlink', '-ns', action='store_true', default=False, help='Don\'t use symlink')
     deploy_parser.set_defaults(func=deploy)
 
 
