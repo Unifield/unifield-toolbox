@@ -259,7 +259,7 @@ class RunBotBranch(object):
         f = open(logfile, 'r')
         line = 0
         error = []
-        reg = re.compile('(Traceback|WARNING:tests)', re.I)
+        reg = re.compile('(Traceback|WARNING:tests|ERROR:)', re.I)
         newstart = re.compile('INFO:server:OpenERP version')
         for l in f:
             line += 1 
@@ -271,7 +271,7 @@ class RunBotBranch(object):
         f.close()
         os.remove(logfile)
         if error:
-            self._email("\n".join(msg), True)
+            self._email("\n".join(error), True)
         else:
             self._email('')
 
