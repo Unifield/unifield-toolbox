@@ -1268,6 +1268,8 @@ def _jira_state(o, r):
     jira_seen = []
     update = []
     for rbb in r.uf_instances.values():
+        if not rbb.get_bool_ini('start',True):
+            continue
         #decrun = sjira.search_runbot(rbb.uname+'.')
         #uf_data_fd.write("runbot_%s=%s;\n"%(rbb.uname, json.dumps(decrun)))
 

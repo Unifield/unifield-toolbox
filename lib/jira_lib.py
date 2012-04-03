@@ -49,7 +49,9 @@ class Jira():
         other_info['Reporter'] = issue.get('fields', {}).get('reporter',{}).get('value',{}).get('displayName')
         other_info['Summary'] = issue.get('fields', {}).get('summary', {}).get('value')
         other_info['Updated'] = ''
-        other_info['Fix Version'] = issue.get('fields', {}).get('fixVersions', {}).get('value',[{}])[-1].get('name','')
+        other_info['Fix Version'] = ''
+        if issue.get('fields', {}).get('fixVersions', {}).get('value'):
+            other_info['Fix Version'] = issue.get('fields', {}).get('fixVersions', {}).get('value',[{}])[-1].get('name','')
         other_info['Release Prio'] = issue.get('fields', {}).get(custom.get('Release Priority'), {}).get('value','')
         other_info['uf'] = key.replace('UF-','')
         lastupdate = issue.get('fields', {}).get('updated', {}).get('value','')
