@@ -298,7 +298,8 @@ class RunBotBranch(object):
         if 'msf_profile' not in modules:
             self.set_ini('load_data',0)
 
-        cmd += ['-i', modules]
+        if not self.get_bool_ini('load_data') or not self.get_bool_ini('data_already_loaded'):
+            cmd += ['-i', modules]
         
         if self.get_bool_ini('load_demo'):
             cmd += ['--log-level=test']
