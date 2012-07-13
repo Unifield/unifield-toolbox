@@ -24,6 +24,7 @@ acctype = {
     'stock': 'account_activable.account_type_stock',
     'equity': 'account.account_type_cash_equity',
     'tax': 'vat_management.account_type_tax',
+    'expense (no p&l)': 'account.account_type_expense_no_pl',
 }
 
 ttype = {
