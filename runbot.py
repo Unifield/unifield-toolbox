@@ -129,6 +129,10 @@ class RunBotBranch(object):
             'sr': 'Sebastien.ROCHE@geneva.msf.org',
             'qt': 'qt@tempo-consulting.fr',
             'dv': 'Duy.VO@geneva.msf.org',
+            'dvo': 'Duy.VO@geneva.msf.org',
+            'pma': 'pma@tempo-consulting.fr',
+            'mch': 'matthieu.choplin@geneva.msf.org',
+            'mcho': 'matthieu.choplin@geneva.msf.org',
         }
         self.committer_alias = {
             'chloups208 <chloups208@chloups208-laptop>': 'P',
@@ -304,6 +308,9 @@ class RunBotBranch(object):
         if self.get_bool_ini('load_demo'):
             cmd += ['--log-level=test']
 
+        if self.get_int_ini('unifield-server-revno') >= 3407:
+            cmd.append("--additional-xml")
+
         if self.get_bool_ini('load_data') or not self.get_bool_ini('load_demo'):
                 cmd.append("--without-demo=all")
 
@@ -382,7 +389,7 @@ class RunBotBranch(object):
             data += "http://index.%s"%(self.runbot.domain, )
             msg = MIMEText(data)
 
-            msg['Subject'] = '%s Runbot %s'%(subj, self.name, )
+            msg['Subject'] = '%s Runbot %s %s'%(subj, self.name, subj)
             msg['To'] = ','.join(new_dest)
             msg['From'] = 'noreply@%s'%(self.runbot.domain, )
 
@@ -650,6 +657,8 @@ class RunBot(object):
             rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
             if init and rbb.get_bool_ini('start',True):
                 rbb.init_folder()
+#            else:
+#                open(os.path.join(self.wd, "toarchive", folder),'w').close()
 
     def get_revno_from_path(self, path, full=False):
         log("Get revno %s"%(path,))
@@ -692,6 +701,7 @@ class RunBot(object):
         http {
           include /etc/nginx/mime.types;
           server_names_hash_bucket_size 128;
+          client_max_body_size 5M;
           autoindex on;
           client_body_temp_path nginx; proxy_temp_path nginx; fastcgi_temp_path nginx; access_log nginx/access.log; index index.html;
           proxy_buffers 16 16k;
@@ -1180,6 +1190,11 @@ def get_uf(o, r):
 def deploy(o, r):
     uf_numbers = o.number.split(',')
     instance = '%s-uf-%s'%(o.jira_user[0:3], '-'.join(uf_numbers))
+    if o.unit:
+        o.no_update = True
+        o.no_url = True
+        if not o.suffix:
+            o.suffix = 'unit'
     if o.suffix:
         instance = '%s-%s'%(instance, o.suffix)
     if instance in r.uf_instances:
@@ -1193,7 +1208,6 @@ def deploy(o, r):
     ret = jira.get_branches('UF-%s'%o.number.split(',')[0])
     o.start = 1
     o.instance = instance
-    o.unit = False
     if not o.email:
         o.email = ret.get('email')
     o.comment = ret.get('comment')
@@ -1204,6 +1218,7 @@ def deploy(o, r):
         if ret[custom]:
             sys.stdout.write("%s-branch: %s\n"%(branch, ret[custom],))
         setattr(o, 'unifield_%s'%branch, ret[custom] and ret[custom].replace('https://code.launchpad.net/','lp:' or False))
+    sys.stdout.write("unit test: %s\n"%(o.unit, ))
     sys.stdout.write("email: %s\n"%(o.email, ))
     sys.stdout.write("Jira workflow %s updated\n"%(o.no_update and "NOT" or "",))
     sys.stdout.write("Jira Runbot %s updated\n"%(o.no_url and "NOT" or "",))
@@ -1371,6 +1386,7 @@ def main():
     
     deploy_parser = subparsers.add_parser('deploy', help='Deploy an issue')
     deploy_parser.add_argument('number', action='store', help='UF Numbers separated by comma  (without the string UF-)\nThe first id will be used to retrieve launchpad url')
+    deploy_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
     deploy_parser.add_argument('--jira-user', '-u', metavar='JIRA_USER', default='jfb', help='Jira User (default: %(default)s)')
     deploy_parser.add_argument('--jira-url', metavar='JIRA_URL', default='http://jira.unifield.org/', help='Jira url (default: %(default)s)')
     deploy_parser.add_argument('--jira-passwd', '-p',  metavar='JIRA_PASSWOR', default=False, help='Jira password')
