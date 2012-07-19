@@ -401,11 +401,15 @@ class RunBotBranch(object):
     def _symlink_nginx_icon(self, itype):
         # assert itype in ['ok', 'nok']
         dest = os.path.join(self.runbot.nginx_path, '%s.png'%(self.name,))
-        os.path.exists(dest) and os.remove(dest)
-        src = os.path.join(self.runbot.nginx_path,'%s.png'%(itype, ))
-        os.symlink(src, dest)
-        # Touch file to disable cache
-        os.utime(src, None)
+        try:
+            os.path.exists(dest) and os.remove(dest)
+
+            src = os.path.join(self.runbot.nginx_path,'%s.png'%(itype, ))
+            os.symlink(src, dest)
+            # Touch file to disable cache
+            os.utime(src, None)
+        except:
+            pass
 
 
     def start_run_web(self,port):
