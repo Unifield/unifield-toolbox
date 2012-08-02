@@ -2,7 +2,7 @@
 import csv
 
 out = '/tmp/add.xml'
-inf = 'coa-20120713.csv'
+inf = '/tmp/mch.csv'
 fo = open(out, 'w')
 
 reader = csv.reader(open(inf, "rb"),delimiter=";",lineterminator="\r",quotechar='"')
@@ -37,8 +37,8 @@ type_for_register = [('none', 'None'), ('transfer', 'Transfer'), ('transfer_same
 destination_xml_id = {
     8: 'analytic_distribution.analytic_account_destination_expatriates',
     9: 'analytic_distribution.analytic_account_destination_national_staff',
-    10: 'analytic_distribution.analytic_account_destination_support',
-    11: 'analytic_distribution.analytic_account_destination_operation',
+    10: 'analytic_distribution.analytic_account_destination_operation',
+    11: 'analytic_distribution.analytic_account_destination_support',
 }
 
 type_for_reg_dic ={}
