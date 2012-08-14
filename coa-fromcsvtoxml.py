@@ -71,6 +71,7 @@ for row in reader:
             <field name="parent_id" %(parent_id)s />
             <field name="reconcile" eval="%(reconcile)s" />
             <field name="user_type" ref="%(user_type)s" />
+            <field name="is_not_hq_correctible" eval="%(not_hq_correctible)s" />
             <field name="accrual_account" eval="%(accrual)s" />%(destination_string)s
         </record>
 '''% {
@@ -82,6 +83,7 @@ for row in reader:
             'reconcile': row[6] in ('VRAI', 'True') and 'True' or 'False',
             'user_type': acctype[row[4].lower()],
             'accrual': row[7] in ('VRAI', 'True') and 'True' or 'False',
+            'not_hq_correctible': row[12] in ('VRAI', 'True') and 'True' or 'False',
             'destination_string': destination_string,
         })
 
