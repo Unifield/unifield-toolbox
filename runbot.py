@@ -302,6 +302,11 @@ class RunBotBranch(object):
         if 'msf_profile' not in modules:
             self.set_ini('load_data',0)
 
+        if self.get_ini('unifield-sync'):
+            for sync_mod in ['sync_client', 'sync_so', 'sync_server', 'sync_common']:
+                if sync_mod not in modules:
+                    modules = '%s,%s'%(modules, sync_mod)
+
         if not self.get_bool_ini('load_data') or not self.get_bool_ini('data_already_loaded'):
             cmd += ['-i', modules]
         
@@ -1101,6 +1106,9 @@ def skel(o, r):
                 if o.unifield_web == 'link' and o.no_symlink:
                     o.unifield_web = 'lp:unifield-web'
                 outf.write("unifield-web = %s\n"%(o.unifield_web, ))
+            elif line.startswith('unifield-sync'):
+                if o.unifield_sync:
+                    outf.write("unifield-sync = %s\n"%(o.unifield_sync, ))
             elif line.startswith('unifield-data'):
                 if not o.unifield_data:
                     o.unifield_data = 'link'
@@ -1211,7 +1219,7 @@ def deploy(o, r):
     if not o.email:
         o.email = ret.get('email')
     o.comment = ret.get('comment')
-    for custom in ['web', 'wm', 'addons', 'server', 'data']:
+    for custom in ['web', 'wm', 'addons', 'server', 'data', 'sync']:
         branch = custom
         if custom == 'wm' and ret['groupedwm']:
             custom = 'groupedwm'
@@ -1379,6 +1387,7 @@ def main():
     skel_parser.add_argument('--unifield-server', '-se', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-web', '-we', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-data', '-ud', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
+    skel_parser.add_argument('--unifield-sync', '-us', metavar='URL', default='', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--comment', '-c')
     skel_parser.add_argument('--email', '-m')
     skel_parser.add_argument('--jira-id', '-j', help='List of jira-id (without UF-)')

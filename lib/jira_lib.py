@@ -8,7 +8,7 @@ import SOAPpy
 import SOAPpy.Types
 from mx import DateTime
 
-custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070', 'Release Priority': 'customfield_10040'}
+custom = {'web': 'customfield_10061', 'wm': 'customfield_10064', 'addons': 'customfield_10063', 'server': 'customfield_10062', 'groupedwm': 'customfield_10065', 'sync': 'customfield_10090','developer': 'customfield_10020', 'runbot_url': 'customfield_10050', 'data': 'customfield_10070', 'Release Priority': 'customfield_10040'}
 class Jira():
 
     def __init__(self, jira_url, username, password):
@@ -64,7 +64,7 @@ class Jira():
         parent = issue.get('fields', {}).get('parent', {}).get('value',{}).get('issueKey')
         if parent:
             other_info['Parent'] = "%s %s"%(parent, self.get_info(parent).get('fields', {}).get('summary', {}).get('value'))
-        for k in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data', 'runbot_url']:
+        for k in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data', 'runbot_url', 'sync']:
             v = issue.get('fields', {}).get(custom[k], {}).get('value', '')
             if v:
                 other_info[k] = v
@@ -90,7 +90,7 @@ class Jira():
     def get_branches(self, key):
         issue = self.get_info(key)
         ret = {}
-        for t in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data']:
+        for t in ['web', 'wm', 'addons', 'server', 'groupedwm', 'data', 'sync']:
             ret[t] = issue.get('fields', {}).get(custom[t], {}).get('value', False)
         ret['comment'] = issue.get('fields', {}).get('summary', {}).get('value', False)
         user = issue.get('fields', {}).get(custom['developer'], {}).get('value', {}).get('name', False)
