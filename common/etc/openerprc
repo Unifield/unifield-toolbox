@@ -53,5 +53,5 @@ db_password=
 db_host=
 
 email_from = False
-addons_path = UF_ADDONS_PATH/unifield-addons,UF_ADDONS_PATH/unifield-wm
+addons_path = UF_ADDONS_PATH/unifield-addons,UF_ADDONS_PATH/unifield-wmSYNC_PATH
 static_http_document_root = None

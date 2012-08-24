@@ -552,6 +552,8 @@ company.url = ''
         # copy the unifield-server project from 'common' folder if not existed
         self.create_module("unifield-server")
         self.create_module("unifield-web")
+        if self.get_ini('unifield-sync'):
+            self.create_module("unifield-sync")
         # copy the folder 'etc' from 'common' folder, then fill the instance path
         self.process_folder_etc()
 
@@ -571,12 +573,18 @@ company.url = ''
         if not os.path.exists(os.path.join(project_path)):
             run(["cp","-r", self.runbot.common_etc, self.instance_path])
         
+            if self.get_ini('unifield-sync'):
+                sync_path = ",%s/%s"%(self.instance_path, 'unifield-sync')
+            else:
+                sync_path = ''
+
             # replace the UF_ADDONS_PATH with the modules path of the current instance 
             config_file = os.path.join(project_path, 'openerprc')
             for line in fileinput.FileInput(config_file, inplace=1):
                 line = line.replace("UF_ADDONS_PATH", self.instance_path)
                 line = line.replace("UF_INSTANCE", self.name)
                 line = line.replace("PIDFILE", self.file_pidserver+'_')
+                line = line.replace("SYNC_PATH", sync_path)
                 sys.stdout.write(line)
 
     def create_module(self, module):
