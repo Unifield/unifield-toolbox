@@ -3,5 +3,5 @@
 
 - Better concurrency control, and free port detection
 
-- Command deploy: new option "--unit" ./runbot.py -u <jira-user> <UF-number> --unit
+- Command deploy: new option "--unit" ./runbot.py -u &lt;jira-user&gt; &lt;UF-number&gt; --unit
   example: ./runbot.py -u md 1129
