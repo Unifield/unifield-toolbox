@@ -1003,6 +1003,12 @@ class RunBot(object):
             <div class="content">
                 <p><b>Last modification: ${r.now}.</b></p>
             </div>
+            <div class="content">
+                <p><b>What's new on runbot:</b></p>
+                <pre class="comment">
+${new}
+                </pre>
+            </div>
         </div>
         <div class="comment">
         % for ic in set(r.state_icon.values()):
@@ -1025,7 +1031,13 @@ class RunBot(object):
         </body>
         """
         self.now = time.strftime("%Y-%m-%d %H:%M:%S")
-        return mako.template.Template(template).render(r=self,t=time.time(),re=re)
+        new = ""
+        new_file = os.path.join(self.wd,'CHANGES.txt')
+        if os.path.exists(new_file):
+            f = open(new_file, 'r')
+            new = f.read()
+            f.close()
+        return mako.template.Template(template).render(r=self,t=time.time(),re=re, new=new)
 
     def nginx_udpate(self, instance='all'):
         """ Update the link, port and entry of the new UniField instance into 2 files: nginx.conf and index.html

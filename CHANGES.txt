@@ -1,0 +1,7 @@
+- The instance name is now mandatory with the command 'run':
+  example: ./runbot.py run jfb-uf-1347
+
+- Better concurrency control, and free port detection
+
+- Command deploy: new option "--unit" ./runbot.py -u <jira-user> <UF-number> --unit
+  example: ./runbot.py -u md 1129
