@@ -31,6 +31,7 @@ from datetime import datetime
 import json
 import httplib2
 import random
+import socket
 #----------------------------------------------------------
 # OpenERP rdtools utils
 #----------------------------------------------------------
@@ -96,6 +97,7 @@ def underscorize(n):
 class RunBotBranch(object):
     def __init__(self,runbot, subfolder, jira_url=False, jira_user=False, jira_passwd=False, noupdate_jira=True, nourl_jira=True):
         self.runbot=runbot
+        self.started = {}
         self.running=False
         self.running_port=None
         self.running_server_pid=None
@@ -495,11 +497,10 @@ company.url = ''
             self.start_run_server(port)
             self.start_run_web(port)
 
-            self.runbot.running.insert(0,self)
-            self.runbot.running.sort(key=lambda x:x.date_last_modified,reverse=1)
+            #self.runbot.started.insert(0,self)
+            #self.runbot.started.sort(key=lambda x:x.date_last_modified,reverse=1)
             self.running_t0=time.time()
             self.running=True
-            self.running_port=port
         else:
             sys.stderr.write("Instance %s not started\n"%(self.name,))
 
@@ -507,24 +508,33 @@ company.url = ''
         self.write_ini()
 
     def stop(self):
-        log("branch-stop",branch=self.unique_name,port=self.running_port)
+        log("branch-stop",branch=self.unique_name)
         pidserver = self.pidserver()
         if pidserver:
             log('Kill server %s'%(pidserver,))
+            kill(pidserver, 15)
+            time.sleep(0.5)
             kill(pidserver)
         pidweb = self.pidweb()
         if pidweb:
             log('Kill server %s'%(pidweb,))
+            kill(pidweb, 15)
+            time.sleep(0.5)
             kill(pidweb)
-        if self in self.runbot.running:
-            self.runbot.running.remove(self)
         self.running=False
-        self.running_port=None
 
     def delete(self, onlydb):
         self.stop()
         log("Delete db %s"%self.subdomain.lower())
-        run(['dropdb', self.subdomain.lower()])
+        try:
+            run(['dropdb', self.subdomain.lower()])
+        except:
+            conn = psycopg2.connect(database='template1')
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            c = conn.cursor()
+            c.execute('select pg_terminate_backend(procpid) from pg_stat_activity where datname = %s',(self.subdomain.lower(),))
+            c.execute('drop database "%s"'%(self.subdomain.lower(),))
+            conn.close()
         if not onlydb:
             log("Delete %s"%self.instance_path)
             shutil.rmtree(self.instance_path)
@@ -650,7 +660,6 @@ class RunBot(object):
         self.domain=domain
         self.uf_instances={}
         self.now = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.running=[]
         self.nginx_path = os.path.join(self.wd,'nginx')
         self.nginx_pid_path = os.path.join(self.nginx_path,'nginx.pid')
         self.nginx_uf_data = 'uf_data.js'
@@ -672,8 +681,6 @@ class RunBot(object):
 
         for folder in allsubdirs:
             rbb=self.uf_instances.setdefault(folder, RunBotBranch(self,folder))
-            if init and rbb.get_bool_ini('start',True):
-                rbb.init_folder()
 #            else:
 #                open(os.path.join(self.wd, "toarchive", folder),'w').close()
 
@@ -724,14 +731,7 @@ class RunBot(object):
           proxy_buffers 16 16k;
           proxy_buffer_size 32k;
           server { listen ${r.nginx_port} default; server_name _; root ./nginx/; }
-          % for i in r.running:
-             server {
-                listen ${r.nginx_port};
-                server_name ${i.subdomain}.${r.domain};
-                location /${i.subdomain}/logs/ { alias ${i.log_path}/; }
-                location / { proxy_pass http://127.0.0.1:${i.running_port+1}; proxy_set_header X-Forwarded-Host $host; }
-             }
-          % endfor
+          include 'instances/*.conf';
         }
         """
         return mako.template.Template(template).render(r=self)
@@ -919,13 +919,13 @@ class RunBot(object):
             <td colspan='3'></td>
         </tr>
         <tr class="total">
-            <td class="name left"><b>${len(r.running)} UniField test instances</b></td>
+            <td class="name left"><b>${len([x for x in r.uf_instances.values() if x.get_bool_ini('start', True) and x.get_int_ini('port')])} UniField test instances</b></td>
             <td></td>
             <td></td>
             <td class="right"></td>
         </tr>
         </tfoot>
-        % for i in sorted(r.running, cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
+        % for i in sorted([x for x in r.uf_instances.values() if x.get_bool_ini('start', True) and x.get_int_ini('port')], cmp=lambda x,y: cmp(x.subdomain.lower(),y.subdomain.lower())):
              <% 
                 jira_id = i.get_ini('jira-id') and i.get_ini('jira-id').split(',') or []
                 detected_uf = i.detected_uf
@@ -933,7 +933,7 @@ class RunBot(object):
         <tbody id="${i.subdomain}" class="tmain" uf="${' '.join(set(jira_id+detected_uf))}" date="${i.get_ini('db_created') or  r.now}" >
         <tr class="file">
             <td class="name left">
-                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.running_port+1})</small> <img src="${i.subdomain}.png" alt=""/>
+                <a href="http://${i.subdomain}.${r.domain}/"  target="_blank">${i.subdomain}</a> <small>(netrpc: ${i.get_int_ini('port')})</small> <img src="${i.subdomain}.png" alt=""/>
             </td>
             <td class="date">
                 % if i.get_ini('db_created'):
@@ -1027,22 +1027,60 @@ class RunBot(object):
         self.now = time.strftime("%Y-%m-%d %H:%M:%S")
         return mako.template.Template(template).render(r=self,t=time.time(),re=re)
 
-    def nginx_udpate(self):
+    def nginx_udpate(self, instance='all'):
         """ Update the link, port and entry of the new UniField instance into 2 files: nginx.conf and index.html
         """
         log("runbot-nginx-update")
         f=open(os.path.join(self.wd,'nginx','index.html'),"w")
         f.write(self.nginx_index())
         f.close()
+
         f=open(os.path.join(self.wd,'nginx','nginx.conf'),"w")
         f.write(self.nginx_config())
         f.close()
+
+        to_process = []
+        if instance == 'all':
+            to_process = [x for x in self.uf_instances.values() if x.get_bool_ini('start', True) and x.get_int_ini('port')]
+        elif instance and self.uf_instances.get(instance):
+            to_process = [self.uf_instances[instance]]
+
+        instances_dir = os.path.join(self.wd,'nginx', 'instances')
+
+        if not os.path.isdir(instances_dir):
+            os.makedirs(instances_dir)
+
+        for i in to_process:
+            f = open(os.path.join(instances_dir, '%s.conf' % i.name),"w")
+            f.write('''
+                server {
+                    listen %(port)s;
+                    server_name %(subdomain)s.%(domain)s;
+                    location /%(subdomain)s/logs/ { alias %(log_path)s/; }
+                    location / { proxy_pass http://127.0.0.1:%(running_port)s; proxy_set_header X-Forwarded-Host $host; }
+                }
+''' % {'port': self.nginx_port, 'subdomain': i.subdomain, 'domain': self.domain, 'log_path': i.log_path, 'running_port': i.get_int_ini('port')+1})
+            f.close()
         self.nginx_reload()
 
-    def _get_port(self):
+    def _get_port(self, num=0):
+        num += 1
+        if num > 100:
+            raise Exception('No free port')
+
         i = self.server_port
         while i in self.ports:
-            i += 2
+            i += 2*random.randint(1,10)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(('127.0.0.1', i))
+            s.close()
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(('127.0.0.1', i+1))
+            s.close()
+        except socket.error:
+            self.ports.append(i)
+            return self._get_port(num)
         return i
 
     def subdirs(self, dir):
@@ -1052,7 +1090,7 @@ class RunBot(object):
         return [name for name in os.listdir(dir)
             if os.path.isdir(os.path.join(dir, name)) and not name.startswith('.')]
 
-    def process_instances(self):
+    def process_instances(self, instance='all'):
         ''' 
         Get the sub folders and build a list of instances to be run 
         '''
@@ -1062,8 +1100,15 @@ class RunBot(object):
             if num_port:
                 self.ports.append(num_port)
                 self.ports.append(num_port+1)
-        
-        for rbb in self.uf_instances.values():
+
+        to_process = []
+        if instance == 'all':
+            to_process = self.uf_instances.values()
+        elif instance and self.uf_instances.get(instance):
+            to_process = [self.uf_instances[instance]]
+
+        for rbb in to_process:
+            rbb.init_folder()
             if rbb.get_bool_ini('start',True):
                 if not rbb.get_int_ini('port'):
                     new_port = self._get_port()
@@ -1072,7 +1117,7 @@ class RunBot(object):
                     rbb.set_ini('port', new_port)
                 rbb.start()
             
-        self.nginx_udpate()
+        self.nginx_udpate(instance)
 
 def skel(o, r):
     if o.instance == 'testjfb':
@@ -1140,11 +1185,10 @@ def skel(o, r):
         if o.start:
             outf.close()
             rbb = r.uf_instances.setdefault(o.instance, RunBotBranch(r,o.instance, jira_url=getattr(o,'jira_url', False), jira_user=getattr(o,'jira_user', False), jira_passwd=getattr(o,'jira_passwd', False), noupdate_jira=getattr(o, 'no_update', False), nourl_jira=getattr(o, 'no_url', False)))
-            rbb.init_folder()
-            r.process_instances() 
+            r.process_instances(o.instance)
         else:
             outf.write("start = 0")
-            sys.stderr.write("Please edit %s , and change 'start',\nyou can use vi or a friendlier editor like nano\n"%(new_ini, ))
+            sys.stderr.write("Please edit %s , change 'start',\nyou can use vi or a friendlier editor like nano\n and run './runbot.py run %s'\n"%(new_ini, o.instance))
             outf.close()
 
 
@@ -1190,10 +1234,10 @@ def restartall(o, r):
     for rbb in r.uf_instances.values():
         rbb.stop()
     time.sleep(1)
-    run_inst(o, r)
+    r.process_instances('all')
 
 def run_inst(o, r):
-    r.process_instances()
+    r.process_instances(o.instance)
     
 def restart(o, r):
     if o.instance not in r.uf_instances:
@@ -1339,6 +1383,9 @@ def _jira_state(o, r):
         os.utime(os.path.join(icon_path, ic), None)
 
 def del_inst(o, r):
+    nginx_conf = os.path.join(r.wd,'nginx', 'instances', '%s.conf' % o.instance)
+    if os.path.exists(nginx_conf):
+        os.remove(nginx_conf)
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
     else:
@@ -1358,6 +1405,7 @@ def main():
 #    parser.add_argument("--checkout", "-co", action="store_true", default=False, help="checkout if link to common is newer (default: %(default)s)")
     subparsers = parser.add_subparsers(dest='command')
     run_parser = subparsers.add_parser('run', help='start/init new instances')
+    run_parser.add_argument('instance', action='store', help='instance to start (all for all instances)')
     run_parser.set_defaults(func=run_inst)
 
     killall_parser = subparsers.add_parser('killall', help='kill all instances')
