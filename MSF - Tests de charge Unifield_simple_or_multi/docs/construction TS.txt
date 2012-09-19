@@ -1,0 +1,12 @@
+TS_1
+for i in {2..7000}; do cp 1.xml $i.xml; done
+for i in {2..7000}; do sed -i "s/product_product\/1/product_product\/$i/" $i.xml; done
+
+TS_3
+i=1; gawk -F',' '{ gsub(/"/,"",$8); gsub(/"/, "", $3); if ($3 == "") $3 = '1'; id = gensub(/sd\.base_([A-Z]+)/, "\\1", "g", $8); print "[u'"'"'"$8"'"'"', u'"'"'2012-01-01'"'"', u'"'"'"$3"'"'"', u'"'"'""sd\.base_rate"id"'"'"']" }' data.csv | while read line; do sed -e "s/@@VALUES@@/$line/" t.xml > TS_3/$i.xml; let i++; done
+
+
+
+TS_9
+for i in {2..22}; do cp 1.xml $i.xml; done
+for i in {2..22}; do sed -i "s/account_bank_statement_line\/1/account_bank_statement_line\/$i/" $i.xml; done

@@ -1,0 +1,67 @@
+<param>
+<value><struct>
+<member>
+ <name>load</name>
+ <value><array><data>
+ <value><struct>
+<member>
+<name>owner</name>
+<value><boolean>0</boolean></value>
+</member>
+<member>
+<name>version</name>
+<value><int>0</int></value>
+</member>
+<member>
+<name>values</name>
+<value><string>[u'sd.base_BGN', u'2012-06-27', u'8.83426', u'sd.#uuid#/res_currency_rate/27']</string></value>
+</member>
+</struct></value>
+<value><struct>
+<member>
+<name>owner</name>
+<value><boolean>0</boolean></value>
+</member>
+<member>
+<name>version</name>
+<value><int>0</int></value>
+</member>
+<member>
+<name>values</name>
+<value><string>[u'sd.base_BGN', u'2012-05-15', u'9.33333', u'sd.#uuid#/res_currency_rate/28']</string></value>
+</member>
+</struct></value>
+<value><struct>
+<member>
+<name>owner</name>
+<value><boolean>0</boolean></value>
+</member>
+<member>
+<name>version</name>
+<value><int>0</int></value>
+</member>
+<member>
+<name>values</name>
+<value><string>[u'sd.base_BGN', u'2012-01-01', u'10.3004', u'sd.base_rateBGN']</string></value>
+</member>
+</struct></value>
+</data></array></value>
+</member>
+<member>
+<name>fields</name>
+<value><string>['currency_id/id', 'name', 'rate', 'id']</string></value>
+</member>
+<member>
+<name>model</name>
+<value><string>res.currency.rate</string></value>
+</member>
+<member>
+<name>rule_id</name>
+<value><int>91</int></value>
+</member>
+<member>
+<name>session_id</name>
+<value><string>#session_id#</string></value>
+</member>
+</struct></value>
+</param>

@@ -1,0 +1,567 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="2.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Setup Unifield Environment" enabled="true">
+      <stringProp name="TestPlan.comments">Simple Controller</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="host" elementType="Argument">
+            <stringProp name="Argument.name">host</stringProp>
+            <stringProp name="Argument.value">${__P(host,localhost)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="port" elementType="Argument">
+            <stringProp name="Argument.name">port</stringProp>
+            <stringProp name="Argument.value">${__P(port,8070)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="userId" elementType="Argument">
+            <stringProp name="Argument.name">userId</stringProp>
+            <stringProp name="Argument.value">${__P(user.id,1)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="password" elementType="Argument">
+            <stringProp name="Argument.name">password</stringProp>
+            <stringProp name="Argument.value">${__P(password,admin)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="databaseName" elementType="Argument">
+            <stringProp name="Argument.name">databaseName</stringProp>
+            <stringProp name="Argument.value">${__P(database.name,SYNC_SERVER)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="resourceDir" elementType="Argument">
+            <stringProp name="Argument.name">resourceDir</stringProp>
+            <stringProp name="Argument.value">${__P(resource.dir,resources)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="External Ressources" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="groupsPool" elementType="Argument">
+            <stringProp name="Argument.name">groupsPool</stringProp>
+            <stringProp name="Argument.value">${resourceDir}/groups.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="operationCentersPool" elementType="Argument">
+            <stringProp name="Argument.name">operationCentersPool</stringProp>
+            <stringProp name="Argument.value">${resourceDir}/operationCenters.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="missionsPool" elementType="Argument">
+            <stringProp name="Argument.name">missionsPool</stringProp>
+            <stringProp name="Argument.value">${resourceDir}/missions.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="coordinationsPool" elementType="Argument">
+            <stringProp name="Argument.name">coordinationsPool</stringProp>
+            <stringProp name="Argument.value">${resourceDir}/coordinations.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="projectsPool" elementType="Argument">
+            <stringProp name="Argument.name">projectsPool</stringProp>
+            <stringProp name="Argument.value">${resourceDir}/projects.csv</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="Unifield Server Default" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${host}</stringProp>
+        <stringProp name="HTTPSampler.port">${port}</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+        <stringProp name="HTTPSampler.response_timeout"></stringProp>
+        <stringProp name="HTTPSampler.protocol"></stringProp>
+        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+        <stringProp name="HTTPSampler.path">/xmlrpc/object</stringProp>
+        <stringProp name="HTTPSampler.concurrentPool">4</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">text/xml</stringProp>
+          </elementProp>
+          <elementProp name="User-Agent" elementType="Header">
+            <stringProp name="Header.name">User-Agent</stringProp>
+            <stringProp name="Header.value">xmlrpclib.py/1.0.1 (by www.pythonware.com)</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Generate Instances" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1341578964000</longProp>
+        <longProp name="ThreadGroup.end_time">1341578964000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="Generate instances" enabled="true">
+          <stringProp name="BeanShellSampler.query">
+String[] operationCenterNames = { &quot;OCA&quot;, &quot;OCB&quot;, &quot;OCP&quot;, &quot;OCG&quot;, &quot;OCBA&quot; };
+int[] coordosPerOperationCenter = { 25, 25, 25, 15, 15 };
+int[] projectsPerMission = { 3, 3, 3, 2, 1 };
+int idProjectTypeOC = 1;
+int idProjectTypeMission = 2;
+
+StringBuilder operationCentersBuf = new StringBuilder();
+StringBuilder coordinationsBuf = new StringBuilder();
+StringBuilder projectsBuf = new StringBuilder();
+StringBuilder groupsBuf = new StringBuilder();
+
+log.info(&quot;Generating instances...&quot;);
+
+for (int i = 0; i &lt; operationCenterNames.length; i++) {
+	String operationCenterName = operationCenterNames[i];
+
+                      groupsBuf.append(operationCenterName).append(&quot;,&quot;).append(idProjectTypeOC).append(&quot;\n&quot;);
+
+	operationCentersBuf.append(UUID.randomUUID()).append(&quot;,&quot;);
+	operationCentersBuf.append(operationCenterName).append(&quot;,&quot;);
+	operationCentersBuf.append(&quot;gregory.bellier@geneva.msf.org&quot;).append(&quot;,&quot;);
+	operationCentersBuf.append(&quot;&quot;).append(&quot;,&quot;);
+	operationCentersBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+	operationCentersBuf.append(operationCenterName);
+	operationCentersBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+
+	for (int j = 1; j &lt;= coordosPerOperationCenter[i]; j++) {
+		String coordoName = operationCenterName + &quot;_Coordo&quot; +j;
+
+		groupsBuf.append(coordoName).append(&quot;,&quot;).append(idProjectTypeMission).append(&quot;\n&quot;);
+
+		coordinationsBuf.append(UUID.randomUUID()).append(&quot;,&quot;);
+		coordinationsBuf.append(coordoName).append(&quot;,&quot;);
+		coordinationsBuf.append(&quot;gregory.bellier@geneva.msf.org&quot;).append(&quot;,&quot;);
+		coordinationsBuf.append(operationCenterName).append(&quot;,&quot;);
+		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+		coordinationsBuf.append(operationCenterName);
+		coordinationsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;);
+		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+		coordinationsBuf.append(coordoName);
+		coordinationsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+
+		for (int k = 1; k &lt;= projectsPerMission[i]; k++) {
+			String projectName = coordoName + &quot;_Project&quot; + k;
+
+			projectsBuf.append(UUID.randomUUID()).append(&quot;,&quot;);
+			projectsBuf.append(projectName).append(&quot;,&quot;);
+			projectsBuf.append(&quot;gregory.bellier@geneva.msf.org&quot;).append(&quot;,&quot;);
+			projectsBuf.append(coordoName).append(&quot;,&quot;);
+			projectsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+			projectsBuf.append(operationCenterName);
+			projectsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;);
+			projectsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+			projectsBuf.append(coordoName);
+			projectsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+		}
+
+	}
+}
+
+log.info(&quot;done.&quot;);
+log.info(&quot;Saving instances to files...&quot;);
+
+try {
+	FileOutputStream fos = null;
+
+                      fos = new FileOutputStream(vars.get(&quot;groupsPool&quot;));
+                      fos.write(groupsBuf.toString().getBytes());
+                      fos.close();
+
+	fos = new FileOutputStream(vars.get(&quot;operationCentersPool&quot;));
+	fos.write(operationCentersBuf.toString().getBytes());
+	fos.close();
+
+	fos = new FileOutputStream(vars.get(&quot;missionsPool&quot;));
+	fos.write(coordinationsBuf.toString().getBytes());
+	fos.write(projectsBuf.toString().getBytes());
+	fos.close();
+
+	fos = new FileOutputStream(vars.get(&quot;coordinationsPool&quot;));
+	fos.write(coordinationsBuf.toString().getBytes());
+	fos.close();
+
+	fos = new FileOutputStream(vars.get(&quot;projectsPool&quot;));
+	fos.write(projectsBuf.toString().getBytes());
+	fos.close();
+} catch (Exception ex) {
+	log.error(ex.getMessage());
+	System.err.println(ex.getMessage());
+}
+
+log.info(&quot;done.&quot;);
+
+</stringProp>
+          <stringProp name="BeanShellSampler.filename"></stringProp>
+          <stringProp name="BeanShellSampler.parameters"></stringProp>
+          <boolProp name="BeanShellSampler.resetInterpreter">false</boolProp>
+        </BeanShellSampler>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Setup Groups" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <longProp name="ThreadGroup.start_time">1341578822000</longProp>
+        <longProp name="ThreadGroup.end_time">1341578822000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Groups Pool" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding"></stringProp>
+          <stringProp name="filename">${groupsPool}</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <stringProp name="shareMode">All threads</stringProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="variableNames">name,type_id</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Create Group" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="345956064">Setup Unifield Environment</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="198468187">Create Group</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Setup Operation Centers" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <longProp name="ThreadGroup.start_time">1341578877000</longProp>
+        <longProp name="ThreadGroup.end_time">1341578877000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Operation Centers Pool" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding"></stringProp>
+          <stringProp name="filename">${operationCentersPool}</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <stringProp name="shareMode">All threads</stringProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Register Instance" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="345956064">Setup Unifield Environment</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="1979560306">Register Instance</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Validate Instance" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="345956064">Setup Unifield Environment</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="-1183459233">Validate Instance</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Setup Missions" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1341578935000</longProp>
+        <longProp name="ThreadGroup.end_time">1341578935000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Missions Pool" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding"></stringProp>
+          <stringProp name="filename">${missionsPool}</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <stringProp name="shareMode">All threads</stringProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Register Instance" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="345956064">Setup Unifield Environment</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="1979560306">Register Instance</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Validate Instance" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="345956064">Setup Unifield Environment</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="-1183459233">Validate Instance</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
+      <TestFragmentController guiclass="TestFragmentControllerGui" testclass="TestFragmentController" testname="Test Fragment" enabled="true"/>
+      <hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Create Group" enabled="true"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="sync.server.entity_group.create" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity_group&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;create&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;struct&gt; &lt;member&gt; &lt;name&gt;name&lt;/name&gt; &lt;value&gt;&lt;string&gt;${name}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;entity_ids&lt;/name&gt; &lt;value&gt;&lt;array&gt;&lt;data&gt; &lt;/data&gt;&lt;/array&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;type_id&lt;/name&gt; &lt;value&gt;&lt;string&gt;${type_id}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;/struct&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain"></stringProp>
+            <stringProp name="HTTPSampler.port"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout"></stringProp>
+            <stringProp name="HTTPSampler.protocol"></stringProp>
+            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+            <stringProp name="HTTPSampler.path"></stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.implementation">Java</stringProp>
+            <boolProp name="HTTPSampler.monitor">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Register Instance" enabled="true"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="sync.server.entity.register" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;register&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;struct&gt; &lt;member&gt; &lt;name&gt;parent_name&lt;/name&gt; &lt;value&gt;&lt;string&gt;${parent_instance}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;group_names&lt;/name&gt; &lt;value&gt;&lt;array&gt;&lt;data&gt; ${group_names}&lt;/data&gt;&lt;/array&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;identifier&lt;/name&gt; &lt;value&gt;&lt;string&gt;${uuid}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;name&lt;/name&gt; &lt;value&gt;&lt;string&gt;${instance_name}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;email&lt;/name&gt; &lt;value&gt;&lt;string&gt;${contact_email}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;/struct&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;struct&gt; &lt;member&gt; &lt;name&gt;lang&lt;/name&gt; &lt;value&gt;&lt;string&gt;en_US&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;tz&lt;/name&gt; &lt;value&gt;&lt;boolean&gt;0&lt;/boolean&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_model&lt;/name&gt; &lt;value&gt;&lt;string&gt;ir.ui.menu&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;_terp_view_name&lt;/name&gt; &lt;value&gt;&lt;string&gt;Register&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;client&lt;/name&gt; &lt;value&gt;&lt;string&gt;web&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_ids&lt;/name&gt; &lt;value&gt;&lt;array&gt;&lt;data&gt; &lt;value&gt;&lt;int&gt;108&lt;/int&gt;&lt;/value&gt; &lt;/data&gt;&lt;/array&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_id&lt;/name&gt; &lt;value&gt;&lt;int&gt;108&lt;/int&gt;&lt;/value&gt; &lt;/member&gt; &lt;/struct&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain"></stringProp>
+            <stringProp name="HTTPSampler.port"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout"></stringProp>
+            <stringProp name="HTTPSampler.protocol"></stringProp>
+            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+            <stringProp name="HTTPSampler.path"></stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.implementation">Java</stringProp>
+            <boolProp name="HTTPSampler.monitor">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Modification successfully done, waiting for parent validation" enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="530817713">&lt;value&gt;&lt;boolean&gt;1&lt;/boolean&gt;&lt;/value&gt;</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">2</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="Validate Instance" enabled="true">
+          <boolProp name="TransactionController.parent">false</boolProp>
+        </TransactionController>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="sync.server.entity.get" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;get&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;${instance_name}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain"></stringProp>
+            <stringProp name="HTTPSampler.port"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout"></stringProp>
+            <stringProp name="HTTPSampler.protocol"></stringProp>
+            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+            <stringProp name="HTTPSampler.path"></stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.implementation">Java</stringProp>
+            <boolProp name="HTTPSampler.monitor">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <XPathExtractor guiclass="XPathExtractorGui" testclass="XPathExtractor" testname="Extract id" enabled="true">
+              <stringProp name="XPathExtractor.default"></stringProp>
+              <stringProp name="XPathExtractor.refname">id</stringProp>
+              <stringProp name="XPathExtractor.xpathQuery">methodResponse/params/param/value/array/data/value/int</stringProp>
+              <boolProp name="XPathExtractor.validate">false</boolProp>
+              <boolProp name="XPathExtractor.tolerant">false</boolProp>
+              <boolProp name="XPathExtractor.namespace">false</boolProp>
+            </XPathExtractor>
+            <hashTree/>
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="sync.server.entity.validate_action" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;validate_action&lt;/string&gt;&lt;/value&gt; &lt;param&gt; &lt;array&gt;&lt;data&gt;&lt;value&gt;&lt;int&gt;${id}&lt;/int&gt;&lt;/value&gt;&lt;/data&gt;&lt;/array&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.domain"></stringProp>
+            <stringProp name="HTTPSampler.port"></stringProp>
+            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+            <stringProp name="HTTPSampler.response_timeout"></stringProp>
+            <stringProp name="HTTPSampler.protocol"></stringProp>
+            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+            <stringProp name="HTTPSampler.path"></stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+            <stringProp name="HTTPSampler.implementation">Java</stringProp>
+            <boolProp name="HTTPSampler.monitor">false</boolProp>
+            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="530817713">&lt;value&gt;&lt;boolean&gt;1&lt;/boolean&gt;&lt;/value&gt;</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">2</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>true</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>true</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
