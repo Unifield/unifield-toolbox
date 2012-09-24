@@ -14,7 +14,7 @@
 </member>
 <member>
 <name>values</name>
-<value><string>[False, 'False', u'sd.product_cat0','False', u'JPH1', False, 'False', u'StandardPrice', 'False', u'JPH1', False, False, False,False, False, False, False, u'Approved (ITC)', '',False, False, False, u'JPH test create article',u'JPH test create article', 'False',u'sd.msf_config_locations_nomen_log',u'sd.#uuid#/product_nomenclature/5',u'sd.#uuid#/product_nomenclature/11',u'sd.#uuid#/product_nomenclature/17','', 'False', u'60.0', u'Make to Stock', False,False, False, '', '', '', '', 'False', 'False','False', False, u'Single Item', u'Buy',u'Stockable Product', False,u'sd.product_product_uom_unit', False, u'Periodical (manual)', False, False,u'sd.#uuid#/product_product/70']</string></value>
+<value><string>[False, 'False', u'sd.product_cat0','False', u'JPH1', False, 'False', u'StandardPrice', 'False', u'JPH1', False, False, False,False, False, False, False, u'Approved (ITC)', '',False, False, False, u'JPH test create article',u'JPH test create article', 'False',u'sd.msf_config_locations_nomen_log',u'sd.#uuid#/product_nomenclature/5',u'sd.#uuid#/product_nomenclature/11',u'sd.#uuid#/product_nomenclature/17','', 'False', u'60.0', u'Make to Stock', False,False, False, '', '', '', '', 'False', 'False','False', False, u'Single Item', u'Buy',u'Stockable Product', False,u'sd.product_product_uom_unit', False, u'Periodical (manual)', False, False,u'sd.#uuid#/product_product/147']</string></value>
 </member>
 </struct></value>
 </data></array></value>
