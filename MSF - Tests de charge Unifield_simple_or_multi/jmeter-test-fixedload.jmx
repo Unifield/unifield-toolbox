@@ -34,7 +34,7 @@
           </elementProp>
           <elementProp name="max_size" elementType="Argument">
             <stringProp name="Argument.name">max_size</stringProp>
-            <stringProp name="Argument.value">${__P(max.size,5)}</stringProp>
+            <stringProp name="Argument.value">${__P(max.size,500)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="last_sequence" elementType="Argument">
@@ -163,7 +163,7 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.num_threads">25</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <longProp name="ThreadGroup.start_time">1340693436000</longProp>
         <longProp name="ThreadGroup.end_time">1340693436000</longProp>
@@ -756,7 +756,7 @@
                   <intProp name="Assertion.test_type">2</intProp>
                 </ResponseAssertion>
                 <hashTree/>
-                <XPathExtractor guiclass="XPathExtractorGui" testclass="XPathExtractor" testname="Extract update" enabled="true">
+                <XPathExtractor guiclass="XPathExtractorGui" testclass="XPathExtractor" testname="Extract update" enabled="false">
                   <stringProp name="XPathExtractor.default">0</stringProp>
                   <stringProp name="XPathExtractor.refname">update</stringProp>
                   <stringProp name="XPathExtractor.xpathQuery">count(methodResponse/params/param/value/array/data/value[2]/struct/member[name=&apos;load&apos;]/value/array/data/value)</stringProp>
@@ -765,7 +765,7 @@
                   <boolProp name="XPathExtractor.namespace">false</boolProp>
                 </XPathExtractor>
                 <hashTree/>
-                <BeanShellPostProcessor guiclass="TestBeanGUI" testclass="BeanShellPostProcessor" testname="Increment offset" enabled="true">
+                <BeanShellPostProcessor guiclass="TestBeanGUI" testclass="BeanShellPostProcessor" testname="Increment offset" enabled="false">
                   <stringProp name="filename"></stringProp>
                   <stringProp name="parameters"></stringProp>
                   <boolProp name="resetInterpreter">false</boolProp>
@@ -778,6 +778,15 @@ vars.put(&quot;offset&quot;, Integer.toString(offset + update));</stringProp>
                   <stringProp name="XPathExtractor.default">0</stringProp>
                   <stringProp name="XPathExtractor.refname">last</stringProp>
                   <stringProp name="XPathExtractor.xpathQuery">methodResponse/params/param/value/array/data/value[3]/boolean</stringProp>
+                  <boolProp name="XPathExtractor.validate">false</boolProp>
+                  <boolProp name="XPathExtractor.tolerant">false</boolProp>
+                  <boolProp name="XPathExtractor.namespace">false</boolProp>
+                </XPathExtractor>
+                <hashTree/>
+                <XPathExtractor guiclass="XPathExtractorGui" testclass="XPathExtractor" testname="Extract offset" enabled="true">
+                  <stringProp name="XPathExtractor.default">0</stringProp>
+                  <stringProp name="XPathExtractor.refname">offset</stringProp>
+                  <stringProp name="XPathExtractor.xpathQuery">methodResponse/params/param/value/array/data/value[2]/struct/member[5]/value/int</stringProp>
                   <boolProp name="XPathExtractor.validate">false</boolProp>
                   <boolProp name="XPathExtractor.tolerant">false</boolProp>
                   <boolProp name="XPathExtractor.namespace">false</boolProp>
@@ -995,7 +1004,7 @@ for (int i = 0; i &lt; files.length; i++) {
 			.replaceAll(&quot;#uuid#&quot;, vars.get(&quot;uuid&quot;))
 			.replaceAll(&quot;#session_id#&quot;, vars.get(&quot;session_id&quot;));
 
-		vars.put(&quot;package_&quot; + (i + 1), pkg);
+		vars.put(&quot;package_&quot; + (i+1), pkg);
 	} catch (IOException ioe) {
 		log.error(ioe.getMessage());
 	} finally {
@@ -1265,7 +1274,7 @@ for (int i = 0; i &lt; files.length; i++) {
           </hashTree>
         </hashTree>
       </hashTree>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -1294,10 +1303,10 @@ for (int i = 0; i &lt; files.length; i++) {
             <bytes>true</bytes>
           </value>
         </objProp>
-        <stringProp name="filename"></stringProp>
+        <stringProp name="filename">/home/gbe/JMeter_launchpad/MSF - Tests de charge Unifield_simple_ou_multi/results/jmeter-test-fixedload-2012-09-24 14:48:08.077.jtl</stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
