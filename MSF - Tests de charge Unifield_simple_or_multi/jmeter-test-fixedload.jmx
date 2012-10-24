@@ -786,7 +786,7 @@ vars.put(&quot;offset&quot;, Integer.toString(offset + update));</stringProp>
                 <XPathExtractor guiclass="XPathExtractorGui" testclass="XPathExtractor" testname="Extract offset" enabled="true">
                   <stringProp name="XPathExtractor.default">0</stringProp>
                   <stringProp name="XPathExtractor.refname">offset</stringProp>
-                  <stringProp name="XPathExtractor.xpathQuery">methodResponse/params/param/value/array/data/value[2]/struct/member[5]/value/int</stringProp>
+                  <stringProp name="XPathExtractor.xpathQuery">methodResponse/params/param/value/array/data/value[2]/struct/member[6]/value/int</stringProp>
                   <boolProp name="XPathExtractor.validate">false</boolProp>
                   <boolProp name="XPathExtractor.tolerant">false</boolProp>
                   <boolProp name="XPathExtractor.namespace">false</boolProp>
