@@ -18,8 +18,41 @@ modeldata = 'ir.model.data'
 model='ir.ui.menu'
 
 
+
+def write_fields(csv, arch, fields, level=0):
+    field = arch.get('name')
+    info = fields[field]
+
+    readonly = arch.get('readonly', info.get('readonly')) and 'X' or ''
+    required = arch.get('required', info.get('required')) and 'X' or ''
+    invisible = arch.get('invisible', info.get('invisible')) and 'X' or ''
+
+    if arch.get('attrs'):
+        attrs = eval(arch.get('attrs'))
+        if 'readonly' in attrs:
+            readonly = 'C'
+        if 'required' in attrs:
+            required = 'C'
+        if 'invisible' in attrs:
+            invisible = 'C'
+
+    begin = ''
+    if level:
+        begin ='%s ' % ('-'*level, )
+
+    csv.writerow([
+        '%s%s' % (begin,field),
+        arch.get('string', info['string']),
+        arch.get('help', info.get('help', '')),
+        info['type'],
+        invisible,
+        readonly,
+        required,
+    ])
+
+
 csvf = csv.writer(open('menu.csv', 'wb'), delimiter=';', quotechar='"')
-csvf.writerow(['Field', 'Name', 'Help', 'Type', 'Attributes', 'RO', 'Rq'])
+csvf.writerow(['Field', 'Name', 'Help', 'Type', 'Invisble', 'RO', 'Rq'])
 xmlids = [('account', 'menu_bank_statement_tree'), ('register_accounting', 'menu_cash_register'), ('account', 'journal_cash_move_lines')]
 for module, xmlid in xmlids:
     data_ids = sock.execute(dbname, uid, pwd, modeldata, 'search', [('module', '=', module), ('name', '=', xmlid)])
@@ -40,26 +73,13 @@ for module, xmlid in xmlids:
     fields_vg = sock.execute(dbname, uid, pwd, res_model, 'fields_view_get', form_id, 'form')
     arch = etree.fromstring(fields_vg['arch'])
     for arch_field in arch.xpath('//field'):
-        field = arch_field.get('name')
-        info = fields_vg['fields'][field]
-    #for field, info in fields_vg['fields'].iteritems():
-        if arch_field.get('readonly'):
-            readonly = arch_field.get('readonly')
-        else:
-            readonly = info.get('readonly')
-        if arch_field.get('required'):
-            required = arch_field.get('required')
-        else:
-            required = info.get('required')
-        csvf.writerow([field, arch_field.get('string', info['string']), arch_field.get('help', info.get('help')), info['type'], '', readonly and 'X' or '', required and 'X' or ''])
+        write_fields(csvf, arch_field, fields_vg['fields'])
+
+        info = fields_vg['fields'][arch_field.get('name')]
         if info['type'] in ('one2many', 'many2many') and info.get('views', {}).get('tree', {}).get('fields'):
             arch2 = etree.fromstring(info['views']['tree']['arch'])
             for arch_field2 in arch2.xpath('//field'):
-                field1 = arch_field2.get('name')
-                info1 = info['views']['tree']['fields'][field1]
-                
-                csvf.writerow(['-- %s'%field1, arch_field2.get('string', info1['string']), arch_field2.get('help', info1.get('help', '')), info1['type'], '', arch_field2.get('readonly', info1.get('readonly')) and 'X' or '', arch_field2.get('required', info1.get('required')) and 'X' or ''])
-
+                write_fields(csvf, arch_field2, info['views']['tree']['fields'], 1)
 
 
 
