@@ -172,7 +172,11 @@
 <table:table-cell table:style-name="ce2" office:value-type="string">
 <text:p>${data['name']}</text:p>
 </table:table-cell>
-<table:table-cell table:style-name="ce2" table:number-columns-repeated="7" />
+<table:table-cell table:style-name="ce2" office:value-type="string" table:number-columns-spanned="2">
+<text:p>${data['xmlid']}</text:p>
+</table:table-cell>
+<table:covered-table-cell table:style-name="ce2" />
+<table:table-cell table:style-name="ce2" table:number-columns-repeated="5" />
 </table:table-row>
 ${gen_row(data['fields'])}
 % endfor

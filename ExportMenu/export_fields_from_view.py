@@ -10,16 +10,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import unifieldrpc
 import parser
 
+#default_xmlids = "account.menu_bank_statement_tree,register_accounting.menu_cash_register,account.journal_cash_move_lines,product.menu_products"
+default_xmlids = "account.menu_bank_statement_tree,register_accounting.menu_cash_register,account.journal_cash_move_lines"
+
 other_options = [
     (("--file", "-f"), {'metavar': 'file', 'default': 'registers_fields.ods', 'help': 'Out file [default: %(default)s]'}),
+    (("--xmlids", "-x"), {'metavar': 'xmlids', 'default': default_xmlids, 'help': 'Xmlid list of menuitem to export [default: %(default)s]'}),
+    (("--menu", "-m"), {'metavar': 'menu', 'default': "", 'help': 'List of Menuitems to export [default: %(default)s]'}),
 ]
 cmdline = parser.ArgParse(other_options)
-
+xmlids = cmdline.xmlids
+mitems = cmdline.menu
 
 out_file = cmdline.file
 sock = unifieldrpc.Rpc(cmdline.dbname, cmdline.user, cmdline.password, cmdline.host, cmdline.port)
 modeldata = 'ir.model.data'
-model='ir.ui.menu'
+modelmenu='ir.ui.menu'
 
 
 def format_field(arch, fields, level=0):
@@ -94,21 +100,47 @@ headers = [
     ('RO', {'title': 'Read Only', 'help': helpbox}),
     ('Rq', {'title': 'Required', 'help': helpbox}),
 ]
+
 ods_datas = []
-xmlids = [('account', 'menu_bank_statement_tree'), ('register_accounting', 'menu_cash_register'), ('account', 'journal_cash_move_lines'), ('product', 'menu_products')]
-for module, xmlid in xmlids:
+to_export = []
+menu_ids = []
+for xml_ids in xmlids and xmlids.split(',') or []:
+    module, xmlid = xml_ids.split('.', 1)
     data_ids = sock.exe(modeldata, 'search', [('module', '=', module), ('name', '=', xmlid)])
+    if not data_ids:
+        print "xmlid: %s not found" % (xml_ids, )
+        continue
     datas = sock.exe(modeldata, 'read', data_ids, ['res_id', 'model'])
     if datas[0]['model'] != 'ir.ui.menu':
         raise Exception('%s.%s : not a menu' % (module, xmlid))
+    menu_ids.append((datas[0]['res_id'], xml_ids))
 
-    menu = sock.exe(model, 'read', datas[0]['res_id'], ['name', 'groups_id', 'action'], {'lang': 'fr_FR'})
-    act, act_id = menu['action'].split(',')
+for mitem in mitems and mitems.split(',') or []:
+    mids = sock.exe(modelmenu, 'search', [('name', '=', mitem), ('active', '=', 't')])
+    if not mids:
+        print "menu: %s not found" % (mitem, )
+    else:
+        for mid in mids:
+            xmlid = sock.exe(modeldata, 'search', [('model', '=', 'ir.ui.menu'), ('res_id', '=', mid)])
+            xml = ""
+            if xmlid:
+                xml_detail = sock.exe(modeldata, 'read', xmlid[0], ['name', 'module'])
+                xml = "%s.%s" % (xml_detail['module'], xml_detail['name'])
+
+            menu_ids.append((mid, xml))
+
+for menu_id, xml in menu_ids:
+    menu = sock.exe(modelmenu, 'read', menu_id, ['name', 'groups_id', 'action'], {'lang': 'fr_FR'})
+    if menu['action']:
+        to_export.append(menu['action'].split(',')+[xml])
+
+for act, act_id, xmlid in to_export:
     form_id = False
     action = sock.exe(act, 'read', int(act_id), ['views', 'res_model'])
     res_model = action['res_model']
     tmp_data = {
         'name': menu['name'],
+        'xmlid': xmlid,
         'fields': []
     }
     for views in action['views']:
