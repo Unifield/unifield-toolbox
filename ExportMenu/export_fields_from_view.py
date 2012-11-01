@@ -43,11 +43,22 @@ def format_field(arch, fields, level=0):
     if level:
         begin ='%s ' % ('-'*level, )
 
-    fields = []
-    if info['type'] in ['one2many', 'many2many'] and info.get('views', {}).get('tree', {}).get('fields'):
-        arch2 = etree.fromstring(info['views']['tree']['arch'])
-        for arch_field2 in arch2.xpath('//field'):
-                fields.append(format_field(arch_field2, info['views']['tree']['fields'], 1))
+    fields_tree = []
+    fields_form = []
+    if info['type'] in ['one2many', 'many2many']:
+        editable = False
+        if info.get('views', {}).get('tree', {}).get('fields'):
+            arch2 = etree.fromstring(info['views']['tree']['arch'])
+            tree = arch2.xpath('//tree')
+            editable = tree[0].get('editable', False)
+            for arch_field2 in arch2.xpath('//field'):
+                    fields_tree.append(format_field(arch_field2, info['views']['tree']['fields'], level+1))
+        if not editable and info.get('views', {}).get('form', {}).get('fields'):
+            arch2 = etree.fromstring(info['views']['form']['arch'])
+            for arch_field2 in arch2.xpath('//field'):
+                    fields_form.append(format_field(arch_field2, info['views']['form']['fields'], level+1))
+
+
     attributes = []
     if info['type'] in ['one2many', 'many2many', 'many2one']:
         attributes.append('Rel: %s' % info['relation'])
@@ -65,7 +76,8 @@ def format_field(arch, fields, level=0):
         'invisible': invisible,
         'readonly': readonly,
         'required': required,
-        'fields': fields,
+        'tree': fields_tree,
+        'form': fields_form,
         'attributes': attributes,
     }
 
@@ -83,7 +95,7 @@ headers = [
     ('Rq', {'title': 'Required', 'help': helpbox}),
 ]
 ods_datas = []
-xmlids = [('account', 'menu_bank_statement_tree'), ('register_accounting', 'menu_cash_register'), ('account', 'journal_cash_move_lines')]
+xmlids = [('account', 'menu_bank_statement_tree'), ('register_accounting', 'menu_cash_register'), ('account', 'journal_cash_move_lines'), ('product', 'menu_products')]
 for module, xmlid in xmlids:
     data_ids = sock.exe(modeldata, 'search', [('module', '=', module), ('name', '=', xmlid)])
     datas = sock.exe(modeldata, 'read', data_ids, ['res_id', 'model'])

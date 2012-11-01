@@ -126,8 +126,23 @@
         <text:p>${field['required']}</text:p>
         </table:table-cell>
         </table:table-row>
-        % if field['fields']:
-            ${gen_row(field['fields'])}
+        % if field['tree']:
+            <table:table-row>
+            <table:table-cell office:value-type="string" table:style-name="Result3" table:number-columns-spanned="8">
+            <text:p>Tree view</text:p>
+            </table:table-cell>
+            <table:covered-table-cell table:style-name="Default" table:number-columns-repeated="7"/>
+            </table:table-row>
+            ${gen_row(field['tree'])}
+        % endif
+        % if field['form']:
+            <table:table-row>
+            <table:table-cell office:value-type="string" table:style-name="Result3" table:number-columns-spanned="8">
+            <text:p>From view</text:p>
+            </table:table-cell>
+            <table:covered-table-cell table:style-name="Default" table:number-columns-repeated="7"/>
+            </table:table-row>
+            ${gen_row(field['form'])}
         % endif
     % endfor
     </table:table-row-group>
