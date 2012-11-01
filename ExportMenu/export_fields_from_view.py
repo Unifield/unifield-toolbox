@@ -1,30 +1,28 @@
 # -*- encoding: utf-8 -*-
-import xmlrpclib
 import csv
 import sys
 from lxml import etree
 from mako.template import Template
 import zipfile
 import shutil
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Lib'))
+import unifieldrpc
+import parser
 
-dbname='jfb-wm2'
-user='admin'
-pwd = 'admin'
-port = 7069
-out_file = 'registers_fields.ods'
+other_options = [
+    (("--file", "-f"), {'metavar': 'file', 'default': 'registers_fields.ods', 'help': 'Out file [default: %(default)s]'}),
+]
+cmdline = parser.ArgParse(other_options)
 
-sock = xmlrpclib.ServerProxy('http://127.0.0.1:%s/xmlrpc/common'%(port, ))
-uid = sock.login(dbname, user, pwd)
-sock = xmlrpclib.ServerProxy('http://127.0.0.1:%s/xmlrpc/object'%(port, ))
 
+out_file = cmdline.file
+sock = unifieldrpc.Rpc(cmdline.dbname, cmdline.user, cmdline.password, cmdline.host, cmdline.port)
 modeldata = 'ir.model.data'
 model='ir.ui.menu'
 
 
-
-
-
-def write_fields(d, arch, fields, level=0):
+def format_field(arch, fields, level=0):
     field = arch.get('name')
     info = fields[field]
 
@@ -45,52 +43,77 @@ def write_fields(d, arch, fields, level=0):
     if level:
         begin ='%s ' % ('-'*level, )
 
-    d.append([
-        '%s%s' % (begin,field),
-        arch.get('string', info['string']),
-        arch.get('help', info.get('help', '')),
-        info['type'],
-        invisible,
-        readonly,
-        required,
-    ])
+    fields = []
+    if info['type'] in ['one2many', 'many2many'] and info.get('views', {}).get('tree', {}).get('fields'):
+        arch2 = etree.fromstring(info['views']['tree']['arch'])
+        for arch_field2 in arch2.xpath('//field'):
+                fields.append(format_field(arch_field2, info['views']['tree']['fields'], 1))
+    attributes = []
+    if info['type'] in ['one2many', 'many2many', 'many2one']:
+        attributes.append('Rel: %s' % info['relation'])
 
+    if info['type'] == 'selection':
+        sel = []
+        for dbkey, value in info['selection']:
+            sel.append(' - %s: %s' % (dbkey, value))
+        attributes.append("Selection: \n%s" % ("\n".join(sel)))
+    return {
+        'name': '%s%s' % (begin,field),
+        'string': arch.get('string', info['string']),
+        'help': arch.get('help', info.get('help', '')),
+        'type': info['type'],
+        'invisible': invisible,
+        'readonly': readonly,
+        'required': required,
+        'fields': fields,
+        'attributes': attributes,
+    }
 
-headers = ['Field', 'Name', 'Help', 'Type', 'Invisble', 'RO', 'Rq']
+helpbox = """X: Yes
+C: conditional"""
+
+headers = [
+    ('Field', {}),
+    ('Name', {}),
+    ('Help', {}),
+    ('Type', {}),
+    ('Attributes', {}),
+    ('Invisible', {'title': 'Invisible', 'help': helpbox}),
+    ('RO', {'title': 'Read Only', 'help': helpbox}),
+    ('Rq', {'title': 'Required', 'help': helpbox}),
+]
 ods_datas = []
 xmlids = [('account', 'menu_bank_statement_tree'), ('register_accounting', 'menu_cash_register'), ('account', 'journal_cash_move_lines')]
 for module, xmlid in xmlids:
-    tmp_data = {}
-    data_ids = sock.execute(dbname, uid, pwd, modeldata, 'search', [('module', '=', module), ('name', '=', xmlid)])
-    datas = sock.execute(dbname, uid, pwd, modeldata, 'read', data_ids, ['res_id', 'model'])
+    data_ids = sock.exe(modeldata, 'search', [('module', '=', module), ('name', '=', xmlid)])
+    datas = sock.exe(modeldata, 'read', data_ids, ['res_id', 'model'])
     if datas[0]['model'] != 'ir.ui.menu':
         raise Exception('%s.%s : not a menu' % (module, xmlid))
 
-    menu = sock.execute(dbname, uid, pwd, model, 'read', datas[0]['res_id'], ['name', 'groups_id', 'action'], {'lang': 'fr_FR'})
+    menu = sock.exe(model, 'read', datas[0]['res_id'], ['name', 'groups_id', 'action'], {'lang': 'fr_FR'})
     act, act_id = menu['action'].split(',')
     form_id = False
-    action = sock.execute(dbname, uid, pwd, act, 'read', int(act_id), ['views', 'res_model'])
+    action = sock.exe(act, 'read', int(act_id), ['views', 'res_model'])
     res_model = action['res_model']
-    tmp_data['name'] = menu['name']
+    tmp_data = {
+        'name': menu['name'],
+        'fields': []
+    }
     for views in action['views']:
         if views[1] == 'form':
             form_id = views[0]
             break
-    fields_vg = sock.execute(dbname, uid, pwd, res_model, 'fields_view_get', form_id, 'form')
+
+    fields_vg = sock.exe(res_model, 'fields_view_get', form_id, 'form')
     arch = etree.fromstring(fields_vg['arch'])
     for arch_field in arch.xpath('//field'):
-        write_fields(csvf, arch_field, fields_vg['fields'])
+        tmp_data['fields'].append(format_field(arch_field, fields_vg['fields']))
 
-        info = fields_vg['fields'][arch_field.get('name')]
-        if info['type'] in ('one2many', 'many2many') and info.get('views', {}).get('tree', {}).get('fields'):
-            arch2 = etree.fromstring(info['views']['tree']['arch'])
-            for arch_field2 in arch2.xpath('//field'):
-                write_fields(csvf, arch_field2, info['views']['tree']['fields'], 1)
-
+    ods_datas.append(tmp_data)
 
 shutil.copyfile('template/registers_fields.ods', out_file)
 zip = zipfile.ZipFile(out_file, 'a')
 mytemplate = Template(filename='template/content.xml', output_encoding='utf-8', input_encoding='utf-8')
-zip.writestr('content.xml', mytemplate.render(headers=headers, objects=datas)
+zip.writestr('content.xml', mytemplate.render(headers=headers, datas=ods_datas))
 zip.close()
 

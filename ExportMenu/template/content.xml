@@ -8,30 +8,37 @@
 <style:font-face style:name="DejaVu Sans" svg:font-family="&apos;DejaVu Sans&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
 </office:font-face-decls>
 <office:automatic-styles>
+
 <style:style style:name="co1" style:family="table-column">
 <style:table-column-properties fo:break-before="auto" style:column-width="4.747cm"/>
 </style:style>
 <style:style style:name="co2" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="9.313cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="5.794cm"/>
 </style:style>
 <style:style style:name="co3" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="9.999cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="7.516cm"/>
 </style:style>
 <style:style style:name="co4" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="1.778cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="2cm"/>
 </style:style>
 <style:style style:name="co5" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="1.833cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="5.36cm"/>
 </style:style>
 <style:style style:name="co6" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="0.826cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="1.833cm"/>
 </style:style>
 <style:style style:name="co7" style:family="table-column">
-<style:table-column-properties fo:break-before="auto" style:column-width="0.743cm"/>
+<style:table-column-properties fo:break-before="auto" style:column-width="0.826cm"/>
 </style:style>
 <style:style style:name="co8" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="0.743cm"/>
+</style:style>
+<style:style style:name="co9" style:family="table-column">
 <style:table-column-properties fo:break-before="auto" style:column-width="2.258cm"/>
 </style:style>
+
+
+
 <style:style style:name="ro1" style:family="table-row">
 <style:table-row-properties style:row-height="0.452cm" fo:break-before="auto" style:use-optimal-row-height="true"/>
 </style:style>
@@ -62,6 +69,16 @@
 <style:style style:name="ta_extref" style:family="table">
 <style:table-properties table:display="false"/>
 </style:style>
+<style:style style:name="gr2" style:family="graphic">
+<style:graphic-properties draw:marker-start="Extrémités_20_de_20_ligne_20_1" draw:marker-start-width="0.2cm" draw:marker-start-center="false" draw:fill="solid" draw:fill-color="#ffffc0" draw:auto-grow-height="true" draw:auto-grow-width="false" fo:padding-top="0.1cm" fo:padding-bottom="0.1cm" fo:padding-left="0.1cm" fo:padding-right="0.1cm" draw:shadow="hidden" draw:shadow-offset-x="0.1cm" draw:shadow-offset-y="0.1cm" draw:caption-escape-direction="auto"/>
+</style:style>
+<style:style style:name="P1" style:family="paragraph">
+<style:paragraph-properties style:text-autospace="none" style:line-break="normal" style:writing-mode="page"/>
+<style:text-properties style:text-outline="false" style:text-line-through-style="none" style:font-name="Arial" fo:font-size="10pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="DejaVu Sans" style:font-size-asian="10pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="DejaVu Sans" style:font-size-complex="10pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color" fo:hyphenate="false"/>
+</style:style>
+<style:style style:name="T1" style:family="text">
+<style:text-properties fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+</style:style>
 </office:automatic-styles>
 <office:body>
 <office:spreadsheet>
@@ -75,54 +92,74 @@
 <table:table-column table:style-name="co5" table:default-cell-style-name="Default"/>
 <table:table-column table:style-name="co6" table:default-cell-style-name="Default"/>
 <table:table-column table:style-name="co7" table:default-cell-style-name="Default"/>
-<table:table-column table:style-name="co8" table:number-columns-repeated="1017" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co8" table:default-cell-style-name="Default"/>
+<%def name="gen_row(fields)">
+    <table:table-row-group>
+    % for field in fields:
+        <table:table-row table:style-name="ro3">
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['name']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['string']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['help']|h}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['type']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        % for attr in field['attributes']:
+            % for line in attr.split("\n"):
+                <text:p>${line}</text:p>
+            % endfor
+        % endfor
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['invisible']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['readonly']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['required']}</text:p>
+        </table:table-cell>
+        </table:table-row>
+        % if field['fields']:
+            ${gen_row(field['fields'])}
+        % endif
+    % endfor
+    </table:table-row-group>
+</%def>
+
 <table:table-row table:style-name="ro1">
-% for header in headers:
+% for header, comment in headers:
 <table:table-cell table:style-name="ce1" office:value-type="string">
+% if comment:
+    <office:annotation draw:style-name="gr2" draw:text-style-name="P1" svg:width="2.899cm" svg:height="1.781cm" svg:x="28.678cm" svg:y="0cm" draw:caption-point-x="-0.61cm" draw:caption-point-y="0.01cm">
+    <dc:date>2012-11-01T00:00:00</dc:date>
+    <text:p text:style-name="P1"> 
+    <text:span text:style-name="T1">${comment['title']}</text:span>
+    </text:p>
+    % for line in comment['help'].split("\n"):
+    <text:p text:style-name="P1">${line}</text:p>
+    % endfor
+    <text:p text:style-name="P1"/>
+    </office:annotation>
+% endif
 <text:p>${header}</text:p>
 </table:table-cell>
 % endfor
 </table:table-row>
-<table:table-row table:style-name="ro2">
 % for data in datas:
+<table:table-row table:style-name="ro2">
 <table:table-cell table:style-name="ce2" office:value-type="string">
 <text:p>${data['name']}</text:p>
 </table:table-cell>
-<table:table-cell table:style-name="ce2" table:number-columns-repeated="6"/>
-<table:table-cell table:number-columns-repeated="1017"/>
+<table:table-cell table:style-name="ce2" table:number-columns-repeated="7" />
 </table:table-row>
-<table:table-row-group>
-% for field in data['field']:
-<table:table-row table:style-name="ro3">
-<table:table-cell office:value-type="string">
-<text:p>${field['name']}</text:p>
-</table:table-cell>
-<table:table-cell office:value-type="string">
-<text:p>${field['string']}</text:p>
-</table:table-cell>
-<table:table-cell>
-<text:p>${field['help']}</text:p> 
-</table:table-cell>
-<table:table-cell office:value-type="string">
-<text:p>${field['type']}</text:p>
-</table:table-cell>
-<table:table-cell office:value-type="string">
-<text:p>${field['invisible']}</text:p>
-</table:table-cell>
-<table:table-cell office:value-type="string">
-<text:p>${field['readonly']}</text:p>
-</table:table-cell>
-<table:table-cell office:value-type="string">
-<text:p>${field['required']}</text:p>
-</table:table-cell>
-<table:table-cell table:number-columns-repeated="1018"/>
-</table:table-row>
-% if field['subfield']:
-<table:table-row-group>
-${gen_row(field['subfield'], 1)}
-</table:table-row-group>
-% endif
-</table:table-row-group>
+${gen_row(data['fields'])}
 % endfor
 </table:table>
 </office:spreadsheet>
