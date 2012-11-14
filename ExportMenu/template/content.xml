@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0" xmlns:dr3d="urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0" xmlns:math="http://www.w3.org/1998/Math/MathML" xmlns:form="urn:oasis:names:tc:opendocument:xmlns:form:1.0" xmlns:script="urn:oasis:names:tc:opendocument:xmlns:script:1.0" xmlns:ooo="http://openoffice.org/2004/office" xmlns:ooow="http://openoffice.org/2004/writer" xmlns:oooc="http://openoffice.org/2004/calc" xmlns:dom="http://www.w3.org/2001/xml-events" xmlns:xforms="http://www.w3.org/2002/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rpt="http://openoffice.org/2005/report" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:grddl="http://www.w3.org/2003/g/data-view#" xmlns:tableooo="http://openoffice.org/2009/table" xmlns:field="urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0" xmlns:formx="urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0" office:version="1.2" grddl:transformation="http://docs.oasis-open.org/office/1.2/xslt/odf2rdf.xsl">
+<office:scripts/>
+<office:font-face-decls>
+<style:font-face style:name="Arial" svg:font-family="Arial" style:font-family-generic="swiss"/>
+<style:font-face style:name="Times New Roman" svg:font-family="&apos;Times New Roman&apos;" style:font-family-generic="swiss"/>
+<style:font-face style:name="Liberation Sans" svg:font-family="&apos;Liberation Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+<style:font-face style:name="DejaVu Sans" svg:font-family="&apos;DejaVu Sans&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+</office:font-face-decls>
+<office:automatic-styles>
+
+<style:style style:name="co1" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="4.747cm"/>
+</style:style>
+<style:style style:name="co2" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="5.794cm"/>
+</style:style>
+<style:style style:name="co3" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="7.516cm"/>
+</style:style>
+<style:style style:name="co4" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="2cm"/>
+</style:style>
+<style:style style:name="co5" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="5.36cm"/>
+</style:style>
+<style:style style:name="co6" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="1.833cm"/>
+</style:style>
+<style:style style:name="co7" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="0.826cm"/>
+</style:style>
+<style:style style:name="co8" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="0.743cm"/>
+</style:style>
+<style:style style:name="co9" style:family="table-column">
+<style:table-column-properties fo:break-before="auto" style:column-width="2.258cm"/>
+</style:style>
+
+
+
+<style:style style:name="ro1" style:family="table-row">
+<style:table-row-properties style:row-height="0.452cm" fo:break-before="auto" style:use-optimal-row-height="true"/>
+</style:style>
+<style:style style:name="ro2" style:family="table-row">
+<style:table-row-properties style:row-height="0.499cm" fo:break-before="auto" style:use-optimal-row-height="true"/>
+</style:style>
+<style:style style:name="ro3" style:family="table-row">
+<style:table-row-properties style:row-height="0.427cm" fo:break-before="auto" style:use-optimal-row-height="true"/>
+</style:style>
+<style:style style:name="ro4" style:family="table-row">
+<style:table-row-properties style:row-height="0.446cm" fo:break-before="auto" style:use-optimal-row-height="true"/>
+</style:style>
+<style:style style:name="ta1" style:family="table" style:master-page-name="PageStyle_5f_Feuille1">
+<style:table-properties table:display="true" style:writing-mode="lr-tb"/>
+</style:style>
+<style:style style:name="ce1" style:family="table-cell" style:parent-style-name="Heading">
+<style:table-cell-properties style:glyph-orientation-vertical="0" fo:background-color="#9966cc" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:shrink-to-fit="false" style:vertical-align="automatic"/>
+<style:paragraph-properties fo:margin-left="0cm" style:writing-mode="page"/>
+<style:text-properties fo:color="#ffffff" style:text-outline="false" style:text-line-through-style="none" fo:text-shadow="none" style:text-underline-style="none" style:font-size-asian="10pt" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="10pt" style:font-style-complex="normal" style:font-weight-complex="bold"/>
+</style:style>
+<style:style style:name="ce2" style:family="table-cell" style:parent-style-name="Heading1">
+<style:text-properties style:text-outline="false" style:text-line-through-style="none" fo:text-shadow="none" style:text-underline-style="none" style:font-size-asian="10pt" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="10pt" style:font-style-complex="normal" style:font-weight-complex="bold"/>
+</style:style>
+<style:style style:name="ce3" style:family="table-cell" style:parent-style-name="Default">
+<style:table-cell-properties fo:background-color="#b84747"/>
+<style:text-properties fo:color="#ffffff" style:text-outline="false" style:text-line-through-style="none" style:font-name="Arial" fo:font-size="10pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="bold" style:font-size-asian="10pt" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="10pt" style:font-style-complex="normal" style:font-weight-complex="bold"/>
+</style:style>
+<style:style style:name="ta_extref" style:family="table">
+<style:table-properties table:display="false"/>
+</style:style>
+<style:style style:name="gr2" style:family="graphic">
+<style:graphic-properties draw:marker-start="Extrémités_20_de_20_ligne_20_1" draw:marker-start-width="0.2cm" draw:marker-start-center="false" draw:fill="solid" draw:fill-color="#ffffc0" draw:auto-grow-height="true" draw:auto-grow-width="false" fo:padding-top="0.1cm" fo:padding-bottom="0.1cm" fo:padding-left="0.1cm" fo:padding-right="0.1cm" draw:shadow="hidden" draw:shadow-offset-x="0.1cm" draw:shadow-offset-y="0.1cm" draw:caption-escape-direction="auto"/>
+</style:style>
+<style:style style:name="P1" style:family="paragraph">
+<style:paragraph-properties style:text-autospace="none" style:line-break="normal" style:writing-mode="page"/>
+<style:text-properties style:text-outline="false" style:text-line-through-style="none" style:font-name="Arial" fo:font-size="10pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="DejaVu Sans" style:font-size-asian="10pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="DejaVu Sans" style:font-size-complex="10pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color" fo:hyphenate="false"/>
+</style:style>
+<style:style style:name="T1" style:family="text">
+<style:text-properties fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+</style:style>
+</office:automatic-styles>
+<office:body>
+<office:spreadsheet>
+<table:calculation-settings table:case-sensitive="false" table:use-regular-expressions="false"/>
+<table:table table:name="Feuille1" table:style-name="ta1" table:print="false">
+<office:forms form:automatic-focus="false" form:apply-design-mode="false"/>
+<table:table-column table:style-name="co1" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co2" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co3" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co4" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co5" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co6" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co7" table:default-cell-style-name="Default"/>
+<table:table-column table:style-name="co8" table:default-cell-style-name="Default"/>
+<%def name="gen_row(fields)">
+    <table:table-row-group>
+    % for field in fields:
+        <table:table-row table:style-name="ro3">
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['name']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['string']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['help']|h}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        <text:p>${field['type']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result">
+        % for attr in field['attributes']:
+            % for line in attr.split("\n"):
+                <text:p>${line}</text:p>
+            % endfor
+        % endfor
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['invisible']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['readonly']}</text:p>
+        </table:table-cell>
+        <table:table-cell office:value-type="string" table:style-name="Result2">
+        <text:p>${field['required']}</text:p>
+        </table:table-cell>
+        </table:table-row>
+        % if field['tree']:
+            <table:table-row>
+            <table:table-cell office:value-type="string" table:style-name="Result3" table:number-columns-spanned="8">
+            <text:p>Tree view</text:p>
+            </table:table-cell>
+            <table:covered-table-cell table:style-name="Default" table:number-columns-repeated="7"/>
+            </table:table-row>
+            ${gen_row(field['tree'])}
+        % endif
+        % if field['form']:
+            <table:table-row>
+            <table:table-cell office:value-type="string" table:style-name="Result3" table:number-columns-spanned="8">
+            <text:p>From view</text:p>
+            </table:table-cell>
+            <table:covered-table-cell table:style-name="Default" table:number-columns-repeated="7"/>
+            </table:table-row>
+            ${gen_row(field['form'])}
+        % endif
+    % endfor
+    </table:table-row-group>
+</%def>
+
+<table:table-row table:style-name="ro1">
+% for header, comment in headers:
+<table:table-cell table:style-name="ce1" office:value-type="string">
+% if comment:
+    <office:annotation draw:style-name="gr2" draw:text-style-name="P1" svg:width="2.899cm" svg:height="1.781cm" svg:x="28.678cm" svg:y="0cm" draw:caption-point-x="-0.61cm" draw:caption-point-y="0.01cm">
+    <dc:date>2012-11-01T00:00:00</dc:date>
+    <text:p text:style-name="P1"> 
+    <text:span text:style-name="T1">${comment['title']}</text:span>
+    </text:p>
+    % for line in comment['help'].split("\n"):
+    <text:p text:style-name="P1">${line}</text:p>
+    % endfor
+    <text:p text:style-name="P1"/>
+    </office:annotation>
+% endif
+<text:p>${header}</text:p>
+</table:table-cell>
+% endfor
+</table:table-row>
+% for data in datas:
+<table:table-row table:style-name="ro2">
+<table:table-cell table:style-name="ce2" office:value-type="string">
+<text:p>${data['name']}</text:p>
+</table:table-cell>
+<table:table-cell table:style-name="ce2" office:value-type="string" table:number-columns-spanned="2">
+<text:p>${data['xmlid']}</text:p>
+</table:table-cell>
+<table:covered-table-cell table:style-name="ce2" />
+<table:table-cell table:style-name="ce2" table:number-columns-repeated="5" />
+</table:table-row>
+${gen_row(data['fields'])}
+% endfor
+</table:table>
+</office:spreadsheet>
+</office:body>
+</office:document-content>
