@@ -35,12 +35,12 @@ do
         [ -z "$env" ] && env=$BRANCH_DEFAULT_ENV
     fi
     echo "Please check the branches:"
-    echo "+ Unifield Server: $server"
-    echo "+ Unifield Addons: $addons"
-    echo "+ Unifield Web: $web"
-    echo "+ Unifield WM: $wm"
-    echo "+ Unifield Sync: $sync"
-    echo "+ Unifield Sync Env: $env"
+    echo "+ Unifield Server: ${server:=${BRANCH_DEFAULT_SERVER}}"
+    echo "+ Unifield Addons: ${addons:=${BRANCH_DEFAULT_ADDONS}}"
+    echo "+ Unifield Web: ${web:=${BRANCH_DEFAULT_WEB}}"
+    echo "+ Unifield WM: ${wm:=${BRANCH_DEFAULT_WM}}"
+    echo "+ Unifield Sync: ${sync:=${BRANCH_DEFAULT_SYNC}}"
+    echo "+ Unifield Sync Env: ${env:=${BRANCH_DEFAULT_ENV}}"
     echo -n "=> Is it correct? [Y] "; read correct
     [ -z "$correct" ] && correct=y
 done
