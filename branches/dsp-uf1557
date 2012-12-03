@@ -1,0 +1,6 @@
+server="lp:~unifield-team/unifield-server/uf1557"
+addons="lp:unifield-addons"
+web="lp:unifield-web"
+wm="lp:~unifield-team/unifield-wm/sprint5"
+sync="lp:~unifield-team/unifield-wm/sync_module_prod"
+env="lp:~unifield-team/unifield-wm/sync_env_script"

@@ -1,0 +1,6 @@
+server="lp:~unifield-team/unifield-server/sp79"
+addons="lp:unifield-addons"
+web="lp:unifield-web"
+wm="lp:~unifield-team/unifield-wm/sprint5"
+sync="lp:~unifield-team/unifield-wm/sp79"
+env="lp:~unifield-team/unifield-wm/sync_env_script"

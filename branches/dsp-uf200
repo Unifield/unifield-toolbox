@@ -1,0 +1,6 @@
+server="lp:unifield-server"
+addons="lp:~unifield-team/unifield-addons/UTP_200"
+web="lp:unifield-web"
+wm="lp:~unifield-team/unifield-wm/UTP_200"
+sync="lp:~unifield-team/unifield-wm/sync_module_prod"
+env="lp:~unifield-team/unifield-wm/sync_env_script"
