@@ -110,12 +110,12 @@ init_user() {
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.ssh /home/${USERERP}/.bazaar
     su - ${USERERP} <<EOF
 
-bzr checkout --lightweight "$wm" unifield-wm
-bzr checkout --lightweight "$addons" unifield-addons
-bzr checkout --lightweight "$web" unifield-web
-bzr checkout --lightweight "$server" unifield-server
-bzr checkout --lightweight "$sync" sync_module_prod
-bzr checkout --lightweight "$env" sync_env_script
+bzr checkout --lightweight "${wm:=${BRANCH_DEFAULT_WM}}" unifield-wm
+bzr checkout --lightweight "${addons:=${BRANCH_DEFAULT_ADDONS}}" unifield-addons
+bzr checkout --lightweight "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
+bzr checkout --lightweight "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
+bzr checkout --lightweight "${sync:=${BRANCH_DEFAULT_SYNC}}" sync_module_prod
+bzr checkout --lightweight "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
 
 mkdir etc log
 #createdb ${DBNAME}
