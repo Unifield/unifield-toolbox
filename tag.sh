@@ -8,12 +8,13 @@ fi
 mkdir $1
 cd $1
 for i in wm addons server web; do
+#for i in addons server web; do
     echo "################# $i #################"
     bzr branch lp:unifield-$i
     cd unifield-$i
     bzr tag $1
     bzr push lp:unifield-$i
-    bzr push lp:unifield-$i/pilot
+    bzr push lp:unifield-$i/pilot2
     cd -
 done
 
