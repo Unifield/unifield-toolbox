@@ -5,20 +5,22 @@ import sys
 import time
 import base64
 import re
+import argparse
 
-user='admin'
-pwd = 'admin'
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("--host", "-H", metavar="host", default="127.0.0.1", help="Host [default: %(default)s]")
+parser.add_argument("--port", "-p", metavar="port", default="8069", help="XMLRPC Port [default: %(default)s]")
+parser.add_argument("--user", "-u", metavar="user", default="admin", help="User [default: %(default)s]")
+parser.add_argument("--password", "-w", metavar="pwd", default="admin", help="Password [default: %(default)s]")
+parser.add_argument('directory', action='store', help='directory')
+o = parser.parse_args()
 
-# xmlrpc port
-port = 8069
-#host = '10.0.0.174'
-host = '127.0.0.1'
+user= o.user
+pwd = o.password
+host = o.host
+port = o.port
 
-if len(sys.argv) < 2:
-    print "%s backup_dir" % (sys.argv[0], )
-    sys.exit(0)
-
-target_dir = sys.argv[1]
+target_dir = o.directory
 
 if not os.path.exists(target_dir):
     print "Dir %s does not exist" % (target_dir, )
