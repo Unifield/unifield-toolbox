@@ -51,7 +51,7 @@ for branch in ('lp:unifield-wm', 'lp:~unifield-team/unifield-wm/sync_module_prod
     from_rev_id = wk.revision_id_to_dotted_revno(wk.tags.lookup_tag(o.from_tag))[0]
     to_rev_id = wk.revision_id_to_dotted_revno(wk.tags.lookup_tag(o.to_tag))[0]
 
-    for rev in wk.revision_history()[from_rev_id+1:to_rev_id]:
+    for rev in wk.revision_history()[from_rev_id:to_rev_id]:
         msg = wk.repository.get_revision(rev).message
         found = False
         for m in re.finditer(rex, msg):
