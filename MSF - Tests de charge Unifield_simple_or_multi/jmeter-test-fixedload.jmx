@@ -115,7 +115,7 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <longProp name="ThreadGroup.start_time">1340693383000</longProp>
         <longProp name="ThreadGroup.end_time">1340693383000</longProp>
@@ -163,7 +163,7 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">25</stringProp>
+        <stringProp name="ThreadGroup.num_threads">8</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <longProp name="ThreadGroup.start_time">1340693436000</longProp>
         <longProp name="ThreadGroup.end_time">1340693436000</longProp>
@@ -269,7 +269,7 @@
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="891412901">Synchronize Instance</stringProp>
@@ -317,7 +317,7 @@
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="891412901">Synchronize Instance</stringProp>
@@ -333,8 +333,8 @@
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">4</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <longProp name="ThreadGroup.start_time">1340979711000</longProp>
-        <longProp name="ThreadGroup.end_time">1340979711000</longProp>
+        <longProp name="ThreadGroup.start_time">1340876457000</longProp>
+        <longProp name="ThreadGroup.end_time">1340876457000</longProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
@@ -350,150 +350,6 @@
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
         </CSVDataSet>
-        <hashTree/>
-        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
-          <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
-            <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
-            <stringProp name="170071582">Test Fragment</stringProp>
-            <stringProp name="891412901">Synchronize Instance</stringProp>
-          </collectionProp>
-        </ModuleController>
-        <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TS_7: Sending of accounting lines from the coordination instances to the synchronization server" enabled="false">
-        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">8</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <longProp name="ThreadGroup.start_time">1340963197000</longProp>
-        <longProp name="ThreadGroup.end_time">1340963197000</longProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-      </ThreadGroup>
-      <hashTree>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Coordinations Pool" enabled="true">
-          <stringProp name="delimiter">,</stringProp>
-          <stringProp name="fileEncoding"></stringProp>
-          <stringProp name="filename">${coordinationsPool}</stringProp>
-          <boolProp name="quotedData">false</boolProp>
-          <boolProp name="recycle">true</boolProp>
-          <stringProp name="shareMode">Groupe d&apos;unités courant</stringProp>
-          <boolProp name="stopThread">false</boolProp>
-          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
-        </CSVDataSet>
-        <hashTree/>
-        <UserParameters guiclass="UserParametersGui" testclass="UserParameters" testname="User Parameters" enabled="true">
-          <collectionProp name="UserParameters.names">
-            <stringProp name="99469">dir</stringProp>
-          </collectionProp>
-          <collectionProp name="UserParameters.thread_values">
-            <collectionProp name="-176566918">
-              <stringProp name="1378273054">${resourceDir}/TS_7/</stringProp>
-            </collectionProp>
-          </collectionProp>
-          <boolProp name="UserParameters.per_iteration">false</boolProp>
-        </UserParameters>
-        <hashTree/>
-        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
-          <collectionProp name="ModuleController.node_path">
-            <stringProp name="-1227702913">WorkBench</stringProp>
-            <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
-            <stringProp name="170071582">Test Fragment</stringProp>
-            <stringProp name="891412901">Synchronize Instance</stringProp>
-          </collectionProp>
-        </ModuleController>
-        <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TS_8: Sending of analytic lines from the coordination instances to the synchronization server" enabled="false">
-        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">8</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <longProp name="ThreadGroup.start_time">1341325667000</longProp>
-        <longProp name="ThreadGroup.end_time">1341325667000</longProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-      </ThreadGroup>
-      <hashTree>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Coordinations Pool" enabled="true">
-          <stringProp name="delimiter">,</stringProp>
-          <stringProp name="fileEncoding"></stringProp>
-          <stringProp name="filename">${coordinationsPool}</stringProp>
-          <boolProp name="quotedData">false</boolProp>
-          <boolProp name="recycle">true</boolProp>
-          <stringProp name="shareMode">Groupe d&apos;unités courant</stringProp>
-          <boolProp name="stopThread">false</boolProp>
-          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
-        </CSVDataSet>
-        <hashTree/>
-        <UserParameters guiclass="UserParametersGui" testclass="UserParameters" testname="User Parameters" enabled="true">
-          <collectionProp name="UserParameters.names">
-            <stringProp name="99469">dir</stringProp>
-          </collectionProp>
-          <collectionProp name="UserParameters.thread_values">
-            <collectionProp name="-176563409">
-              <stringProp name="1378273085">${resourceDir}/TS_8/</stringProp>
-            </collectionProp>
-          </collectionProp>
-          <boolProp name="UserParameters.per_iteration">false</boolProp>
-        </UserParameters>
-        <hashTree/>
-        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
-          <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
-            <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
-            <stringProp name="170071582">Test Fragment</stringProp>
-            <stringProp name="891412901">Synchronize Instance</stringProp>
-          </collectionProp>
-        </ModuleController>
-        <hashTree/>
-      </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TS_9: Sending of registers lines from the coordination instances to the synchronization server" enabled="false">
-        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">1</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">8</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <longProp name="ThreadGroup.start_time">1341325670000</longProp>
-        <longProp name="ThreadGroup.end_time">1341325670000</longProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
-      </ThreadGroup>
-      <hashTree>
-        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Coordinations Pool" enabled="true">
-          <stringProp name="delimiter">,</stringProp>
-          <stringProp name="fileEncoding"></stringProp>
-          <stringProp name="filename">${coordinationsPool}</stringProp>
-          <boolProp name="quotedData">false</boolProp>
-          <boolProp name="recycle">true</boolProp>
-          <stringProp name="shareMode">Groupe d&apos;unités courant</stringProp>
-          <boolProp name="stopThread">false</boolProp>
-          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
-        </CSVDataSet>
-        <hashTree/>
-        <UserParameters guiclass="UserParametersGui" testclass="UserParameters" testname="User Parameters" enabled="true">
-          <collectionProp name="UserParameters.names">
-            <stringProp name="99469">dir</stringProp>
-          </collectionProp>
-          <collectionProp name="UserParameters.thread_values">
-            <collectionProp name="-176535813">
-              <stringProp name="1378273116">${resourceDir}/TS_9/</stringProp>
-            </collectionProp>
-          </collectionProp>
-          <boolProp name="UserParameters.per_iteration">false</boolProp>
-        </UserParameters>
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
           <collectionProp name="ModuleController.node_path">
@@ -589,6 +445,54 @@
         </ModuleController>
         <hashTree/>
       </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TS_9bis: Sending of registers lines from the coordination instances to the synchronization server" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">8</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1341325670000</longProp>
+        <longProp name="ThreadGroup.end_time">1341325670000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Coordinations Pool" enabled="true">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding"></stringProp>
+          <stringProp name="filename">${coordinationsPool}</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <stringProp name="shareMode">Groupe d&apos;unités courant</stringProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="variableNames">uuid,instance_name,contact_email,parent_instance,group_names</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <UserParameters guiclass="UserParametersGui" testclass="UserParameters" testname="User Parameters" enabled="true">
+          <collectionProp name="UserParameters.names">
+            <stringProp name="99469">dir</stringProp>
+          </collectionProp>
+          <collectionProp name="UserParameters.thread_values">
+            <collectionProp name="704747946">
+              <stringProp name="248672854">${resourceDir}/TS_9bis/</stringProp>
+            </collectionProp>
+          </collectionProp>
+          <boolProp name="UserParameters.per_iteration">false</boolProp>
+        </UserParameters>
+        <hashTree/>
+        <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
+          <collectionProp name="ModuleController.node_path">
+            <stringProp name="-1227702913">WorkBench</stringProp>
+            <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
+            <stringProp name="170071582">Test Fragment</stringProp>
+            <stringProp name="891412901">Synchronize Instance</stringProp>
+          </collectionProp>
+        </ModuleController>
+        <hashTree/>
+      </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TS_12: Sending of .." enabled="false">
         <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
@@ -629,7 +533,7 @@
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Module Synchronize" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="219554762">Unifield Fixed Load Test</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="891412901">Synchronize Instance</stringProp>
@@ -1303,7 +1207,7 @@ for (int i = 0; i &lt; files.length; i++) {
             <bytes>true</bytes>
           </value>
         </objProp>
-        <stringProp name="filename">/home/gbe/JMeter_launchpad/MSF - Tests de charge Unifield_simple_ou_multi/results/jmeter-test-fixedload-2012-09-24 14:48:08.077.jtl</stringProp>
+        <stringProp name="filename">/home/gbe/JMeter_launchpad/jmeter.git/MSF - Tests de charge Unifield_simple_or_multi/results/jmeter-test-fixedload-2013-02-05 12:39:23.123.jtl</stringProp>
       </ResultCollector>
       <hashTree/>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
@@ -1335,7 +1239,7 @@ for (int i = 0; i &lt; files.length; i++) {
             <bytes>true</bytes>
           </value>
         </objProp>
-        <stringProp name="filename"></stringProp>
+        <stringProp name="filename">/home/gbe/JMeter_launchpad/jmeter.git/MSF - Tests de charge Unifield_simple_or_multi/results/jmeter-test-fixedload-2013-02-05 12:39:23.123.jtl</stringProp>
       </ResultCollector>
       <hashTree/>
       <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save Responses to a file" enabled="false">

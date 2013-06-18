@@ -77,6 +77,27 @@
             classpathref="classpath" />
     </target>
 
+    <target name="drop-and-create-database2" description="Drop and create database">
+         <sql
+            driver="${database.driver}"
+            url="${database.url}postgres"
+            userid="${database.user}"
+            password="${database.password}"
+            autocommit="true"
+            classpathref="classpath">
+            DROP DATABASE IF EXISTS "${database.name}";
+
+            CREATE DATABASE "${database.name}";
+        </sql>
+
+       <sshexec
+            host="${openerp.host}"
+            username="${openerp.ssh.user}"
+            password="${openerp.ssh.password}"
+    	    trust="yes"
+            command="sudo -u openerp pg_restore --no-owner --no-acl -d ${database.name} /opt/unifield/SYNC_SERVER-20130131-111507.dump" />
+    </target>
+
     <target name="start-servers" description="Start servers">
         <echo message="Starting servers..." />
 
@@ -92,8 +113,8 @@
         </for>
     </target>
 
-<!--    <target name="setup-env" description="Setup environment" depends="init, stop-openerp-server, drop-and-create-database, start-openerp-server"> -->
-    <target name="setup-env" description="Setup environment" depends="init, stop-openerp-server, start-openerp-server">
+    <target name="setup-env" description="Setup environment" depends="init, stop-openerp-server, drop-and-create-database2, start-openerp-server">
+<!--    <target name="setup-env" description="Setup environment" depends="stop-openerp-server, start-openerp-server"> -->
         <echo message="Setting up environment..." />
 
         <jmeter
@@ -178,6 +199,13 @@
                 <jmeterarg value="-Gdatabase.name=${database.name}" />
                 <jmeterarg value="-Glast.sequence=${last.sequence}" />
                 <jmeterarg value="-Gmax.size=${max.size}" />
+<!--                <jmeterarg value="-Jhost=${openerp.host}" />
+                <jmeterarg value="-Jport=${openerp.port}" />
+                <jmeterarg value="-Juser.id=${user.id}" />
+                <jmeterarg value="-Jdatabase.name=${database.name}" />
+                <jmeterarg value="-Jlast.sequence=${last.sequence}" />
+                <jmeterarg value="-Jmax.size=${max.size}" />
+-->
                 <property name="resource.dir" value="${resource.dir}" />
         </jmeter>
     </target>
@@ -202,7 +230,8 @@
         </exec>
     </target>
 
-    <target name="all" description="" depends="init, setup-env, run-load-test, generate-reports, collect-logs" />
+<!--    <target name="all" description="" depends="init, setup-env, run-load-test, generate-reports, collect-logs" /> -->
+    <target name="all" description="" depends="setup-env, run-load-test, generate-reports, collect-logs" />
 
     <target name="clean">
         <delete dir="${result.dir}" />
@@ -212,8 +241,7 @@
             username="${openerp.ssh.user}"
             password="${openerp.ssh.password}"
     	    trust="yes"
-            command="sudo rm ${openerp.logfile}" />
+            command="sudo rm -f ${openerp.logfile}" />
     </target>
-
 </project>
 

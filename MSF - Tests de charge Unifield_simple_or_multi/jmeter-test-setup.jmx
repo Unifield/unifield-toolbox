@@ -280,7 +280,7 @@ log.info(&quot;done.&quot;);
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Register Instance" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="345956064">Setup Unifield Environment</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="1979560306">Register Instance</stringProp>
@@ -425,7 +425,7 @@ log.info(&quot;done.&quot;);
               <collectionProp name="Arguments.arguments">
                 <elementProp name="" elementType="HTTPArgument">
                   <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;get&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;${instance_name}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;get&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${instance_name}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
                   <stringProp name="Argument.metadata">=</stringProp>
                   <boolProp name="HTTPArgument.use_equals">true</boolProp>
                 </elementProp>
@@ -463,7 +463,7 @@ log.info(&quot;done.&quot;);
               <collectionProp name="Arguments.arguments">
                 <elementProp name="" elementType="HTTPArgument">
                   <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;validate_action&lt;/string&gt;&lt;/value&gt; &lt;param&gt; &lt;array&gt;&lt;data&gt;&lt;value&gt;&lt;int&gt;${id}&lt;/int&gt;&lt;/value&gt;&lt;/data&gt;&lt;/array&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;validate_action&lt;/string&gt;&lt;/value&gt;&lt;/param&gt; &lt;param&gt; &lt;array&gt;&lt;data&gt;&lt;value&gt;&lt;int&gt;${id}&lt;/int&gt;&lt;/value&gt;&lt;/data&gt;&lt;/array&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;</stringProp>
                   <stringProp name="Argument.metadata">=</stringProp>
                   <boolProp name="HTTPArgument.use_equals">true</boolProp>
                 </elementProp>
