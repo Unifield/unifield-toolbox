@@ -1,110 +1,256 @@
+COORDINATIONS,3
 OCA,1
 OCA_Coordo1,2
+HQ + OCA_Coordo1,4
 OCA_Coordo2,2
+HQ + OCA_Coordo2,4
 OCA_Coordo3,2
+HQ + OCA_Coordo3,4
 OCA_Coordo4,2
+HQ + OCA_Coordo4,4
 OCA_Coordo5,2
+HQ + OCA_Coordo5,4
 OCA_Coordo6,2
+HQ + OCA_Coordo6,4
 OCA_Coordo7,2
+HQ + OCA_Coordo7,4
 OCA_Coordo8,2
+HQ + OCA_Coordo8,4
 OCA_Coordo9,2
+HQ + OCA_Coordo9,4
 OCA_Coordo10,2
+HQ + OCA_Coordo10,4
 OCA_Coordo11,2
+HQ + OCA_Coordo11,4
 OCA_Coordo12,2
+HQ + OCA_Coordo12,4
 OCA_Coordo13,2
+HQ + OCA_Coordo13,4
 OCA_Coordo14,2
+HQ + OCA_Coordo14,4
 OCA_Coordo15,2
+HQ + OCA_Coordo15,4
 OCA_Coordo16,2
+HQ + OCA_Coordo16,4
 OCA_Coordo17,2
+HQ + OCA_Coordo17,4
 OCA_Coordo18,2
+HQ + OCA_Coordo18,4
 OCA_Coordo19,2
+HQ + OCA_Coordo19,4
 OCA_Coordo20,2
+HQ + OCA_Coordo20,4
 OCA_Coordo21,2
+HQ + OCA_Coordo21,4
 OCA_Coordo22,2
+HQ + OCA_Coordo22,4
 OCA_Coordo23,2
+HQ + OCA_Coordo23,4
 OCA_Coordo24,2
+HQ + OCA_Coordo24,4
 OCA_Coordo25,2
+HQ + OCA_Coordo25,4
 OCB,1
 OCB_Coordo1,2
+HQ + OCB_Coordo1,4
 OCB_Coordo2,2
+HQ + OCB_Coordo2,4
 OCB_Coordo3,2
+HQ + OCB_Coordo3,4
 OCB_Coordo4,2
+HQ + OCB_Coordo4,4
 OCB_Coordo5,2
+HQ + OCB_Coordo5,4
 OCB_Coordo6,2
+HQ + OCB_Coordo6,4
 OCB_Coordo7,2
+HQ + OCB_Coordo7,4
 OCB_Coordo8,2
+HQ + OCB_Coordo8,4
 OCB_Coordo9,2
+HQ + OCB_Coordo9,4
 OCB_Coordo10,2
+HQ + OCB_Coordo10,4
 OCB_Coordo11,2
+HQ + OCB_Coordo11,4
 OCB_Coordo12,2
+HQ + OCB_Coordo12,4
 OCB_Coordo13,2
+HQ + OCB_Coordo13,4
 OCB_Coordo14,2
+HQ + OCB_Coordo14,4
 OCB_Coordo15,2
+HQ + OCB_Coordo15,4
 OCB_Coordo16,2
+HQ + OCB_Coordo16,4
 OCB_Coordo17,2
+HQ + OCB_Coordo17,4
 OCB_Coordo18,2
+HQ + OCB_Coordo18,4
 OCB_Coordo19,2
+HQ + OCB_Coordo19,4
 OCB_Coordo20,2
+HQ + OCB_Coordo20,4
 OCB_Coordo21,2
+HQ + OCB_Coordo21,4
 OCB_Coordo22,2
+HQ + OCB_Coordo22,4
 OCB_Coordo23,2
+HQ + OCB_Coordo23,4
 OCB_Coordo24,2
+HQ + OCB_Coordo24,4
 OCB_Coordo25,2
+HQ + OCB_Coordo25,4
 OCP,1
 OCP_Coordo1,2
+HQ + OCP_Coordo1,4
 OCP_Coordo2,2
+HQ + OCP_Coordo2,4
 OCP_Coordo3,2
+HQ + OCP_Coordo3,4
 OCP_Coordo4,2
+HQ + OCP_Coordo4,4
 OCP_Coordo5,2
+HQ + OCP_Coordo5,4
 OCP_Coordo6,2
+HQ + OCP_Coordo6,4
 OCP_Coordo7,2
+HQ + OCP_Coordo7,4
 OCP_Coordo8,2
+HQ + OCP_Coordo8,4
 OCP_Coordo9,2
+HQ + OCP_Coordo9,4
 OCP_Coordo10,2
+HQ + OCP_Coordo10,4
 OCP_Coordo11,2
+HQ + OCP_Coordo11,4
 OCP_Coordo12,2
+HQ + OCP_Coordo12,4
 OCP_Coordo13,2
+HQ + OCP_Coordo13,4
 OCP_Coordo14,2
+HQ + OCP_Coordo14,4
 OCP_Coordo15,2
+HQ + OCP_Coordo15,4
 OCP_Coordo16,2
+HQ + OCP_Coordo16,4
 OCP_Coordo17,2
+HQ + OCP_Coordo17,4
 OCP_Coordo18,2
+HQ + OCP_Coordo18,4
 OCP_Coordo19,2
+HQ + OCP_Coordo19,4
 OCP_Coordo20,2
+HQ + OCP_Coordo20,4
 OCP_Coordo21,2
+HQ + OCP_Coordo21,4
 OCP_Coordo22,2
+HQ + OCP_Coordo22,4
 OCP_Coordo23,2
+HQ + OCP_Coordo23,4
 OCP_Coordo24,2
+HQ + OCP_Coordo24,4
 OCP_Coordo25,2
+HQ + OCP_Coordo25,4
 OCG,1
 OCG_Coordo1,2
+HQ + OCG_Coordo1,4
 OCG_Coordo2,2
+HQ + OCG_Coordo2,4
 OCG_Coordo3,2
+HQ + OCG_Coordo3,4
 OCG_Coordo4,2
+HQ + OCG_Coordo4,4
 OCG_Coordo5,2
+HQ + OCG_Coordo5,4
 OCG_Coordo6,2
+HQ + OCG_Coordo6,4
 OCG_Coordo7,2
+HQ + OCG_Coordo7,4
 OCG_Coordo8,2
+HQ + OCG_Coordo8,4
 OCG_Coordo9,2
+HQ + OCG_Coordo9,4
 OCG_Coordo10,2
+HQ + OCG_Coordo10,4
 OCG_Coordo11,2
+HQ + OCG_Coordo11,4
 OCG_Coordo12,2
+HQ + OCG_Coordo12,4
 OCG_Coordo13,2
+HQ + OCG_Coordo13,4
 OCG_Coordo14,2
+HQ + OCG_Coordo14,4
 OCG_Coordo15,2
+HQ + OCG_Coordo15,4
+OCG_Coordo16,2
+HQ + OCG_Coordo16,4
+OCG_Coordo17,2
+HQ + OCG_Coordo17,4
+OCG_Coordo18,2
+HQ + OCG_Coordo18,4
+OCG_Coordo19,2
+HQ + OCG_Coordo19,4
+OCG_Coordo20,2
+HQ + OCG_Coordo20,4
+OCG_Coordo21,2
+HQ + OCG_Coordo21,4
+OCG_Coordo22,2
+HQ + OCG_Coordo22,4
+OCG_Coordo23,2
+HQ + OCG_Coordo23,4
+OCG_Coordo24,2
+HQ + OCG_Coordo24,4
+OCG_Coordo25,2
+HQ + OCG_Coordo25,4
 OCBA,1
 OCBA_Coordo1,2
+HQ + OCBA_Coordo1,4
 OCBA_Coordo2,2
+HQ + OCBA_Coordo2,4
 OCBA_Coordo3,2
+HQ + OCBA_Coordo3,4
 OCBA_Coordo4,2
+HQ + OCBA_Coordo4,4
 OCBA_Coordo5,2
+HQ + OCBA_Coordo5,4
 OCBA_Coordo6,2
+HQ + OCBA_Coordo6,4
 OCBA_Coordo7,2
+HQ + OCBA_Coordo7,4
 OCBA_Coordo8,2
+HQ + OCBA_Coordo8,4
 OCBA_Coordo9,2
+HQ + OCBA_Coordo9,4
 OCBA_Coordo10,2
+HQ + OCBA_Coordo10,4
 OCBA_Coordo11,2
+HQ + OCBA_Coordo11,4
 OCBA_Coordo12,2
+HQ + OCBA_Coordo12,4
 OCBA_Coordo13,2
+HQ + OCBA_Coordo13,4
 OCBA_Coordo14,2
+HQ + OCBA_Coordo14,4
 OCBA_Coordo15,2
+HQ + OCBA_Coordo15,4
+OCBA_Coordo16,2
+HQ + OCBA_Coordo16,4
+OCBA_Coordo17,2
+HQ + OCBA_Coordo17,4
+OCBA_Coordo18,2
+HQ + OCBA_Coordo18,4
+OCBA_Coordo19,2
+HQ + OCBA_Coordo19,4
+OCBA_Coordo20,2
+HQ + OCBA_Coordo20,4
+OCBA_Coordo21,2
+HQ + OCBA_Coordo21,4
+OCBA_Coordo22,2
+HQ + OCBA_Coordo22,4
+OCBA_Coordo23,2
+HQ + OCBA_Coordo23,4
+OCBA_Coordo24,2
+HQ + OCBA_Coordo24,4
+OCBA_Coordo25,2
+HQ + OCBA_Coordo25,4

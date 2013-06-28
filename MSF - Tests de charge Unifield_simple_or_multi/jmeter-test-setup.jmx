@@ -115,19 +115,23 @@
       </ThreadGroup>
       <hashTree>
         <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="Generate instances" enabled="true">
-          <stringProp name="BeanShellSampler.query">
-String[] operationCenterNames = { &quot;OCA&quot;, &quot;OCB&quot;, &quot;OCP&quot;, &quot;OCG&quot;, &quot;OCBA&quot; };
-int[] coordosPerOperationCenter = { 25, 25, 25, 15, 15 };
-int[] projectsPerMission = { 3, 3, 3, 2, 1 };
+          <stringProp name="BeanShellSampler.query">String[] operationCenterNames = { &quot;OCA&quot;, &quot;OCB&quot;, &quot;OCP&quot;, &quot;OCG&quot;, &quot;OCBA&quot; };
+int[] coordosPerOperationCenter = { 25, 25, 25, 25, 25 };
+int[] projectsPerMission = { 4, 4, 4, 4, 4 };
 int idProjectTypeOC = 1;
 int idProjectTypeMission = 2;
+int idProjectTypeCOORDINATIONS = 3;
+int idProjectTypeHQplusMission = 4;
 
 StringBuilder operationCentersBuf = new StringBuilder();
 StringBuilder coordinationsBuf = new StringBuilder();
 StringBuilder projectsBuf = new StringBuilder();
 StringBuilder groupsBuf = new StringBuilder();
+String groupCoordinationsName = &quot;COORDINATIONS&quot;;
 
 log.info(&quot;Generating instances...&quot;);
+
+groupsBuf.append(groupCoordinationsName).append(&quot;,&quot;).append(idProjectTypeCOORDINATIONS).append(&quot;\n&quot;);
 
 for (int i = 0; i &lt; operationCenterNames.length; i++) {
 	String operationCenterName = operationCenterNames[i];
@@ -140,12 +144,21 @@ for (int i = 0; i &lt; operationCenterNames.length; i++) {
 	operationCentersBuf.append(&quot;&quot;).append(&quot;,&quot;);
 	operationCentersBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
 	operationCentersBuf.append(operationCenterName);
-	operationCentersBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+	operationCentersBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
+	operationCentersBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+	operationCentersBuf.append(groupCoordinationsName);
+	operationCentersBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
 
 	for (int j = 1; j &lt;= coordosPerOperationCenter[i]; j++) {
 		String coordoName = operationCenterName + &quot;_Coordo&quot; +j;
+		String HQplusMissionName = &quot;HQ + &quot; + coordoName;
+
+		operationCentersBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+		operationCentersBuf.append(HQplusMissionName);
+		operationCentersBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
 
 		groupsBuf.append(coordoName).append(&quot;,&quot;).append(idProjectTypeMission).append(&quot;\n&quot;);
+		groupsBuf.append(HQplusMissionName).append(&quot;,&quot;).append(idProjectTypeHQplusMission).append(&quot;\n&quot;);
 
 		coordinationsBuf.append(UUID.randomUUID()).append(&quot;,&quot;);
 		coordinationsBuf.append(coordoName).append(&quot;,&quot;);
@@ -153,10 +166,16 @@ for (int i = 0; i &lt; operationCenterNames.length; i++) {
 		coordinationsBuf.append(operationCenterName).append(&quot;,&quot;);
 		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
 		coordinationsBuf.append(operationCenterName);
-		coordinationsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;);
+		coordinationsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
 		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
 		coordinationsBuf.append(coordoName);
-		coordinationsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+		coordinationsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
+		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+		coordinationsBuf.append(groupCoordinationsName);
+		coordinationsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
+		coordinationsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+		coordinationsBuf.append(HQplusMissionName);
+		coordinationsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;).append(&quot;\n&quot;);
 
 		for (int k = 1; k &lt;= projectsPerMission[i]; k++) {
 			String projectName = coordoName + &quot;_Project&quot; + k;
@@ -167,13 +186,17 @@ for (int i = 0; i &lt; operationCenterNames.length; i++) {
 			projectsBuf.append(coordoName).append(&quot;,&quot;);
 			projectsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
 			projectsBuf.append(operationCenterName);
-			projectsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;);
+			projectsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
 			projectsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
 			projectsBuf.append(coordoName);
-			projectsBuf.append(&quot;&lt;/value&gt;&lt;/string&gt;&quot;).append(&quot;\n&quot;);
+			projectsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;);
+			projectsBuf.append(&quot;&lt;value&gt;&lt;string&gt;&quot;);
+			projectsBuf.append(HQplusMissionName);
+			projectsBuf.append(&quot;&lt;/string&gt;&lt;/value&gt;&quot;).append(&quot;\n&quot;);
 		}
 
 	}
+	operationCentersBuf.append(&quot;\n&quot;);
 }
 
 log.info(&quot;done.&quot;);
@@ -244,7 +267,7 @@ log.info(&quot;done.&quot;);
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Create Group" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="345956064">Setup Unifield Environment</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="198468187">Create Group</stringProp>
@@ -289,7 +312,7 @@ log.info(&quot;done.&quot;);
         <hashTree/>
         <ModuleController guiclass="ModuleControllerGui" testclass="ModuleController" testname="Validate Instance" enabled="true">
           <collectionProp name="ModuleController.node_path">
-            <stringProp name="1358040521">Plan de travail</stringProp>
+            <stringProp name="-1227702913">WorkBench</stringProp>
             <stringProp name="345956064">Setup Unifield Environment</stringProp>
             <stringProp name="170071582">Test Fragment</stringProp>
             <stringProp name="-1183459233">Validate Instance</stringProp>
@@ -382,7 +405,75 @@ log.info(&quot;done.&quot;);
               <collectionProp name="Arguments.arguments">
                 <elementProp name="" elementType="HTTPArgument">
                   <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt; &lt;methodCall&gt; &lt;methodName&gt;execute&lt;/methodName&gt; &lt;params&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${databaseName}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;int&gt;${userId}&lt;/int&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;${password}&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;sync.server.entity&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;string&gt;register&lt;/string&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;struct&gt; &lt;member&gt; &lt;name&gt;parent_name&lt;/name&gt; &lt;value&gt;&lt;string&gt;${parent_instance}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;group_names&lt;/name&gt; &lt;value&gt;&lt;array&gt;&lt;data&gt; ${group_names}&lt;/data&gt;&lt;/array&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;identifier&lt;/name&gt; &lt;value&gt;&lt;string&gt;${uuid}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;name&lt;/name&gt; &lt;value&gt;&lt;string&gt;${instance_name}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;email&lt;/name&gt; &lt;value&gt;&lt;string&gt;${contact_email}&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;/struct&gt;&lt;/value&gt; &lt;/param&gt; &lt;param&gt; &lt;value&gt;&lt;struct&gt; &lt;member&gt; &lt;name&gt;lang&lt;/name&gt; &lt;value&gt;&lt;string&gt;en_US&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;tz&lt;/name&gt; &lt;value&gt;&lt;boolean&gt;0&lt;/boolean&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_model&lt;/name&gt; &lt;value&gt;&lt;string&gt;ir.ui.menu&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;_terp_view_name&lt;/name&gt; &lt;value&gt;&lt;string&gt;Register&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;client&lt;/name&gt; &lt;value&gt;&lt;string&gt;web&lt;/string&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_ids&lt;/name&gt; &lt;value&gt;&lt;array&gt;&lt;data&gt; &lt;value&gt;&lt;int&gt;108&lt;/int&gt;&lt;/value&gt; &lt;/data&gt;&lt;/array&gt;&lt;/value&gt; &lt;/member&gt; &lt;member&gt; &lt;name&gt;active_id&lt;/name&gt; &lt;value&gt;&lt;int&gt;108&lt;/int&gt;&lt;/value&gt; &lt;/member&gt; &lt;/struct&gt;&lt;/value&gt; &lt;/param&gt; &lt;/params&gt; &lt;/methodCall&gt;   </stringProp>
+                  <stringProp name="Argument.value">&lt;?xml version=&apos;1.0&apos;?&gt;
+&lt;methodCall&gt;
+&lt;methodName&gt;execute&lt;/methodName&gt;
+&lt;params&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;string&gt;${databaseName}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;int&gt;${userId}&lt;/int&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;string&gt;${password}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;string&gt;sync.server.entity&lt;/string&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;string&gt;register&lt;/string&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;param&gt;
+&lt;value&gt;
+&lt;struct&gt;
+&lt;member&gt;
+&lt;name&gt;parent_name&lt;/name&gt;
+&lt;value&gt;
+&lt;string&gt;${parent_instance}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/member&gt;
+&lt;member&gt;
+&lt;name&gt;group_names&lt;/name&gt;
+&lt;value&gt;
+&lt;array&gt;
+&lt;data&gt;${group_names}&lt;/data&gt;
+&lt;/array&gt;
+&lt;/value&gt;
+&lt;/member&gt;
+&lt;member&gt;
+&lt;name&gt;identifier&lt;/name&gt;
+&lt;value&gt;
+&lt;string&gt;${uuid}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/member&gt;
+&lt;member&gt;
+&lt;name&gt;name&lt;/name&gt;
+&lt;value&gt;
+&lt;string&gt;${instance_name}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/member&gt;
+&lt;member&gt;
+&lt;name&gt;email&lt;/name&gt;
+&lt;value&gt;
+&lt;string&gt;${contact_email}&lt;/string&gt;
+&lt;/value&gt;
+&lt;/member&gt;
+&lt;/struct&gt;
+&lt;/value&gt;
+&lt;/param&gt;
+&lt;/params&gt;
+&lt;/methodCall&gt;</stringProp>
                   <stringProp name="Argument.metadata">=</stringProp>
                   <boolProp name="HTTPArgument.use_equals">true</boolProp>
                 </elementProp>
@@ -498,7 +589,7 @@ log.info(&quot;done.&quot;);
           </hashTree>
         </hashTree>
       </hashTree>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -530,7 +621,7 @@ log.info(&quot;done.&quot;);
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>

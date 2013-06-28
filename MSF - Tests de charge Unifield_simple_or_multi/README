@@ -1,11 +1,11 @@
-The most important file is build.properties
+The most important file to configure is build.properties
 The test plan is jmeter-test-fixedload.jmx while the instances creation is jmeter-test-setup.jmx
 
 You need JMeter 2.7 which is not the one packaged in Ubuntu 10.04. However you do need the ant-contrib package.
 
 The file jsch-0.1.48.jar located in the lib folder must be copied into /usr/share/ant/lib
 
-The test source files are in the resources folder. To understand what each Test Scenario (TS) is, please refer to the "Load tests" document in the docs folder.
+The test source files must be in the resources folder. To understand what each Test Scenario (TS) is, please refer to the "Load tests" document in the docs folder.
 
 The main ant commands are:
 - ant setup-env, restores remotely the database and creates the instances into the database.
@@ -17,14 +17,23 @@ If you want to run the load tests directly from the jmeter GUI. You must enter t
 
 As there are some variables with default values, you may want to change them directly in the test plan or from the commandline. Example: gbe@msf ~/MSF - Tests de charge Unifield_simple_ou_multi $ ~/apache-jmeter-2.7/bin/jmeter -Jhost=10.82.4.10 -Jport=50182 -Jmax.size=500
 
-To generate the XML files go to: MSF - Tests de charge Unifield_simple_or_multi/docs/Second_campaign/Scenarii/Captures and execute the scripts. In the end, the xml files must be copied into MSF - Tests de charge Unifield_simple_or_multi/resources such as MSF - Tests de charge Unifield_simple_or_multi/resources/TS_1. The path matters.
+To generate the XML files go to:docs/Third_campaign\ pilot2.3/Captures_cleaned and execute the scripts. In the end, the xml files must be copied into MSF - Tests de charge Unifield_simple_or_multi/resources such as MSF - Tests de charge Unifield_simple_or_multi/resources/TS_1. The path matters.
 
-If you want to use several machines for the load tests, you must define them in build.properties, put their IPs in /etc/hosts on the master node, transfer the folder resources to each injector and run jmeter-server
+If you want to use several machines for the load tests, you must:
+- define them in build.properties
+- put their IPs in /etc/hosts on the master node
+- on the injector node, the machine name must match its IP, not just 127.0.0.1
+- transfer the folder resources to each injecto
+- run jmeter-server on the injectors
+
+If in the load tests, there are 10 users (threads) and have 5 injectors, then it is 50 users simulated not just 10. It is actually 10 per injector.
+The csv files must be generated with the Generate Instances in the jmeter-test-setup.jmx
+Important note: each injector must have the csv files of a specific OCs. As the generate instances currently works, all the instances of every OCs are in the same file. You must split that to avoid pushing from the same instance 5 times.
 
 msf@injector1:~$ ls
 apache-jmeter-2.7  resources
 msf@injector1:~$ apache-jmeter-2.7/bin/jmeter-server
 
-Extra care must be used with the rules id. You need to change the file to match your setup. A database from code pilot0.4 is provided in the resources.
+Extra care must be used with the rules id. You need to change the file to match your setup. Databases pilot2.3 are provided in the resources, especially the SYNC_SERVER one.
 
 That's it folks!

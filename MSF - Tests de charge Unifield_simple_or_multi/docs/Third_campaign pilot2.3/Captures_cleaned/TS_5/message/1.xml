@@ -1,0 +1,22 @@
+<param>
+<value><array><data>
+<value><struct>
+<member>
+<name>dest</name>
+<value><string>#parent_instance#</string></value>
+</member>
+<member>
+<name>args</name>
+<value><string>[{'categ': u'other', 'analytic_distribution_id': False, 'name': u'13/OC/MW102/PO0000@@ID@@', 'order_line': [{'comment': False, 'line_number': 1, 'analytic_distribution_id': {'id': u'sd.#uuid#/analytic_distribution/1'}, 'sync_order_line_db_id': u'13/OC/MW102/PO0000@@ID@@_1', 'product_id': {'id': u'sd.product_ADAPCABL2S-', 'name': u'(computer) CABLE, SERIAL interface PC/Mini-M, female/male'}, 'product_uom': u'PCE', 'date_planned': '2013-06-13', 'price_unit': 10.625, 'default_name': u'(computer) CABLE, SERIAL interface PC/Mini-M, female/male', 'nomenclature_description': False, 'nomen_manda_2': False, 'have_analytic_distribution_from_header': False, 'notes': False, 'product_qty': 12.0, 'default_code': u'ADAPCABL2S-', 'nomen_manda_0': False, 'nomen_manda_3': False, 'id': u'sd.#uuid#/purchase_order_line/1', 'nomen_manda_1': False, 'name': u'(computer) CABLE, SERIAL interface PC/Mini-M, female/male'}], 'notes': False, 'priority': u'normal', 'loan_duration': 2, 'details': False, 'delivery_requested_date': '2013-06-13', 'order_type': u'regular'}]</string></value>
+</member>
+<member>
+<name>call</name>
+<value><string>sale.order.create_so</string></value>
+</member>
+<member>
+<name>id</name>
+<value><string>#uuid#/purchase_order/@@ID@@_1</string></value>
+</member>
+</struct></value>
+</data></array></value>
+</param>

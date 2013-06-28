@@ -95,7 +95,7 @@
             username="${openerp.ssh.user}"
             password="${openerp.ssh.password}"
     	    trust="yes"
-            command="sudo -u openerp pg_restore --no-owner --no-acl -d ${database.name} /opt/unifield/SYNC_SERVER-20130131-111507.dump" />
+            command="sudo -u openerp pg_restore --no-owner --no-acl -j 8 -d ${database.name} /opt/unifield-pilot2.3/SYNC_SERVER-20130618-103637-pilot2.3.dump" />
     </target>
 
     <target name="start-servers" description="Start servers">

@@ -1,0 +1,119 @@
+POST http://10.82.4.10:50170/xmlrpc/object
+
+POST data:
+<?xml version='1.0'?>
+<methodCall>
+<methodName>execute</methodName>
+<params>
+<param>
+<value><string>SYNC_SERVER</string></value>
+</param>
+<param>
+<value><int>1</int></value>
+</param>
+<param>
+<value><string>admin</string></value>
+</param>
+<param>
+<value><string>sync.server.sync_manager</string></value>
+</param>
+<param>
+<value><string>receive_package</string></value>
+</param>
+<param>
+<value><string>23adf5823ecb11e2869ed4ae52a5e4b6</string></value>
+</param>
+<param>
+<value><struct>
+<member>
+<name>load</name>
+<value><array><data>
+<value><struct>
+<member>
+<name>owner</name>
+<value><string>OCA_Coordo1_Project1</string></value>
+</member>
+<member>
+<name>version</name>
+<value><int>2</int></value>
+</member>
+<member>
+<name>values</name>
+<value><string>[u'sd.analytic_distribution_analytic_account_msf_private_funds', u'-12.0', u'-12.0', False, u'sd.af4b38503ec811e29d21d4ae52a5e4b6/account_analytic_account/14', u'sd.base_EUR', u'2012-12-05', u'sd.analytic_distribution_analytic_account_destination_support', u'2012-12-05', u'sd.af4b38503ec811e29d21d4ae52a5e4b6/account_account/181', u'sd.af4b38503ec811e29d21d4ae52a5e4b6/msf_instance/3', 'False', 'False', u'sd.23adf5823ecb11e2869ed4ae52a5e4b6/account_analytic_journal/23', u'sd.23adf5823ecb11e2869ed4ae52a5e4b6/account_move_line/1', u'Load test', u'sd.2012/Dec 2012_2012-12-01', False, False, False, u'sd.23adf5823ecb11e2869ed4ae52a5e4b6/account_analytic_line/7']</string></value>
+</member>
+</struct></value>
+</data></array></value>
+</member>
+<member>
+<name>fields</name>
+<value><string>['account_id/id', 'amount', 'amount_currency', 'code', 'cost_center_id/id', 'currency_id/id', 'date', 'destination_id/id', 'document_date', 'general_account_id/id', 'instance_id/id', 'is_reallocated', 'is_reversal', 'journal_id/id', 'move_id/id', 'name', 'period_id/id', 'ref', 'reversal_origin/id', 'source_date', 'id']</string></value>
+</member>
+<member>
+<name>model</name>
+<value><string>account.analytic.line</string></value>
+</member>
+<member>
+<name>rule_id</name>
+<value><int>42</int></value>
+</member>
+<member>
+<name>session_id</name>
+<value><string>f4eeee2da2e540ea82eb8016a2a99ef3</string></value>
+</member>
+</struct></value>
+</param>
+<param>
+<value><struct>
+<member>
+<name>lang</name>
+<value><string>en_MF</string></value>
+</member>
+<member>
+<name>tz</name>
+<value><boolean>0</boolean></value>
+</member>
+<member>
+<name>active_model</name>
+<value><string>ir.ui.menu</string></value>
+</member>
+<member>
+<name>no_model_data_line</name>
+<value><boolean>0</boolean></value>
+</member>
+<member>
+<name>_terp_view_name</name>
+<value><string>Synchronize</string></value>
+</member>
+<member>
+<name>active_id</name>
+<value><int>476</int></value>
+</member>
+<member>
+<name>client</name>
+<value><string>web</string></value>
+</member>
+<member>
+<name>active_ids</name>
+<value><array><data>
+<value><int>476</int></value>
+</data></array></value>
+</member>
+<member>
+<name>department_id</name>
+<value><boolean>0</boolean></value>
+</member>
+</struct></value>
+</param>
+</params>
+</methodCall>
+
+
+[no cookies]
+
+Request Headers:
+Host: 10.82.4.10:50170
+Content-Length: 3016
+User-Agent: xmlrpclib.py/1.0.1 (by www.pythonware.com)
+Connection: keep-alive
+Content-Type: text/xml
+
