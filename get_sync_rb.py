@@ -31,12 +31,12 @@ parser.add_argument("--host", "-H", metavar="host")
 parser.add_argument("--force", "-f", action="store_true", help="Delete dump if exists")
 parser.add_argument("--web-port", "-w", help="Web port")
 parser.add_argument("--netrpc-port", "-n",  help="NetRPC port")
+parser.add_argument("--syncdb", "-s", action="store_true",  help="For existing db: update sync host/port (the others are always updated)")
 parser.add_argument("--dropdb-bydefault", action="store_true",  help="Default choice for droping db question")
 
 parser.add_argument('--directory', action='store', help='Directory to get the branch [default: current]')
 parser.add_argument('--version', action='store')
 o = parser.parse_args()
-print o
 cnx = httplib2.Http()
 if not o.version:
     # Get the last env
@@ -179,13 +179,17 @@ if db_exists:
         for dump in db_exists:
             call(['dropdb', dump])
     else:
-        print "I'll not touch these dbs"
+        print "I'll not touch these dbs (except if we are using --syncdb)"
         all_dbs = list(set(all_dbs) - set(db_exists))
 
 create_db(all_dbs)
 
-print "Setting instance sync server"
-for dump in all_dbs:
+print "Setting instance sync server ..."
+db_to_update = all_dbs[:]
+if o.syncdb:
+    db_to_update += db_exists
+
+for dump in db_to_update:
     if dump != sync_db:
         db = psycopg2.connect('dbname=%s'%dump)
         cr = db.cursor()
