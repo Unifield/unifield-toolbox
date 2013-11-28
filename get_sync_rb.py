@@ -11,22 +11,56 @@ from bzrlib.branch import BzrBranch
 import shutil
 import psycopg2
 
+defaults = {
+    'host': 'last_sync_dump.dsp.uf3.unifield.org',
+    'web_port': 8061,
+    'netrpc_port': 8070,
+    'directory': os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')),
+    'force': False,
+}
+cfile = os.path.realpath(os.path.expanduser('~/.mkdbrc'))
+if os.path.exists(cfile):
+    config = ConfigParser.SafeConfigParser()
+    config.read([cfile])
+    defaults.update(dict(config.items("Defaults")))
+
+
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--host", "-H", metavar="host", default="last_sync_dump.dsp.uf3.unifield.org", help="Host [default: %(default)s]")
-parser.add_argument("--force", "-f", action="store_true", default=False, help="Delete dump if exists")
-parser.add_argument("--web-port", "-w", default=8061, help="Web port [default: %(default)s]")
-parser.add_argument("--netrpc-port", "-n", default=8070, help="NetRPC port [default: %(default)s]")
+parser.set_defaults(**defaults)
+parser.add_argument("--host", "-H", metavar="host")
+parser.add_argument("--force", "-f", action="store_true", help="Delete dump if exists")
+parser.add_argument("--web-port", "-w", help="Web port")
+parser.add_argument("--netrpc-port", "-n",  help="NetRPC port")
 
-parser.add_argument('directory', action='store', help='Directory to get the branch [default: current]')
-parser.add_argument('version', action='store')
+parser.add_argument('--directory', action='store', help='Directory to get the branch [default: current]')
+parser.add_argument('--version', action='store')
 o = parser.parse_args()
-
 cnx = httplib2.Http()
+if not o.version:
+    # Get the last env
+    url = os.path.join('http://%s' % o.host)
+    resp, content = cnx.request(url, "GET")
+    pattern = re.compile('href="([0-9]{12})/"')
+    match = pattern.search(content)
+    if match:
+        o.version = match.group(1)
+        print "Get last sync env: %(ver)s in %(dir)s/%(ver)s" % {'ver': o.version, 'dir':o.directory}
+    else:
+        raise Exception('No version found ! check %s' % url)
+
 resp, content = cnx.request(os.path.join('http://%s' % o.host, o.version, 'info.txt'), "GET")
 
-main_dir = os.path.realpath(o.directory)
+main_dir = os.path.realpath(os.path.join(o.directory, o.version))
 if not os.path.exists(main_dir):
     os.makedirs(main_dir)
+
+
+def test_db_exists(dbname):
+    try:
+        psycopg2.connect("dbname=%s"%dbname)
+        return True
+    except psycopg2.OperationalError:
+        return False
 
 def get_branch_and_revno(path):
     if os.path.islink(path):
@@ -45,7 +79,7 @@ def get_branch_and_revno(path):
 
 def ask(qu):
     while True:
-        print "%s [Y/n]" % qu
+        print "%s [Y/n]" % qu,
         ans = raw_input()
         if ans in ['Y','y', '']:
             return True
@@ -56,7 +90,6 @@ def create_db(all_dbs):
     for dump in all_dbs:
         print "Restoring DB %s ..." % dump
         dump_file = os.path.join(dump_dir, '%s.dump'%dump)
-        call(['dropdb', dump])
         call(['createdb', dump])
         call(['pg_restore', '--no-owner', '-d', dump, dump_file])
 
@@ -72,7 +105,7 @@ config.read(info_txt)
 
 
 # Check or download the branches
-for mod in ['unifield-addons', 'unifield-server', 'unifield-wm', 'sync_module_prod']:
+for mod in ['unifield-addons', 'unifield-server', 'unifield-wm', 'sync_module_prod', 'unifield-web']:
     url = config.get('Config', '%s_url' % mod)
     revno = config.get('Config', '%s_revno' % mod)
     wk_dir = os.path.join(main_dir, mod)
@@ -86,7 +119,6 @@ for mod in ['unifield-addons', 'unifield-server', 'unifield-wm', 'sync_module_pr
             if ask('Should I delete and re-branch the code ?'):
                     shutil.rmtree(wk_dir)
                     to_download = True
-
     if to_download:
         print 'bzr branch -r %s %s %s' % (revno, url, mod)
         call(['bzr', 'branch', '-r', revno, url, mod], cwd=main_dir)
@@ -96,16 +128,18 @@ dump_dir = os.path.join(main_dir, 'DBs')
 if not os.path.exists(dump_dir):
     os.makedirs(dump_dir)
 
-print "Get Dumps"
-resp, content = cnx.request(os.path.join('http://%s' % o.host, o.version), "GET")
+print "Get db dumps ..."
+url = os.path.join('http://%s' % o.host, o.version)
+resp, content = cnx.request(url, "GET")
 pattern = re.compile('="(\w+)\.dump"')
 dumps = pattern.findall(content)
 if not dumps:
-    print "error: not dump found"
+    print "Error: not dump found, check: %s" % url
     sys.exit(1)
 
 all_dbs = []
 sync_db = False
+existing_dump = []
 for dump in dumps:
     new_name =  '%s_%s'%(o.version, dump)
     dump_file = os.path.join(dump_dir, '%s.dump'%new_name)
@@ -118,12 +152,30 @@ for dump in dumps:
         f.write(content)
         f.close
     else:
-        print "Dump %s, already exists" % dump
+        existing_dump.append(dump)
 
-print "Sync DB %s" % sync_db
-print "I will drop and create the following DBs: %s" % ','.join(all_dbs)
-if ask('Are you ok ?'):
-    create_db(all_dbs)
+if existing_dump:
+    print "Dumps %s,\n\t already exist, use -f option to force the download." % ','.join(existing_dump)
+
+if not sync_db:
+    print "Error: no dbname detected for the sync server"
+    sys.exit(1)
+
+db_exists = []
+for db in all_dbs:
+    if test_db_exists(db):
+        db_exists.append(db)
+
+
+if db_exists:
+    if ask("I'll drop these dbs: %s\nAre you ok to drop them ?" % ','.join(db_exists)):
+        for dump in db_exists:
+            call(['dropdb', dump])
+    else:
+        print "I'll not touch these dbs"
+        all_dbs = list(set(all_dbs) - set(db_exists))
+
+create_db(all_dbs)
 
 print "Setting instance sync server"
 for dump in all_dbs:
@@ -161,6 +213,7 @@ if os.path.exists(web_config):
     config.read(web_config)
 else:
     config.read(os.path.join(main_dir, 'unifield-web', 'doc' ,'openerp-web.cfg'))
+
 config.set('global', 'server.socket_port', o.web_port)
 config.set('global', 'openerp.server.port', o.netrpc_port)
 with open(web_config, 'wb') as configfile:
@@ -173,5 +226,4 @@ print ""
 print "To start the server:"
 print "   cd %s" % (os.path.join(main_dir, 'unifield-server', 'bin'))
 print "   ./openerp-server.py -c ../../openerprc"
-
-
+print "... http://127.1.2.3:%s " % o.web_port
