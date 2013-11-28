@@ -33,6 +33,7 @@ parser.add_argument("--web-port", "-w", help="Web port")
 parser.add_argument("--netrpc-port", "-n",  help="NetRPC port")
 parser.add_argument("--syncdb", "-s", action="store_true",  help="For existing db: update sync host/port (the others are always updated)")
 parser.add_argument("--dropdb-bydefault", action="store_true",  help="Default choice for droping db question")
+parser.add_argument("--prefix", "-p",  help="Prefix for the db name")
 
 parser.add_argument('--directory', action='store', help='Directory to get the branch [default: current]')
 parser.add_argument('--version', action='store')
@@ -50,6 +51,7 @@ if not o.version:
     else:
         raise Exception('No version found ! check %s' % url)
 
+prefix = o.prefix or o.version
 resp, content = cnx.request(os.path.join('http://%s' % o.host, o.version, 'info.txt'), "GET")
 
 main_dir = os.path.realpath(os.path.join(o.directory, o.version))
@@ -147,12 +149,13 @@ all_dbs = []
 sync_db = False
 existing_dump = []
 for dump in dumps:
-    new_name =  '%s_%s'%(o.version, dump)
+    new_name =  '%s%s'%(prefix, dump.replace('last_sync', ''))
     dump_file = os.path.join(dump_dir, '%s.dump'%new_name)
     all_dbs.append(new_name)
     if 'SYNC' in dump:
         sync_db = new_name
     if not os.path.exists(dump_file) or o.force:
+        print "%s ..." % dump
         resp, content = cnx.request(os.path.join('http://%s' % o.host, o.version, "%s.dump"%dump), "GET")
         f = open(dump_file, 'wb')
         f.write(content)
