@@ -31,10 +31,12 @@ parser.add_argument("--host", "-H", metavar="host")
 parser.add_argument("--force", "-f", action="store_true", help="Delete dump if exists")
 parser.add_argument("--web-port", "-w", help="Web port")
 parser.add_argument("--netrpc-port", "-n",  help="NetRPC port")
+parser.add_argument("--dropdb-bydefault", action="store_true",  help="Default choice for droping db question")
 
 parser.add_argument('--directory', action='store', help='Directory to get the branch [default: current]')
 parser.add_argument('--version', action='store')
 o = parser.parse_args()
+print o
 cnx = httplib2.Http()
 if not o.version:
     # Get the last env
@@ -77,13 +79,17 @@ def get_branch_and_revno(path):
 
     return parent, wt.branch.revision_id_to_dotted_revno(lr)[0]
 
-def ask(qu):
+def ask(qu, default_choice):
     while True:
-        print "%s [Y/n]" % qu,
+        choice = "[y/N]"
+        if default_choice:
+            choice = "[Y/n]"
+
+        print "%s %s" % (qu, choice),
         ans = raw_input()
-        if ans in ['Y','y', '']:
+        if ans in ['Y','y'] or default_choice and not ans:
             return True
-        if ans in ['n','N']:
+        if ans in ['n','N'] or not default_choice and not ans:
             return False
 
 def create_db(all_dbs):
@@ -168,7 +174,8 @@ for db in all_dbs:
 
 
 if db_exists:
-    if ask("I'll drop these dbs: %s\nAre you ok to drop them ?" % ','.join(db_exists)):
+    if ask("I'll drop these dbs: %s\nAre you ok to drop them ?" % ','.join(db_exists), default_choice=o.dropdb_bydefault):
+        print "Dropping could fail if the server is running"
         for dump in db_exists:
             call(['dropdb', dump])
     else:
