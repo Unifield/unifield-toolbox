@@ -22,7 +22,7 @@ cfile = os.path.realpath(os.path.expanduser('~/.mkdbrc'))
 if os.path.exists(cfile):
     config = ConfigParser.SafeConfigParser()
     config.read([cfile])
-    defaults.update(dict(config.items("Defaults")))
+    defaults.update(dict(config.items("Duplicator")))
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
