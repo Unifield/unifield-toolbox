@@ -12,7 +12,7 @@ import shutil
 import psycopg2
 
 defaults = {
-    'host': 'last_sync_dump.dsp.uf3.unifield.org',
+    'host': 'se_dump.dsp.uf3.unifield.org',
     'web_port': 8061,
     'netrpc_port': 8070,
     'directory': os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')),
@@ -47,14 +47,14 @@ if not o.version:
     match = pattern.search(content)
     if match:
         o.version = match.group(1)
-        print "Get last sync env: %(ver)s in %(dir)s/%(ver)s" % {'ver': o.version, 'dir':o.directory}
+        print "Get %(host)s sync env: %(ver)s in %(dir)s/%(pref)s" % {'host': o.host, 'ver': o.version, 'dir':o.directory, 'pref': o.prefix or o.version}
     else:
         raise Exception('No version found ! check %s' % url)
 
 prefix = o.prefix or o.version
 resp, content = cnx.request(os.path.join('http://%s' % o.host, o.version, 'info.txt'), "GET")
 
-main_dir = os.path.realpath(os.path.join(o.directory, o.version))
+main_dir = os.path.realpath(os.path.join(o.directory, prefix))
 if not os.path.exists(main_dir):
     os.makedirs(main_dir)
 
@@ -149,7 +149,8 @@ all_dbs = []
 sync_db = False
 existing_dump = []
 for dump in dumps:
-    new_name =  '%s%s'%(prefix, dump.replace('last_sync', ''))
+    init_prefix = o.host.split('.')[0].replace('_dump', '')
+    new_name =  '%s%s'%(prefix, dump.replace(init_prefix, ''))
     dump_file = os.path.join(dump_dir, '%s.dump'%new_name)
     all_dbs.append(new_name)
     if 'SYNC' in dump:
