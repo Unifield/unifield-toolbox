@@ -1,7 +1,24 @@
-- The instance name is now mandatory with the command 'run':
+- 05/Sept/2013: new unifield-data version (UF-1042) change fields on products from selection to m2o
+  check if your unifield-wm contains the revid jfb@tempo-consulting.fr-20130905093229-7vyntm4uaumxfbz1, revno 1752
+  (bzr revision-info jfb@tempo-consulting.fr-20130905093229-7vyntm4uaumxfbz1)
+  if not, use this old unifield-data version: lp:~unifield-team/unifield-wm/unifield-data-wm-1751
+  
+- new option --nopo to ignore po file in lp:~unifield-team/unifield-server/option_test_module
+
+- nice server branch: lp:~unifield-team/unifield-server/option_test_module
+  with option: --test-module=module1,module2
+
+- new unifield-data version, with a new field family_id on product.category
+  check if your unifield-wm contains the revid jf@tempo4-20120823151227-a11czxb8op2uv3mx 
+  if not use this old unifield-data version: lp:~unifield-team/unifield-wm/unifield-data-before-wm-1092
+  or add the url https://code.launchpad.net/~unifield-team/unifield-wm/unifield-data-before-wm-1092  in your Jira issue
+
+  example: ./runbut skel instance-name -wm lp:unifield-wm -ud lp:~unifield-team/unifield-wm/unifield-data-before-wm-1092
+
+- The instance name is now mandatory with the 'run' command:
   example: ./runbot.py run jfb-uf-1347
 
 - Better concurrency control, and free port detection
 
 - Command deploy: new option "--unit":  ./runbot.py deploy -u &lt;jira-user&gt; &lt;UF-number&gt; --unit
-  example: ./runbot.py deploy -u md 1129 --unit
+  example: ./runbot.py deploy -u mdietrich 1129 --unit

@@ -135,6 +135,8 @@ class RunBotBranch(object):
             'pma': 'pma@tempo-consulting.fr',
             'mch': 'matthieu.choplin@geneva.msf.org',
             'mcho': 'matthieu.choplin@geneva.msf.org',
+            'sc': 'scarroll@geneva.msf.org',
+            'vg': 'vg@tempo-consulting.fr',
         }
         self.committer_alias = {
             'chloups208 <chloups208@chloups208-laptop>': 'P',
@@ -432,6 +434,9 @@ server.thread_pool = 10
 tools.sessions.on = True
 log.access_level = "INFO"
 log.error_level = "INFO"
+tools.fix_312_session_persistent.on = True
+tools.httponly_cookies.on = True
+tools.sessions.persistent = False
 tools.csrf.on = False
 tools.log_tracebacks.on = False
 tools.cgitb.on = True
@@ -724,7 +729,7 @@ class RunBot(object):
         events { worker_connections  1024; }
         http {
           include /etc/nginx/mime.types;
-          server_names_hash_bucket_size 128;
+          server_names_hash_bucket_size 512;
           client_max_body_size 5M;
           autoindex on;
           client_body_temp_path nginx; proxy_temp_path nginx; fastcgi_temp_path nginx; access_log nginx/access.log; index index.html;
@@ -1004,7 +1009,7 @@ class RunBot(object):
                 <p><b>Last modification: ${r.now}.</b></p>
             </div>
             <div class="content">
-                <p><b>What's new on runbot:</b></p>
+                <p><b><a name="news">What's new on runbot:</a></b></p>
                 <pre class="comment">
 ${new}
                 </pre>
@@ -1023,13 +1028,13 @@ ${new}
             <div class="comment">
             <a href="${r.bzr_url}~unifield-team/unifield-${br}/trunk">${br}</a>: revno:${r.revno[br]['revno']} ${r.revno[br]['time']} 
             <div class="comment">
-                ${r.revno[br]['lastmsg']}
             </div>
             </div>
             % endfor
         </div>
         </body>
         """
+        #${r.revno[br]['lastmsg'] and r.revno[br]['lastmsg'].encode('utf-8') or "" | x}
         self.now = time.strftime("%Y-%m-%d %H:%M:%S")
         new = ""
         new_file = os.path.join(self.wd,'CHANGES.txt')
@@ -1217,6 +1222,7 @@ def kill_inst(o, r):
             r.uf_instances[o.instance].set_ini('start', 0)
             r.uf_instances[o.instance].set_ini('port', 0)
             r.uf_instances[o.instance].write_ini()
+            clean_nginx_conf(r, o.instance)
         r.uf_instances[o.instance].stop()
     
 def list_inst(o, r):
@@ -1237,6 +1243,7 @@ def list_inst(o, r):
     for rbb in r.uf_instances.values():
         sys.stdout.write("Instance %s:\n"%(rbb.name, ))
         if not rbb.get_bool_ini('start',True):
+            clean_nginx_conf(r, rbb.name)
             sys.stdout.write("    Disabled in config.ini\n")
         sys.stdout.write("    web: %s\n"%(rbb.is_web_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port')+1, rbb.pidweb()) or 'not running', ))
         sys.stdout.write("    server: %s\n"%(rbb.is_server_running() and 'running on port %s, pid %s'%(rbb.get_int_ini('port'), rbb.pidserver()) or 'not running'))
@@ -1394,10 +1401,16 @@ def _jira_state(o, r):
     for ic in r.state_icon.values()+['nok.gif']:
         os.utime(os.path.join(icon_path, ic), None)
 
-def del_inst(o, r):
-    nginx_conf = os.path.join(r.wd,'nginx', 'instances', '%s.conf' % o.instance)
+def clean_nginx_conf(r, instance_name):
+    nginx_conf = os.path.join(r.wd,'nginx', 'instances', '%s.conf' % instance_name)
     if os.path.exists(nginx_conf):
         os.remove(nginx_conf)
+
+def del_inst(o, r):
+    clean_nginx_conf(r, o.instance)
+#    nginx_conf = os.path.join(r.wd,'nginx', 'instances', '%s.conf' % o.instance)
+#    if os.path.exists(nginx_conf):
+#        os.remove(nginx_conf)
     if o.instance not in r.uf_instances:
         sys.stderr.write("%s not in instance\n"%o.instance)
     else:
@@ -1452,7 +1465,7 @@ def main():
     skel_parser = subparsers.add_parser('skel', help='create a directory for a new instance')
     skel_parser.add_argument('instance', action='store', help='instance')
     skel_parser.add_argument('--start', '-s', action='store_true', default=False, help='Start this instance')
-    skel_parser.add_argument('--no-symlink', '-ns', action='store_true', default=False, help='Don\'t use symlink')
+    skel_parser.add_argument('--no-symlink', '-ns', action='store_true', default=True, help='Don\'t use symlink')
     skel_parser.add_argument('--unit', action='store_true', default=False, help='Run instance with unit test (load demo)')
     skel_parser.add_argument('--unifield-wm', '-wm', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')
     skel_parser.add_argument('--unifield-addons', '-ad', metavar='URL', default='link', help='Launchpad url or keyword "link" (default: %(default)s)')

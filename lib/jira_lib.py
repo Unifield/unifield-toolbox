@@ -118,3 +118,8 @@ class Jira_Soap():
             ret.append(issue['key'])
         return ret
 
+    def search(self, cond):
+        ret = []
+        for issue in self.soap.getIssuesFromJqlSearch(self.auth, cond, 10):
+            ret.append(issue['key'])
+        return ret
