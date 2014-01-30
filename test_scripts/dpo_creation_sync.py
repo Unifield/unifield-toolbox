@@ -1,204 +1,192 @@
+#-*- coding: utf-8 -*-
 import oerplib
+import unittest
+import time
+
+DB_SUFFIX = 'uf_2301_'
 
 # Connect database on sync. engine
 def connect_to_sync(conn):
+    """
+    Connect database on sync. engine
+    """
     sync_client = conn.get('sync.client.sync_server_connection')
     sync_client.action_connect([1])
 
 
-# Project
-p = oerplib.OERP('localhost', protocol='xmlrpc', port=8069)
-p_user = p.login('admin', 'admin', 'uf_2301_PROJECT_01')
+class XMLRPCConnection(oerplib.OERP):
 
-# Coordo
-c = oerplib.OERP('localhost', protocol='xmlrpc', port=8069)
-c_user = c.login('admin', 'admin', 'uf_2301_COORDO_01')
-
-print('Launch the connection to the sync. engine')
-connect_to_sync(p)
-connect_to_sync(c)
-
-# At project, create a PO with one item
-
-# Analytic distribution
-print('Create analytic distribution')
-analytic_id = p.search('account.analytic.account', [('code', '=', 'OPS')])
-if not analytic_id:
-    raise 'No Analytic account \'OPS\' found in database \'%s\'' % p.database
-else:
-    analytic_id = analytic_id[0]
-
-destination_id = p.search('account.analytic.account', [('code', '=', 'HT101')])
-if not destination_id:
-    raise 'No Analytic account \'HT101\' found in database \'%s\'' % p.database
-else:
-    destination_id = destination_id[0]
-
-ad = p.create('analytic.distribution', {'name': 'TEST QT uf_23301'})
-ad_line = p.create('cost.center.distribution.line', {'name': 'CC Line 1',
-                                                     'amount': 0.0,
-                                                     'percentage': 100.00,
-                                                     'currency_id': 1,
-                                                     'analytic_id': analytic_id,
-                                                     'distribution_id': ad,
-                                                     'destination_id': destination_id})
-
-# Partner
-partner_name = 'uf_2301_COORDO_01'
-partner = False
-partner_id = p.search('res.partner', [('name', '=', partner_name)])
-if not partner_id:
-    raise 'No partner \'%s\' found in database \'%s\'' % (partner_name, p.database)
-else:
-    partner_id = partner_id[0]
-    partner = p.browse('res.partner', partner_id)
-
-# Address
-addr_id = p.search('res.partner.address', [('partner_id', '=', partner_id)])
-if not addr_id:
-    raise 'No address found for the partner \'%s\' in the database \'%s\'' % (partner_name, p.database)
-else:
-    addr_id = addr_id[0]
-
-# Pricelist
-pricelist_id = partner.property_product_pricelist_purchase.id
-
-# Location
-location_id = p.search('stock.location', [('name', '=', 'Input')])
-if not location_id:
-    raise 'No location \'Input\' found in the database \'%s\'' % p.database
-else:
-    location_id = location_id[0]
-
-print('Create PO')
-po_id = p.create('purchase.order', {'partner_id': partner_id,
-                                    'partner_address_id': addr_id,
-                                    'location_id': location_id,
-                                    'analytic_distribution_id': ad,
-                                    'pricelist_id': pricelist_id})
-
-# Add a line on this PO
-print('Add line on PO')
-product_code = 'ADAPCABL1S-'
-product = False
-product_id = p.search('product.product', [('default_code', '=', product_code)])
-if not product_id:
-    raise 'No product \'%s\' found in database \'%s\'' % (product_code, p.database)
-else:
-    product_id = product_id[0]
-    product = p.browse('product.product', product_id)
-
-line_vals = {'product_id': product_id,
-             'product_qty': 50.00,
-             'price_unit': 0.00,
-             'product_uom': product.uom_id.id,
-             'name': product.name,
-             'order_id': po_id}
-
-line_id = p.create('purchase.order.line', line_vals)
-
-line_vals = {'product_id': product_id,
-             'product_qty': 25.00,
-             'price_unit': 0.00,
-             'product_uom': product.uom_id.id,
-             'name': product.name,
-             'order_id': po_id}
-
-line_id = p.create('purchase.order.line', line_vals)
-
-# Validate the PO
-print('Validate the PO')
-p.exec_workflow('purchase.order', 'purchase_confirm', po_id)
-
-# Run the sync. engine
-print('Run the sync. engine')
-sync_mgr = p.create('sync.client.sync_manager', {})
-p.execute('sync.client.sync_manager', 'sync', {'context': {}})
+        def get_object(self):
+            self.ana_acc       = self.get('account.analytic.account')
+            self.distrib       = self.get('analytic.distribution')
+            self.cc_dl         = self.get('cost.center.distribution.line')
+            self.partner       = self.get('res.partner')
+            self.addr          = self.get('res.partner.address')
+            self.location      = self.get('stock.location')
+            self.purchase      = self.get('purchase.order')
+            self.po_line       = self.get('purchase.order.line')
+            self.product       = self.get('product.product')
+            self.sync_mgr      = self.get('sync.client.sync_manager')
+            self.sale          = self.get('sale.order')
+            self.sourcing_line = self.get('sourcing.line')
+            self.poca          = self.get('procurement.order.compute.all')
 
 
-#############
-# At Coordo #
-#############
+class DPOSyncTestCase(unittest.TestCase):
 
-# Run the sync. engine
-print('Run the sync. engine at coordo')
-sync_mgr = c.create('sync.client.sync_manager', {})
-c.execute('sync.client.sync_manager', 'sync', {'context': {}})
+    def setUp(self):
+        # Project
+        self.p = XMLRPCConnection('localhost', protocol='xmlrpc', port=8069)
+        self.p_user = self.p.login('admin', 'admin', '%sPROJECT_01' % DB_SUFFIX)
+        self.p.get_object()
+        connect_to_sync(self.p)
 
-# Get the FO created
-partner_id = c.search('res.partner', [('name', '=', 'uf_2301_PROJECT_01')])
-if not partner_id:
-    raise 'No partner \'uf_2301_PROJECT_01\' found in database \'%s\'' % c.database
-else:
-    partner_id = partner_id[0]
+        # Coordo
+        self.c = XMLRPCConnection('localhost', protocol='xmlrpc', port=8069)
+        self.c_user = self.c.login('admin', 'admin', '%sCOORDO_01' % DB_SUFFIX)
+        self.c.get_object()
+        connect_to_sync(self.c)
 
-fo_id = c.search('sale.order', [('partner_id', '=', partner_id)], order='id desc')
-if not fo_id:
-    raise 'No FO found in database \'%s\'' % c.database
-else:
-    fo_id = fo_id[0]
+    def runTest(self):
+        p = self.p
+        c = self.c
 
-print('Validate the new FO')
-c.exec_workflow('sale.order', 'order_validated', fo_id)
+        ops_ids = p.ana_acc.search([('code', '=', 'OPS')])
+        self.assert_(ops_ids, 'OPS analytic account not found !')
+        
+        ht101_ids = p.ana_acc.search([('code', '=', 'HT101')])
+        self.assert_(ht101_ids, 'HT101 analytic account not found !')
 
-print('Select DPO on OST and confirm the line')
-ost = False
-ost_ids = c.search('sourcing.line', [('sale_order_id', '=', fo_id)])
-if not ost_ids:
-    raise 'No OST line found for FO in database \'%s\'' % c.database
-else:
-    for ost_id in ost_ids:
-        ost = c.browse('sourcing.line', ost_id)
+        # Creation of the analytic distribution
+        ad_id = p.distrib.create({'name': 'Test DPO sync'})
+        self.assert_(ad_id, 'Analytic distribution not created !')
+        # Create a line in the AD
+        p.cc_dl.create({'name': 'CC Line 1',
+                        'amount': 0.00,
+                        'percentage': 100.00,
+                        'currency_id': 1,
+                        'analytic_id': ops_ids[0],
+                        'distribution_id': ad_id,
+                        'destination_id': ht101_ids[0]})
 
-        supplier = c.search('res.partner', [('name', '=', 'ITCompany')])
-        if not supplier:
-            raise 'No supplier \'ITCompany\' found in database \'%s\'' % c.database
-        else:
-            supplier = supplier[0]
+        # Looking for the COORDO_01 partner
+        partner_name = '%sCOORDO_01' % DB_SUFFIX
+        partner_ids = p.partner.search([('name', '=', partner_name)])
+        self.assert_(partner_ids, 'Partner COORDO_01 not found in PROJECT_01 !')
+        partner = p.partner.browse(partner_ids[0])
 
-        fo_name = ost.sale_order_id.name
-        values = {'supplier': supplier,
-                  'type': 'make_to_order',
-                  'po_cft': 'dpo',}
-        c.write('sourcing.line', [ost_id], values)
-        c.execute('sourcing.line', 'confirmLine', [ost_id])
+        # Search address for the partner COORDO_01
+        addr_ids = p.addr.search([('partner_id', '=', partner_ids[0])])
+        self.assert_(addr_ids, 'No address found for the partner COORDO_01 !')
 
-fo_state =  c.read('sale.order', ost.sale_order_id.id, ['state'])['state']
-while fo_state != 'done':
-    fo_state =  c.read('sale.order', ost.sale_order_id.id, ['state'])['state']
+        # Get the pricelist of the partner COORDO_01
+        pricelist_id = partner.property_product_pricelist_purchase.id
 
-fo_split_id = c.search('sale.order', [('name', '=', '%s-3' % fo_name)])
-if not fo_split_id:
-    raise 'No FO split found'
-else:
-    fo_split_id = fo_split_id[0]
+        # Search the stock location Input
+        location_ids = p.location.search([('name', '=', 'Input')])
+        self.assert_(location_ids, 'No location Input found in PROJECT_01 !')
 
-print('Run the scheduler')
-proc_id = c.create('procurement.order.compute.all', {})
-c.execute('procurement.order.compute.all', 'procure_calculation', [proc_id])
+        # Create PO
+        po_id = p.purchase.create({'partner_id': partner_ids[0],
+                                   'partner_address_id': addr_ids[0],
+                                   'location_id': location_ids[0],
+                                   'analytic_distribution_id': ad_id,
+                                   'pricelist_id': pricelist_id})
 
-po_id = False
-while not po_id:
-    po_id = c.search('purchase.order', [('origin', '=', '%s-3' % fo_name)])
-if not po_id:
-    raise 'No PO found with origin = \'%s\' in the database \'%s\'' % (fo_name, c.database)
-else:
-    po_id = po_id[0]
+        product_code = 'ADAPCABL1S-'
+        product_ids = p.product.search([('default_code', '=', product_code)])
+        self.assert_(product_ids, 'No product %s found !' % product_code)
 
-print('Validate the PO')
-import time
-c.write('purchase.order', [po_id], {'delivery_confirmed_date': time.strftime('%Y-%m-%d')})
-c.exec_workflow('purchase.order', 'purchase_confirm', po_id)
-print('Confirm the PO')
-c.execute('purchase.order', 'confirm_button', [po_id])
+        product = p.product.browse(product_ids[0])
 
-# Run the sync. engine
-print('Run the sync. engine at coordo')
-sync_mgr = c.create('sync.client.sync_manager', {})
-c.execute('sync.client.sync_manager', 'sync', {'context': {}})
+        line_vals = {'product_id': product.id,
+                     'product_qty': 50.00,
+                     'price_unit': 0.00,
+                     'product_uom': product.uom_id.id,
+                     'name': product.name,
+                     'order_id': po_id}
 
-# Run the sync. engine
-print('Run the sync. engine at project')
-sync_mgr = p.create('sync.client.sync_manager', {})
-p.execute('sync.client.sync_manager', 'sync', {'context': {}})
+        p.po_line.create(line_vals)
 
+        line_vals = {'product_id': product.id,
+                     'product_qty': 25.00,
+                     'price_unit': 0.00,
+                     'product_uom': product.uom_id.id,
+                     'name': product.name,
+                     'order_id': po_id}
+
+        p.po_line.create(line_vals)
+
+        p.exec_workflow('purchase.order', 'purchase_confirm', po_id)
+
+        # Run the sync. engine
+        p.execute('sync.client.sync_manager', 'sync', {'context': {}})
+
+
+        #############
+        # At Coordo #
+        #############
+
+        # Run the sync. engine
+        c.execute('sync.client.sync_manager', 'sync', {'context': {}})
+
+        # Get the FO created
+        partner_ids = c.partner.search([('name', '=', '%sPROJECT_01' % DB_SUFFIX)])
+        self.assert_(partner_ids, 'No partner PROJECT_01 found in COORDO_01 !')
+
+        fo_ids = c.search('sale.order', [('partner_id', '=', partner_ids[0])], order='id desc')
+        self.assert_(fo_ids, 'No FO created at Coordo for the partner PROJECT_01')
+
+        # Validate the new FO
+        c.exec_workflow('sale.order', 'order_validated', fo_ids[0])
+
+        # Select DPO on OST and confirm the line
+        ost = False
+        ost_ids = c.sourcing_line.search([('sale_order_id', '=', fo_ids[0])])
+        self.assert_(ost_ids, 'No OST line found for the FO − It seems that the FO hasn\'t been validated !')
+        for ost_id in ost_ids:
+            ost = c.sourcing_line.browse(ost_id)
+        
+            supplier_ids = c.partner.search([('name', '=', 'ITCompany')])
+            self.assert_(supplier_ids, 'No supplier ITCompany found in COORDO_01 !')
+            fo_name = ost.sale_order_id.name
+            values = {'supplier': supplier_ids[0],
+                      'type': 'make_to_order',
+                      'po_cft': 'dpo',}
+            c.sourcing_line.write([ost_id], values)
+            c.execute('sourcing.line', 'confirmLine', [ost_id])
+        
+        fo_state =  c.sale.read(ost.sale_order_id.id, ['state'])['state']
+        while fo_state != 'done':
+            fo_state =  c.sale.read(ost.sale_order_id.id, ['state'])['state']
+        
+        fo_split_ids = c.sale.search([('name', '=', '%s-3' % fo_name)])
+        self.assert_(fo_split_ids, 'No FO split found − May the FO was not split well !')
+        
+        # Run the scheduler
+        proc_id = c.poca.create({})
+        c.execute('procurement.order.compute.all', 'procure_calculation', [proc_id])
+        
+        po_ids = False
+        while not po_ids:
+            time.sleep(2)
+            print fo_name
+            po_ids = c.purchase.search([('origin', 'like', '%s-3' % fo_name)])
+
+        self.assert_(po_ids, 'No PO found with origin = \'%s-3\' in COORDO_01' % fo_name)
+        
+        # Validate the PO
+        c.purchase.write(po_ids, {'delivery_confirmed_date': time.strftime('%Y-%m-%d')})
+        c.exec_workflow('purchase.order', 'purchase_confirm', po_ids[0])
+        # Confirm the PO
+        c.execute('purchase.order', 'confirm_button', po_ids)
+        
+        # Run the sync. engine at coordo
+        c.execute('sync.client.sync_manager', 'sync', {'context': {}})
+        
+        # Run the sync. engine at project
+        p.execute('sync.client.sync_manager', 'sync', {'context': {}})
+         
+
+if __name__ == '__main__':
+    unittest.main()
