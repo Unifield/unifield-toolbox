@@ -40,10 +40,11 @@ from datetime import datetime
 #####
 ## VARIABLES
 ###
-dbname='ref5'
+dbname='ref5_tests'
 login = 'admin'
 pwd = 'admin'
 timeout = 3600
+budget_id = 8
 
 #####
 ## BEGIN
@@ -54,10 +55,13 @@ o = oerplib.OERP('localhost', protocol='xmlrpc', port=8069, timeout=timeout)
 u = o.login(login, pwd, dbname)
 
 # Select some register lines
-print "Budget ID: 1"
+#l_obj = o.get('msf.budget.line')
+#l_ids = l_obj.search([('budget_id', '=', budget_id)])
+b_obj = o.get('msf.budget')
+print "Budget ID:", budget_id
 before = datetime.today()
 try:
-  o.read('msf.budget', [1], ['total_budget_amount'])
+  b_obj.button_display_type2([8])
 except Exception, e:
   print e
 finally:
