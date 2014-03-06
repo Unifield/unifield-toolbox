@@ -19,7 +19,6 @@ class ProductTest(UnifieldTest):
         if not uom_id:
             uom_id = instance.uom.create({
                 'name': name,
-                ''
             })
 
         return uom_id
