@@ -19,9 +19,9 @@ class UnifieldTest(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(UnifieldTest, self).__init__(*args, **kwargs)
-        self.db['sync'] = XMLConn('SYNC_SERVER')
-        self.db['hq'] = XMLConn('HQ1')
-        self.db['coordo'] = XMLConn('HQ1C1')
-        self.db['project'] = XMLConn('HQ1C1P1')
+        self.sync = XMLConn('SYNC_SERVER')
+        self.hq1 = XMLConn('HQ1')
+        self.c1 = XMLConn('HQ1C1')
+        self.p1 = XMLConn('HQ1C1P1')
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

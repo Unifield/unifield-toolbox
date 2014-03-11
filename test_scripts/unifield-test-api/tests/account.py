@@ -7,7 +7,6 @@ class AccountTest(UnifieldTest):
     def __init__(self, *args, **kwargs):
         '''Include some data in the database'''
         super(AccountTest, self).__init__(*args, **kwargs)
-        db = self.db.get('project')
         # Values
         vals = {
             'name': 'test-20',
@@ -15,17 +14,16 @@ class AccountTest(UnifieldTest):
             'type': 'other'
         }
         # Search user_type
-        user_type_ids = db.get('account.account.type').search([('name', '=', 'Expense')])
+        user_type_ids = self.p1.get('account.account.type').search([('name', '=', 'Expense')])
         vals.update({'user_type': user_type_ids[0]})
-        res = db.get('account.account').create(vals)
+        res = self.p1.get('account.account').create(vals)
 
     @classmethod
     def tearDownClass(self):
         '''
         Clear data after tests have been used
         '''
-        db = self.db.get('project')
-        account_obj = db.get('account.account')
+        account_obj = self.p1.get('account.account')
         a_ids = account_obj.search([('name', '=', 'test-20'), ('code', '=', 'TT20')])
         account_obj.unlink(a_ids)
         super(AccountTest, self).tearDownClass()

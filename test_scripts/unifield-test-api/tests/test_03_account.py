@@ -6,8 +6,7 @@ class AccountAccountTest(AccountTest):
 
     def test_010_coa(self):
         '''Check Chart of Account length'''
-        db = self.db.get('project')
-        ids = db.get('account.account').search([])
+        ids = self.p1.get('account.account').search([])
         self.assert_(len(ids) == 342, "Chart of Account length: %s" % len(ids))
 
 def get_test_class():
