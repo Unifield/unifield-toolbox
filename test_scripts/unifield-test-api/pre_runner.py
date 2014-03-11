@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-print ("Code that do some things previously all tests.")
+print ("Code that do some things previously to all tests.")
 
 # TODO:
 # - fetch DB from unifield servers

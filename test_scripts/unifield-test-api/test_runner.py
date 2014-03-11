@@ -9,6 +9,9 @@ import sys
 # TODO: Read a file to parse some configuration and read which directory to browse
 path_for_tests = 'tests'
 
+def _separator():
+    print ('#' * 70)
+
 def main():
     """
     Launch all 'test_' files in a specific directory
@@ -17,6 +20,8 @@ def main():
     suite = unittest.TestSuite() # the suite of tests
     test_modules = [] # modules that are in 'tests' directory
     added_paths = [] # path added to PYTHONPATH
+
+    _separator()
 
     # Browse the directory to search all tests
     print ('Browsing %s directory.' % path_for_tests)
@@ -41,13 +46,17 @@ def main():
         module = __import__(module_info[1])
         if 'get_test_class' in module.__dict__:
             class_type = module.get_test_class()
-            print class_type
+            print (" - Module %s" % (class_type.__module__,))
             test_suite = unittest.TestSuite((unittest.makeSuite(class_type), ))
             suite.addTest(test_suite)
+
+    _separator()
 
     # Launch a python script that runs some tasks before tests
     print ('Launch pre-tasks')
     execfile('pre_runner.py')
+
+    _separator()
 
     # Create a file for the output result
     output = file('output.html', 'wb')
@@ -57,15 +66,23 @@ def main():
         title='Example tests',
         description='A suite of tests that permit to test PyUnit class'
     )
+    print ('TESTING...')
     runner.run(suite)
 
+    _separator()
+
+    print ('Clean paths')
     # Delete all paths added to the PYTHONPATH
     for added_path in added_paths:
         sys.path.remove(added_path)
 
+    _separator()
+
     # Launch a python script that runs some tasks after all tests
     print ('Launch post-tasks')
     execfile('post_runner.py')
+
+    _separator()
 
 if __name__ == "__main__":
     main()
