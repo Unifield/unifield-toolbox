@@ -61,13 +61,13 @@ def main():
     # Create a file for the output result
     output = file('output.html', 'wb')
     # Run tests
-    runner = HTMLTestRunner.HTMLTestRunner(
+    campaign = HTMLTestRunner.HTMLTestRunner(
         stream=output,
         title='Example tests',
         description='A suite of tests that permit to test PyUnit class'
     )
     print ('TESTING...')
-    runner.run(suite)
+    campaign.run(suite)
 
     _separator()
 
