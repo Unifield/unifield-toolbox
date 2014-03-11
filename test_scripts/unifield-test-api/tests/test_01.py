@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
 import unittest
 
 class SomethingTest(unittest.TestCase):
@@ -20,3 +22,5 @@ class SomethingTest(unittest.TestCase):
 def get_test_class():
     '''Return the class to use for tests'''
     return SomethingTest
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

@@ -1,7 +1,9 @@
-import test_01
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+from test_01 import SomethingTest
 import unittest
 
-class AnotherTest(test_01.SomethingTest):
+class AnotherTest(SomethingTest):
 
     ###########################################################################
     ## We skip test_020 because it was already done in SomethingTest class.
@@ -18,3 +20,5 @@ class AnotherTest(test_01.SomethingTest):
 def get_test_class():
     '''Return the class to use for tests'''
     return AnotherTest
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

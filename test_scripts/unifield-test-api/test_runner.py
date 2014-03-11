@@ -41,6 +41,7 @@ def main():
         module = __import__(module_info[1])
         if 'get_test_class' in module.__dict__:
             class_type = module.get_test_class()
+            print class_type
             test_suite = unittest.TestSuite((unittest.makeSuite(class_type), ))
             suite.addTest(test_suite)
 
@@ -68,3 +69,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
