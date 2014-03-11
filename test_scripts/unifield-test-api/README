@@ -1,0 +1,5 @@
+To use PyUnit tests in this directory:
+
+    python test_runner.py
+
+
