@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-print ("Code that do some things previously to all tests.")
+print ("  No pre-tasks defined yet.")
 
 # TODO:
 # - fetch DB from unifield servers

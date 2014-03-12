@@ -19,6 +19,8 @@ class UnifieldTest(unittest.TestCase):
     @var db: contains the list of DB connections
     '''
     db = {}
+    test_module_name = 'unifield_tests'
+    test_module_obj_name = 'unifield.test'
 
     def _addConnection(self, db_suffix, name):
         '''
@@ -37,24 +39,36 @@ class UnifieldTest(unittest.TestCase):
         self._addConnection('HQ1C1P1', 'p1')
         # For each database, check that unifield_tests module is loaded
         #+ If not, load it.
-        module_to_install = 'unifield_tests'
         for database_name in self.db:
             database = self.db.get(database_name)
             module_obj = database.get('ir.module.module')
-            m_ids = module_obj.search([('name', '=', module_to_install)])
+            m_ids = module_obj.search([('name', '=', self.test_module_name)])
             for module in module_obj.read(m_ids, ['state']):
                 state = module.get('state', '')
                 if state == 'uninstalled':
-                    print ('Updating %s module for %s DB' % (module_to_install, database_name))
+                    print ('Updating %s module for %s DB' % (self.test_module_name, database_name))
                     module_obj.button_install([module.get('id')])
                     database.get('base.module.upgrade').upgrade_module([])
                 elif state in ['to upgrade', 'to install']:
-                    print ('Updating %s module for %s DB' % (module_to_install, database_name))
+                    print ('Updating %s module for %s DB' % (self.test_module_name, database_name))
                     database.get('base.module.upgrade').upgrade_module([])
                 elif state in ['installed']:
-                    print ('%s module already installed in %s DB' % (module_to_install, database_name))
+                    print ('%s module already installed in %s DB' % (self.test_module_name, database_name))
                     pass
                 else:
                     raise EnvironmentError('Wrong module state: %s' % (state or '',))
+
+    def is_keyword_present(self, db, keyword):
+        '''
+        Check that the given keyword is present in given db connection and active.
+        '''
+        res = False
+        if not db or not keyword:
+            return res
+        t_obj = db.get(self.test_module_obj_name)
+        t_ids = t_obj.search([('name', '=', keyword), ('active', '=', True)])
+        if not t_ids:
+            return res
+        return True
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

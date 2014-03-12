@@ -14,10 +14,8 @@ class AccountTest(UnifieldTest):
         keyword = 'account_test_class'
         for database_name in self.db:
             database = self.db.get(database_name)
-            t_obj = database.get('unifield.test')
-            t_ids = t_obj.search([('name', '=', keyword)])
             # If no one, create a test account
-            if not t_ids:
+            if not self.is_keyword_present(database, keyword):
                 # Values
                 vals = {
                     'name': 'test-20',
@@ -27,9 +25,9 @@ class AccountTest(UnifieldTest):
                 # Search user_type
                 user_type_ids = database.get('account.account.type').search([('name', '=', 'Expense')])
                 vals.update({'user_type': user_type_ids[0]})
-                res = database.get('account.account').create(vals)
+                database.get('account.account').create(vals)
                 # Write the fact that the data have been loaded
-                t_obj.create({'name': keyword, 'active': True})
+                database.get(self.test_module_obj_name).create({'name': keyword, 'active': True})
             else:
                 print "%s exists!" % (keyword)
 
