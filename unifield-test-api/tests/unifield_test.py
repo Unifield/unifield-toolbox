@@ -9,6 +9,8 @@ Modified by 'od' on 2014 March, the 11th
 import unittest
 from connection import XMLRPCConnection as XMLConn
 
+active_test = {}
+
 class UnifieldTest(unittest.TestCase):
     '''
     Main test class for Unifield tests using TestCase and Openerplib as main inheritance
@@ -64,11 +66,17 @@ class UnifieldTest(unittest.TestCase):
         '''
         res = False
         if not db or not keyword:
-            return res
-        t_obj = db.get(self.test_module_obj_name)
-        t_ids = t_obj.search([('name', '=', keyword), ('active', '=', True)])
-        if not t_ids:
-            return res
-        return True
+            return False
+        
+        if active_test[db][keyword]:
+            return True
+        
+        return False
+        
+        #t_obj = db.get(self.test_module_obj_name)
+        #t_ids = t_obj.search([('name', '=', keyword), ('active', '=', True)])
+        #if not t_ids:
+        #    return res
+        #return True
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

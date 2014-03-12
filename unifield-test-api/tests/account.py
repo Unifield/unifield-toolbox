@@ -2,6 +2,8 @@
 # -*- coding: utf8 -*-
 from unifield_test import UnifieldTest
 
+from unifield_test import active_test
+
 class AccountTest(UnifieldTest):
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +29,9 @@ class AccountTest(UnifieldTest):
                 vals.update({'user_type': user_type_ids[0]})
                 database.get('account.account').create(vals)
                 # Write the fact that the data have been loaded
-                database.get(self.test_module_obj_name).create({'name': keyword, 'active': True})
+                active_test.setdefault(database_name, set())
+                active_test[database_name].add(keyword)
+                #database.get(self.test_module_obj_name).create({'name': keyword, 'active': True})
             else:
                 print "%s exists!" % (keyword)
 
