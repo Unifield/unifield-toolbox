@@ -1,3 +1,0 @@
-import tests
-import HTMLTestRunner
-import test_runner
