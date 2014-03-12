@@ -17,6 +17,8 @@ class UnifieldTest(unittest.TestCase):
     @var c1: same as sync for HQ1C1 DB
     @var p1: same as sync for HQ1C1P1 DB
     @var db: contains the list of DB connections
+    @var test_module_name: name of the module used to create extended table for tests
+    @var test_module_obj_name: name of the OpenERP object to use to access to extended table
     '''
     db = {}
     test_module_name = 'unifield_tests'
