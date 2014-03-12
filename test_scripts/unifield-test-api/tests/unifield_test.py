@@ -12,10 +12,11 @@ from connection import XMLRPCConnection as XMLConn
 class UnifieldTest(unittest.TestCase):
     '''
     Main test class for Unifield tests using TestCase and Openerplib as main inheritance
-    @var db: contains links to databases
+    @var sync: contains Synchro Server oerplib connection
+    @var hq1: same as sync for HQ1 DB
+    @var c1: same as sync for HQ1C1 DB
+    @var p1: same as sync for HQ1C1P1 DB
     '''
-    db = {}
-    pool = {}
 
     def __init__(self, *args, **kwargs):
         super(UnifieldTest, self).__init__(*args, **kwargs)
@@ -34,7 +35,7 @@ class UnifieldTest(unittest.TestCase):
             for module in module_obj.read(m_ids, ['state']):
                 state = module.get('state', '')
                 if state == 'uninstalled':
-                    module_obj.button_install(module.get('id'))
+                    module_obj.button_install([module.get('id')])
                     database.get('base.module.upgrade').upgrade_module([])
                 elif state in ['to upgrade', 'to install']:
                     database.get('base.module.upgrade').upgrade_module([])

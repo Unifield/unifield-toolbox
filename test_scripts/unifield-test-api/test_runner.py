@@ -35,7 +35,16 @@ def main():
     # Inform how many modules was found
     print ('%d module(s) found' % len(test_modules))
 
+    _separator()
+
+    # Launch a python script that runs some tasks before tests
+    print ('Launch pre-tasks')
+    execfile('pre_runner.py')
+
+    _separator()
+
     # Import found modules
+    print ('Import these modules:')
     #+ Sort them by module name (x[1])
     for module_info in sorted(test_modules, key=lambda x: x[1]):
         module_path = path.dirname(module_info[0])
@@ -49,12 +58,6 @@ def main():
             print (" - Module %s" % (class_type.__module__,))
             test_suite = unittest.TestSuite((unittest.makeSuite(class_type), ))
             suite.addTest(test_suite)
-
-    _separator()
-
-    # Launch a python script that runs some tasks before tests
-    print ('Launch pre-tasks')
-    execfile('pre_runner.py')
 
     _separator()
 
