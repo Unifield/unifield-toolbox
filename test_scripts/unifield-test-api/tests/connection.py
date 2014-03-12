@@ -48,7 +48,8 @@ class XMLRPCConnection(OERP):
         super(XMLRPCConnection, self).__init__(
             server=server_url,
             protocol='xmlrpc',
-            port=server_port
+            port=server_port,
+            timeout=3600
         )
         # Login initialization
         db_name = '%s%s' % (db_prefix, db_suffix)
