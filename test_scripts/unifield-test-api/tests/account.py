@@ -5,27 +5,32 @@ from unifield_test import UnifieldTest
 class AccountTest(UnifieldTest):
 
     def __init__(self, *args, **kwargs):
-        '''Include some data in the database'''
+        '''
+        Include some account data in the database.
+        Include/create them only if they have not been already created.
+        To know this, we use the key: "account_test_class"
+        '''
         super(AccountTest, self).__init__(*args, **kwargs)
-        # Values
-        vals = {
-            'name': 'test-20',
-            'code': 'TT20',
-            'type': 'other'
-        }
-        # Search user_type
-        user_type_ids = self.p1.get('account.account.type').search([('name', '=', 'Expense')])
-        vals.update({'user_type': user_type_ids[0]})
-        res = self.p1.get('account.account').create(vals)
-
-    @classmethod
-    def tearDownClass(self):
-        '''
-        Clear data after tests have been used
-        '''
-        account_obj = self.p1.get('account.account')
-        a_ids = account_obj.search([('name', '=', 'test-20'), ('code', '=', 'TT20')])
-        account_obj.unlink(a_ids)
-        super(AccountTest, self).tearDownClass()
+        keyword = 'account_test_class'
+        for database_name in self.db:
+            database = self.db.get(database_name)
+            t_obj = database.get('unifield.test')
+            t_ids = t_obj.search([('name', '=', keyword)])
+            # If no one, create a test account
+            if not t_ids:
+                # Values
+                vals = {
+                    'name': 'test-20',
+                    'code': 'TT20',
+                    'type': 'other'
+                }
+                # Search user_type
+                user_type_ids = database.get('account.account.type').search([('name', '=', 'Expense')])
+                vals.update({'user_type': user_type_ids[0]})
+                res = database.get('account.account').create(vals)
+                # Write the fact that the data have been loaded
+                t_obj.create({'name': keyword, 'active': True})
+            else:
+                print "%s exists!" % (keyword)
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
