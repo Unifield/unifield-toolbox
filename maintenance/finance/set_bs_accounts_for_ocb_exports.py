@@ -17,11 +17,14 @@ import oerplib
 
 def main():
   # Description of usage
-  current_usage = """Set all account with a "Shrink entries for HQ export" to False, except 10100, 10200 and 10210 account.
-  This need an XMLRPC connection."""
+  current_usage = """usage: %prog -d database -p port [-w] admin_password
+
+Set all account with a "Shrink entries for HQ export" to False, except 10100, 10200 and 10210 account.\n
+This need an XMLRPC connection."""
   parser = ArgumentParser(usage=current_usage)
   parser.add_argument("--database", "-d", metavar="database", help="Database name", required=True)
   parser.add_argument("--password", "-w", metavar="pwd", default="admin", help="Password [default: %(default)s]")
+  parser.add_argument("--port", "-p", metavar="port", default="8069", help="Port [default: %(default)s]", required=True)
 
   # Default variables
   user = 'admin'
@@ -34,9 +37,10 @@ def main():
   # Fetch some elements
   pwd = opt.password or 'admin'
   db = opt.database
+  port = opt.port
 
   # Connection to the DB with oerplib library
-  o = oerplib.OERP(host, protocol='xmlrpc')
+  o = oerplib.OERP(host, protocol='xmlrpc', port=port)
   u = o.login(user, pwd, db)
 
   # Fetch specific accounts
