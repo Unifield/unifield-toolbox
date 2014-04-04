@@ -17,7 +17,7 @@ import oerplib
 
 def main():
   # Description of usage
-  current_usage = """usage: %prog -d database -p port [-w] admin_password
+  current_usage = """usage: program -d database -p port [-w] admin_password
 
 Set all account with a "Shrink entries for HQ export" to False, except 10100, 10200 and 10210 account.\n
 This need an XMLRPC connection."""
