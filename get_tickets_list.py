@@ -37,7 +37,7 @@ if os.path.exists(commit_list):
     print "File %s: exists" % (commit_list)
     sys.exit(1)
 
-rex = re.compile('(\s|^)((UF|UTP|SP|AIO|OEB|ITWG)-[0-9]+)', re.I)
+rex = re.compile('(\s|^)((REF|UFTP|UF|UTP|SP|AIO|OEB|ITWG)-[0-9]+)', re.I)
 
 all_issues = {}
 
