@@ -14,7 +14,6 @@ for i in wm addons server web; do
     cd unifield-$i
     bzr tag $1
     bzr push lp:unifield-$i
-    bzr push lp:unifield-$i/pilot2
     cd -
 done
 
