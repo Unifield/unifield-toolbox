@@ -5,6 +5,8 @@ from ConfigParser import NoSectionError
 from ConfigParser import NoOptionError
 from oerplib import OERP
 from supply_flow import SupplyFlow
+from finance_flow import FinanceSetupFlow
+from finance_flow import FinanceFlow
 
 import logging
 import time
@@ -169,6 +171,10 @@ class TestProxy(object):
 
 if __name__ == '__main__':
     proxy = TestProxy()
+
+    finance_setup = FinanceSetupFlow(proxy)
+    finance_setup.run()
+
     supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()
 
