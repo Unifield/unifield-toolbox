@@ -168,6 +168,49 @@ class TestProxy(object):
     def exec_workflow(self, *args):
         self.conn.exec_workflow(*args)
 
+    def current_date2orm(self):
+        """
+        get current date
+        :rtype: str YYYY-MM-DD
+        """
+        return time.strftime('%Y-%m-%d')
+
+    def date2orm(self, dt):
+        """
+        convert date to orm format
+        :type dt: DateTime
+        :rtype: str YYYY-MM-DD
+        """
+        return dt.strftime('%Y-%m-%d')
+
+    def get_iter_item(self, iter, index):
+        """
+        get iterable item at given index
+        used to get a specific item of an oerplib browsed list's item
+        :param iter: iterable to get item from
+        :param index: index of the wanted item
+        :type index: int
+        :return item or None
+        """
+        i = 0
+        for item in iter:
+            if i == index:
+                return item
+            i += 1
+        return None
+
+    def get_record_id_from_xmlid(self, module, xmlid):
+        """
+        get record id from xml id
+        :param module: module name
+        :type module: str
+        :param xmlid: xmlid
+        :type xmlid: str
+        :return: id
+        """
+        obj = self.ir_data.get_object_reference(module, xmlid)
+        return obj[1] if obj else False
+
 
 if __name__ == '__main__':
     proxy = TestProxy()
