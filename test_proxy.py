@@ -1,0 +1,190 @@
+# -*- coding: utf-8 -*-
+
+from ConfigParser import ConfigParser
+from ConfigParser import NoSectionError
+from ConfigParser import NoOptionError
+from oerplib import OERP
+from supply_flow import SupplyFlow
+
+import logging
+import time
+import os
+
+
+_COLORS = {
+    'normal': '\033[0;39m',
+    'blue': '\033[1;34m',
+    'green': '\033[1;32m',
+    'magenta': '\033[1;35m',
+    'red': '\033[1;31m',
+    'yellow': '\033[1;33m',
+}
+
+def color_msg(msg, color_code):
+    """
+    Color the message
+    :param msg: Message
+    :param color_code: Code of the color to use
+    :return: The message with the good color
+    """
+    return "%s%s%s" %(_COLORS[color_code], msg, _COLORS['normal'], )
+
+MODELS = {
+    'so': 'sale.order',
+    'sol': 'sale.order.line',
+    'po': 'purchase.order',
+    'pol': 'purchase.order.line',
+    'data': 'ir.model.data',
+    'pick': 'stock.picking',
+    'move': 'stock.move',
+    'prod': 'product.product',
+    'ana_acc': 'account.analytic.account',
+    'ad': 'analytic.distribution',
+    'cc': 'cost.center.distribution.line',
+    'fp': 'funding.pool.distribution.line',
+    'acc_type': 'account.account.type',
+    'acc': 'account.account',
+    'partner': 'res.partner',
+    'addr': 'res.partner.address',
+    'proc': 'procurement.order',
+    'out_proc': 'outgoing.delivery.processor',
+    'in_proc': 'stock.incoming.processor',
+}
+
+
+class GetTiming(object):
+
+    def __init__(self, obj_attr):
+        self.obj_attr = obj_attr
+
+    def __call__(self, f):
+        def wrapped_f(*args):
+            start_time = time.time()
+            f(*args)
+            end_time = time.time()
+
+            # Store the processing time in the instance obj.
+            setattr(args[0], self.obj_attr, end_time-start_time)
+        return wrapped_f
+
+def color_str(msg, color_code):
+    """
+    color message
+    :param msg: message
+    :param color_code: color code
+    :return:
+    """
+    return "%s%s%s" % (_COLORS[color_code], msg, _COLORS['normal'], )
+
+
+class TestProxy(object):
+
+    def __init__(self, config_file=None):
+        # Read config file
+        if not config_file:
+            config_file = '%s/test_perf.cfg' % (
+                os.path.dirname(os.path.abspath(__file__)),
+            )
+        self.read_cfg_file(config_file)
+
+        try:
+            logfile_path = self.config.get('logging', 'logfile')
+        except (NoSectionError, NoOptionError) as e:
+            logfile_path = '%s/test_perf.log' % (
+                os.path.dirname(os.path.abspath(__file__)),
+            )
+
+        logging.basicConfig(
+            filename= logfile_path,
+            level=logging.INFO,
+            format='%(message)s',
+        )
+
+        self.min_lines = self.config.getint('supply', 'min_lines')
+        self.max_lines = self.config.getint('supply', 'max_lines')
+
+        # Prepare connection data
+        server_port = self.config.getint('server', 'port')
+        server_url = self.config.get('server', 'url')
+        uid = self.config.get('database', 'username')
+        pwd = self.config.get('database', 'password')
+        db_name = self.config.get('database', 'name')
+
+        # Unifield connection
+        self.conn = OERP(
+            server=server_url,
+            protocol='xmlrpc',
+            port=server_port,
+            timeout=3600,
+        )
+        # Unifield login
+        self.login = self.conn.login(uid, pwd, db_name)
+
+        # Prepare objects proxies
+        for key, model in MODELS.iteritems():
+            if not hasattr(self, key):
+                setattr(self, key, self.conn.get(model))
+
+        self.product_ids = self.prod.search([
+            ('type', '=', 'product'),
+            ('batch_management', '=', False),
+            ('perishable', '=', False),
+        ])
+
+    def read_cfg_file(self, config_file):
+        """
+        Read the configuration file
+        :param config_file: Path to the config file
+        :return: True
+        """
+        if not os.path.exists(config_file):
+            raise NameError('%s not found !' % config_file)
+
+        if not hasattr(self, 'config'):
+            self.config = ConfigParser()
+        self.config.read([config_file])
+
+        return True
+
+    def log(self, msg, color_code=None):
+        """
+        Write the message in log file (optionaly, color it)
+        :param msg: The message to log
+        :param color_code: Code of the color to use (optional)
+        :return: True
+        """
+        msg = '%s :: %s' % (
+            time.strftime('%Y-%M-%d %H:%M:%S'),
+            msg,
+        )
+
+        if color_code:
+            msg = color_str(msg, color_code)
+        logging.info(msg)
+
+        return True
+
+    def exec_workflow(self, *args):
+        self.conn.exec_workflow(*args)
+
+
+if __name__ == '__main__':
+    proxy = TestProxy()
+    supply_test = SupplyFlow(proxy)
+    supply_test.run_complete_flow()
+
+    TIMINGS = [
+        ('FO Validation', 'fo_validation_time'),
+        ('FO Confirmation', 'fo_confirmation_time'),
+        ('PO Creation', 'po_creation_time'),
+        ('PO Validation', 'po_validation_time'),
+        ('PO Confirmation', 'po_confirmation_time'),
+        ('IN processing', 'in_processing_time'),
+        ('PICK Conversion', 'out_convert_to_standard_time'),
+        ('OUT Processing', 'out_processing_time'),
+    ]
+
+    for timing in TIMINGS:
+        proxy.log("%s time: %s" % (timing[0], getattr(supply_test, timing[1])))
+
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4
