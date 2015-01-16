@@ -51,22 +51,6 @@ MODELS = {
     'in_proc': 'stock.incoming.processor',
 }
 
-
-class GetTiming(object):
-
-    def __init__(self, obj_attr):
-        self.obj_attr = obj_attr
-
-    def __call__(self, f):
-        def wrapped_f(*args):
-            start_time = time.time()
-            f(*args)
-            end_time = time.time()
-
-            # Store the processing time in the instance obj.
-            setattr(args[0], self.obj_attr, end_time-start_time)
-        return wrapped_f
-
 def color_str(msg, color_code):
     """
     color message
@@ -172,19 +156,5 @@ if __name__ == '__main__':
     proxy = TestProxy()
     supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()
-
-    TIMINGS = [
-        ('FO Validation', 'fo_validation_time'),
-        ('FO Confirmation', 'fo_confirmation_time'),
-        ('PO Creation', 'po_creation_time'),
-        ('PO Validation', 'po_validation_time'),
-        ('PO Confirmation', 'po_confirmation_time'),
-        ('IN processing', 'in_processing_time'),
-        ('PICK Conversion', 'out_convert_to_standard_time'),
-        ('OUT Processing', 'out_processing_time'),
-    ]
-
-    for timing in TIMINGS:
-        proxy.log("%s time: %s" % (timing[0], getattr(supply_test, timing[1])))
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4
