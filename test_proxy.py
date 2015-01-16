@@ -27,9 +27,15 @@ def color_msg(msg, color_code):
     :param color_code: Code of the color to use
     :return: The message with the good color
     """
-    return "%s%s%s" %(_COLORS[color_code], msg, _COLORS['normal'], )
+    return "%s%s%s" % (_COLORS[color_code], msg, _COLORS['normal'], )
 
 MODELS = {
+    'ir_data': 'ir.model.data',
+    'comp': 'res.company',
+    'fy': 'account.fiscalyear',
+    'per': 'account.period',
+    'per_cr': 'account.period.create',
+    'ccy': 'res.currency',
     'so': 'sale.order',
     'sol': 'sale.order.line',
     'po': 'purchase.order',
@@ -44,11 +50,20 @@ MODELS = {
     'fp': 'funding.pool.distribution.line',
     'acc_type': 'account.account.type',
     'acc': 'account.account',
+    'journal': 'account.journal',
     'partner': 'res.partner',
     'addr': 'res.partner.address',
     'proc': 'procurement.order',
     'out_proc': 'outgoing.delivery.processor',
     'in_proc': 'stock.incoming.processor',
+    'reg': 'account.bank.statement',
+    'reg_cr': 'wizard.register.creation',
+    'regl': 'account.bank.statement.line',
+    'am': 'account.move',
+    'aml': 'account.move.line',
+    'inv': 'account.invoice',
+    'inv_imp': 'wizard.import.invoice',
+    'inv_imp_l': 'wizard.import.invoice.lines',
 }
 
 def color_str(msg, color_code):
