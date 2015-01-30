@@ -34,7 +34,7 @@ MODELS = {
     'acc_type': 'account.account.type',
     'acc': 'account.account',
     'journal': 'account.journal',
-    'ajournal': 'account.analytic.journal',
+    'ana_journal': 'account.analytic.journal',
     'partner': 'res.partner',
     'addr': 'res.partner.address',
     'proc': 'procurement.order',
@@ -115,13 +115,21 @@ class TestProxy(object):
         # Prepare objects proxies
         for key, model in MODELS.iteritems():
             if not hasattr(self, key):
-                setattr(self, key, self.conn.get(model))
+                setattr(self, key, self.get(model))
 
         self.product_ids = self.prod.search([
             ('type', '=', 'product'),
             ('batch_management', '=', False),
             ('perishable', '=', False),
         ])
+        
+    def get(self, model):
+        """
+        get oerplib model
+        :param model: model name
+        :type model: str
+        """
+        return self.conn.get(model)
 
     def read_cfg_file(self, config_file):
         """
@@ -173,6 +181,19 @@ class TestProxy(object):
         :rtype: str YYYY-MM-DD
         """
         return dt.strftime('%Y-%m-%d')
+        
+    def random_date(start, end):
+        """
+        :type start: datetime
+        :type end: datetime
+        :return: a random datetime between two datetime
+        :rtype: datetime
+        """
+        # http://stackoverflow.com/questions/553303/generate-a-random-date-between-two-other-dates
+        delta = end - start
+        int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
+        random_second = randrange(int_delta)
+        return (start + timedelta(seconds=random_second))
 
     def get_iter_item(self, iter, index):
         """

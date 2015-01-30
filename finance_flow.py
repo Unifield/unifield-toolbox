@@ -13,6 +13,31 @@ class FinanceFlowException(Exception):
 class FinanceFlowBase(object):
     def __init__(self, proxy):
         self.proxy = proxy
+        self.cache_clear()
+        
+    def cache_clear(self):
+        """
+        clear cache
+        """
+        self._cache = {}
+
+    def cache_set(self, key, val):
+        """
+        store a value in cache
+        :param key: key for value
+        :param val: valueclea
+        :return: value
+        """
+        self._cache[key] = val
+        return val
+
+    def cache_get(self, key):
+        """
+        get a value from cache
+        :param key: key for value to get
+        :return:
+        """
+        return self._cache.get(key, False)
 
     def get_partner(self, partner_type):
         """
@@ -114,7 +139,7 @@ class FinanceFlowBase(object):
             analytic_journal_type = journal_type
             if journal_type in ('bank', 'cheque', ):
                 analytic_journal_type = 'cash'
-            aaj_ids = self.proxy.ajournal.search(
+            aaj_ids = self.proxy.ana_journal.search(
                 [('type', '=', analytic_journal_type)])
             if not aaj_ids:
                 tpl = "no analytic journal found with this type: %s"
@@ -150,7 +175,7 @@ class FinanceFlowBase(object):
         return self.proxy.journal.create(vals)
         
     def create_register(self, name, code, register_type, account_code,
-            currency_name, bank_journal_id=False):
+        currency_name, bank_journal_id=False):
         """
         create a register in the current period.
         (use create_journal)
@@ -173,7 +198,7 @@ class FinanceFlowBase(object):
             'cheque': 'CHK',
         }
         aaj_code = analytic_journal_code_map[register_type]
-        aaj_ids = self.proxy.ajournal.search([('code', '=', aaj_code)])
+        aaj_ids = self.proxy.ana_journal.search([('code', '=', aaj_code)])
         if not aaj_ids:
             tpl = "analytic journal code %s not found"
             raise FinanceFlowException(tpl % (aaj_code, ))
@@ -205,6 +230,352 @@ class FinanceFlowBase(object):
                 self.proxy.reg.button_open_bank([register.id])
             elif register.journal_id.type == 'cheque':
                 self.proxy.reg.button_open_cheque([register.id])
+                
+    def create_analytic_distribution(self, account_id=False):
+        """
+        create analytic distribution
+        :param account_id: related accountdb._id (if not set search for a random
+            destination)
+        :type account_id: int
+        :return: ad id
+        """
+        # inits
+        company_ids = self.proxy.comp.search([])[0]
+        company = self.proxy.comp.browse(company_ids)
+        instance = company.instance_id
+        default_cost_center_id = instance.top_cost_center_id \
+            and instance.top_cost_center_id.id or False
+        default_funding_pool_id = self.proxy.get_record_id_from_xmlid(
+            'analytic_distribution', 'analytic_account_msf_private_funds', )
+
+        # get destination id
+        if not account_id:
+            # search a random destination
+            destination_ids = self.proxy.ana_acc.search(
+                [('category', '=', 'DEST')])
+            if not destination_ids:
+                raise FinanceFlowException('no destination found')
+            destination_id = choice(destination_ids)
+        else:
+            account = self.proxy.acc.browse(account_id)
+            destination_id = account.default_destination_id and \
+                account.default_destination_id.id or False
+            if not destination_id:
+                tpl = "no default destination found for '%s' account"
+                raise FinanceFlowException(tpl % (account.code, ))
+
+        # create ad
+        curr_date = self.current_date2orm()
+        name = "auto AD %s" % (curr_date, )
+        distrib_id = self.proxy.ad.create({'name': name})
+        data = [
+            ('cost.center.distribution.line', default_cost_center_id, False),
+            ('funding.pool.distribution.line', default_funding_pool_id,
+                default_cost_center_id),
+        ]
+        for analytic_obj, value, cc_id in data:
+            vals = {
+                'distribution_id': distrib_id,
+                'name': "auto AD",
+                'analytic_id': value,
+                'cost_center_id': cc_id,
+                'percentage': 100.0,
+                'currency_id': company.currency_id.id,
+                'destination_id': destination_id,
+            }
+            self.proxy.get(analytic_obj).create(vals)
+        return distrib_id
+
+    def create_journal_entry(self, month, with_ad):
+        """
+        create a JE (with 2 JI in it (expense and counterpart lines)
+        :param with_ad: True if AD should be generated
+        :type with_ad: boolean
+        """
+        month_str = "%02d" % (month, )
+        rday = randint(1, 30)
+        day = 28 if rday > 28 and month == 2 else rday
+        day_str = "%02d" % (day, )
+        curr_date = strftime('%Y-' + month_str + '-' + day_str)
+
+        random_amount = randint(100, 10000)
+
+        # purchase journal
+        journal_id = self.get_purchase_journal()
+
+        # current period
+        period_id = self.get_period(curr_date)
+
+        # partner (external)
+        partner_id = self.get_partner('external')
+
+        # create JE
+        name = 'auto JE %s' % (curr_date, )
+        entry_name = name
+        vals = {
+            'journal_id': journal_id,
+            'period_id': period_id,
+            'date': curr_date,
+            'document_date': curr_date,
+            'partner_id': partner_id,
+            'status': 'manu',
+            'name': name,
+            'manual_name': name,
+        }
+        move_id = self.proxy.am.create(vals)
+        if not id:
+            raise FinanceFlowException('account move creation failed :: %s' % (
+                vals, ))
+
+        # create JI
+        name = "auto JI %s" % (curr_date, )
+        if with_ad:
+            account_ids = self.cache_get('ji_account_ids_ad')
+            if not account_ids:
+                domain = [
+                    ('is_analytic_addicted', '=', True),
+                    ('type', '=', 'other'),
+                    ('code', '>', '6'),
+                ]
+                account_ids = self.proxy.acc.search(domain)
+                self.cache_set('ji_account_ids_ad', account_ids)
+        else:
+            account_ids = self.cache_get('ji_account_ids')
+            if not account_ids:
+                domain = [
+                    ('is_analytic_addicted', '!=', True),
+                    ('type', '=', 'payable'),
+                ]
+                account_ids = self.proxy.acc.search(domain)
+                self.cache_set('ji_account_ids', account_ids)
+        random_account_id = choice(account_ids)
+        vals = {
+            'move_id': move_id,
+            'journal_id': journal_id,
+            'period_id': period_id,
+            'date': curr_date,
+            'document_date': curr_date,
+            'account_id': random_account_id,
+            'name': name,
+            'amount_currency': random_amount,
+        }
+        if with_ad:
+            distrib_id = self.create_analytic_distribution(
+                account_id=random_account_id)
+            vals.update({'analytic_distribution_id': distrib_id})
+        aml_id = self.proxy.aml.create(vals)
+        if not aml_id:
+            tpl = 'account move line creation failed :: %s'
+            raise FinanceFlowException(tpl % (vals, ))
+
+        # create JI counterpart
+        name = "auto JI %s counterpart" % (curr_date, )
+        domain = [
+            ('is_analytic_addicted', '!=', True),
+            ('type', '=', 'receivable'),
+        ]
+        counterpart_account_ids = self.proxy.acc.search(domain)
+        random_counterpart_account_id = choice(counterpart_account_ids)
+        vals.update({
+            'account_id': random_counterpart_account_id,
+            'amount_currency': -1 * random_amount,
+            'name': name,
+            'analytic_distribution_id': False,
+        })
+        aml_id = self.proxy.aml.create(vals)
+        if not aml_id:
+            tpl = 'account move line counterpart creation failed :: %s'
+            raise FinanceFlowException(tpl % (vals, ))
+
+        # validate JE
+        self.proxy.am.button_validate([move_id])
+        
+    def create_register_line(self, register_id, code, amount,
+            generate_distribution=False,
+            date=False, document_date=False,
+            third_partner_id=False, third_employee_id=False,
+            third_journal_id=False):
+        """
+        create a register line in the given register
+        :param register_id: parent register id
+        :param code: account code
+        :param amount: > 0 amount IN, < 0 amount OUT
+        :param generate_distribution: (optional) if set to True generate a compatible AD and attach it to the register line
+        :param datetime date: posting date
+        :param datetime document_date: document date
+        :param third_partner_id: partner id
+        :param third_employee_id: emp id (operational advance)
+        :param third_journal_id: journal id (internal transfer)
+        :return: register line id and AD id
+        :rtype: tuple (register_id/ad_id or False)
+        """
+        # TODO this function is not tested yet
+        if not register_id:
+            raise FinanceFlowException("register id missing")
+
+        # check account code
+        code_ids = self.proxy.acc.search(
+            ['|', ('name', 'ilike', code), ('code', 'ilike', code)])
+        if len(code_ids) != 1:
+            tpl = "error searching for this account code: %s. need %s codes"
+            raise FinanceFlowException(tpl % (code,
+                len(code_ids) > 1 and 'less' or 'more', ))
+
+        register_br = self.proxy.reg.browse(register_id)
+        account_br = self.proxy.acc.browse(code_ids[0])
+        account_id = account.id
+
+        # check dates
+        if not date:
+            date_start = register_br.period_id.date_start or False
+            date_stop = register_br.period_id.date_stop or False
+            if not date_start or not date_stop:
+                tpl = "no date found for the period %s"
+                raise FinanceFlowException(tpl % (register_br.period_id.name, ))
+            random_date = self.proxy.random_date(
+                datetime.strptime(str(date_start), '%Y-%m-%d'),
+                datetime.strptime(str(date_stop), '%Y-%m-%d')
+            )
+            date = datetime.strftime(random_date, '%Y-%m-%d')
+        if not document_date:
+            document_date = date
+
+        # vals
+        vals = {
+            'statement_id': register_id,
+            'account_id': account_id,
+            'document_date': document_date,
+            'date': date,
+            'amount': amount,
+            'name': "auto %s" % (date, ),
+        }
+        if third_partner_id:
+            vals['partner_id'] = third_partner_id
+        if third_employee_id:
+            vals['employee_id'] = third_employee_id
+        if third_journal_id:
+            vals['transfer_journal_id'] = third_journal_id
+
+        regl_id = self.proxy.regl.create(vals)
+        if generate_distribution and account_br.is_analytic_addicted:
+            distrib_id = self.create_analytic_distribution(
+                account_id=account_id)
+            self.proxy.regl.write([regl_id],
+                {'analytic_distribution_id': distrib_id})
+        else:
+            distrib_id = False
+        return res, distrib_id
+
+    def register_import_invoice(self, invoice_id):
+        ai_br = self.proxy.inv.browse(invoice_id)
+
+        # check if adhoc state: 'draft' or 'open'
+        if not ai_br.state in ('draft', 'open', ):
+            tpl = "register_import_invoice invoice %d '%s' not 'draft' or" \
+                " 'open'"
+            self.log(tpl % (invoice_id, ai_br.name or ''), 'yellow')
+            return False
+
+        # check if opened (else do it: as it was finance side validated)
+        posting_date = self.date2orm(ai_br.date_invoice)
+        if ai_br.state == 'draft':
+            # open (bypass wizard.invoice_date check by setting missing values)
+            vals = {}
+            if not ai_br.document_date:
+                vals['document_date'] = posting_date
+            if not ai_br.check_total:
+                vals['check_total'] = ai_br.amount_total
+            if vals:
+                self.proxy.inv.write([invoice_id], vals)
+            self.proxy.exec_workflow('account.invoice', 'invoice_open',
+                invoice_id)
+
+        # invoice's register (from invoice posting date)
+        # randomly pick and browse one of 3 cash/bank/cheque register
+        period_id = self.get_period(posting_date)
+        type = choice([ 'cash', 'bank', 'cheque', ])
+        domain = [
+            ('period_id', '=', period_id),
+            ('journal_id.type', '=', type),  # see register_accounting
+                                             # account_bank_statement.py
+                                             # get_statement() (server action)
+        ]
+        reg_ids = self.proxy.reg.search(domain)
+        if not reg_ids:
+            tpl = "no '%s' register found for period '%s'"
+            raise FinanceFlowException(tpl % (type, posting_date))
+        reg_id = reg_ids[0]
+        reg_br = self.proxy.reg.browse(reg_id)
+
+        # simulate register "pending payement" button (wizard.import.invoice)
+        # + single import + ok
+
+        # create import wizard
+        # see:
+        #   - register_accounting/account_bank_statement.py:
+        #       button_wiz_import_invoices()
+        #   - register_accounting/wizard/import_invoices_on_registers.py
+        vals = {
+            'statement_id': reg_id,
+            'currency_id': reg_br.currency.id,
+        }
+        context = {
+            'from_cheque': type == 'cheque' or False,
+            'st_id': reg_id,
+            'st_period_id': period_id,
+        }
+        wii_id = self.proxy.inv_imp.create(vals, context)
+
+        # search the invoice line in 'importable' invoices list
+        domain = [
+            # tuples for importable invoices moves (as in wizard)...
+            ('ready_for_import_in_register', '=', True),
+            ('currency_id', '=', reg_br.currency.id),
+            ('invoice_line_id', '=', False),
+            # ...the move of the invoice we are in to simulate
+            ('move_id', '=', ai_br.move_id.id),
+        ]
+        aml_ids = self.proxy.aml.search(domain)
+        if aml_ids:  # so not already
+            # single import
+            self.proxy.inv_imp.write([wii_id],
+                {'line_ids': [(6, 0, [aml_ids[0]])]}, context)
+            self.proxy.inv_imp.single_import([wii_id], context)
+
+            # confirm
+            if type == 'cheque':
+                # provide cheque number before confirm
+                wii_br = self.proxy.inv_imp.browse(wii_id)
+                if wii_br and wii_br.invoice_lines_ids:
+                    line = self.get_iter_item(wii_br.invoice_lines_ids, 0)
+                    if line:
+                        cheque_number = "CHK %s" % (ai_br.name or '', )
+                        self.proxy.inv_impl.write([line.id],
+                            {'cheque_number': cheque_number}, context)
+            self.proxy.inv_imp.action_confirm([wii_id], context)
+            self.log("import invoice '%s' in '%s' '%s' register" % (
+                ai_br.name or '', type, posting_date, ))
+
+            # simulate imported invoice register line hard post
+            ai_br = self.proxy.inv.browse(invoice_id)
+            # FIXME seem enough to identify unique imported confirmed line
+            # FIXME but check if better can be done
+            # identify imported confirmed line by:
+            # statement/current date/ref<=>invoice origin/expense amount(< 0)
+            domain = [
+                ('statement_id', '=', reg_id),
+                ('date', '=', self.current_date2orm()),
+                ('ref', '=', ai_br.origin),
+                ('amount', '=', ai_br.amount_total * -1),
+            ]
+            reg_line_ids = self.proxy.regl.search(domain)
+            if reg_line_ids:
+                #self.proxy.regl.button_temp_posting([reg_line_ids[0]], context)
+                self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
+            self.log("import invoice '%s' in '%s' '%s' register hard post" % (
+                ai_br.name or '', type, posting_date, ))
+
+        return True
 
 
 class FinanceSetupFlow(FinanceFlowBase):
