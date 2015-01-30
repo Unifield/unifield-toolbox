@@ -12,25 +12,6 @@ import logging
 import time
 import os
 
-
-_COLORS = {
-    'normal': '\033[0;39m',
-    'blue': '\033[1;34m',
-    'green': '\033[1;32m',
-    'magenta': '\033[1;35m',
-    'red': '\033[1;31m',
-    'yellow': '\033[1;33m',
-}
-
-def color_msg(msg, color_code):
-    """
-    Color the message
-    :param msg: Message
-    :param color_code: Code of the color to use
-    :return: The message with the good color
-    """
-    return "%s%s%s" % (_COLORS[color_code], msg, _COLORS['normal'], )
-
 MODELS = {
     'ir_data': 'ir.model.data',
     'comp': 'res.company',
@@ -53,6 +34,7 @@ MODELS = {
     'acc_type': 'account.account.type',
     'acc': 'account.account',
     'journal': 'account.journal',
+    'ajournal': 'account.analytic.journal',
     'partner': 'res.partner',
     'addr': 'res.partner.address',
     'proc': 'procurement.order',
@@ -66,6 +48,15 @@ MODELS = {
     'inv': 'account.invoice',
     'inv_imp': 'wizard.import.invoice',
     'inv_imp_l': 'wizard.import.invoice.lines',
+}
+
+_COLORS = {
+    'normal': '\033[0;39m',
+    'blue': '\033[1;34m',
+    'green': '\033[1;32m',
+    'magenta': '\033[1;35m',
+    'red': '\033[1;31m',
+    'yellow': '\033[1;33m',
 }
 
 def color_str(msg, color_code):
@@ -159,10 +150,10 @@ class TestProxy(object):
             msg,
         )
 
+        logging.info(msg)  # log without color
         if color_code:
             msg = color_str(msg, color_code)
-        logging.info(msg)
-
+        print msg
         return True
 
     def exec_workflow(self, *args):
@@ -218,7 +209,7 @@ if __name__ == '__main__':
     finance_setup = FinanceSetupFlow(proxy)
     finance_setup.run()
 
-    supply_test = SupplyFlow(proxy)
-    supply_test.run_complete_flow()
+    """supply_test = SupplyFlow(proxy)
+    supply_test.run_complete_flow()"""
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4
