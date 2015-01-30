@@ -62,7 +62,8 @@ class FinanceFlowBase(object):
             raise FinanceFlowException('purchase journal not found')
         return  journal_ids[0]
         
-    def get_account_from_account_type(self, account_type):
+    def get_account_from_account_type(self, account_type,
+        is_analytic_addicted=None):
         """
         get account ids from user account type (code or name)
         code between: asset, capital, cash, debt, equity, expense, income,
@@ -78,7 +79,10 @@ class FinanceFlowBase(object):
         if not acc_type_ids:
             raise FinanceFlowException("account type '%s' not found" % (
                 account_type, ))
-        return self.proxy.acc.search([('user_type', '=', acc_type_ids[0])])
+        domain = [('user_type', '=', acc_type_ids[0])]
+        if is_analytic_addicted is not None:
+            domain += [('is_analytic_addicted', '=', is_analytic_addicted)]
+        return self.proxy.acc.search(domain)
 
     def get_period(self, dt):
         """
