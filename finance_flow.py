@@ -239,39 +239,64 @@ class FinanceFlowBase(object):
         :type account_id: int
         :return: ad id
         """
-        # inits
-        company_ids = self.proxy.comp.search([])[0]
-        company = self.proxy.comp.browse(company_ids)
-        instance = company.instance_id
-        default_cost_center_id = instance.top_cost_center_id \
-            and instance.top_cost_center_id.id or False
-        default_funding_pool_id = self.proxy.get_record_id_from_xmlid(
+        company = self.proxy.comp.browse(self.proxy.comp.search([])[0])
+        funding_pool_pf_id = self.proxy.get_record_id_from_xmlid(
             'analytic_distribution', 'analytic_account_msf_private_funds', )
+        cost_center_id = False
+        funding_pool_id = False
 
-        # get destination id
+        # DEST/CC/FP
         if not account_id:
-            # search a random destination
+            # no account: any DEST, default instance CC and PF funding pool
             destination_ids = self.proxy.ana_acc.search(
                 [('category', '=', 'DEST')])
-            if not destination_ids:
-                raise FinanceFlowException('no destination found')
-            destination_id = choice(destination_ids)
+            cost_center_id = company.instance_id.top_cost_center_id \
+                and company.instance_id.top_cost_center_id.id or False
+            funding_pool_id = funding_pool_pf_id
         else:
-            account = self.proxy.acc.browse(account_id)
-            destination_id = account.default_destination_id and \
-                account.default_destination_id.id or False
-            if not destination_id:
-                tpl = "no default destination found for '%s' account"
-                raise FinanceFlowException(tpl % (account.code, ))
-
+            # random DEST/FP from account via 'account.destination.link'
+            # (PF randomly taken too) and compatible CC
+            adl_ids = self.proxy.acc_dest_link.search(
+                [('account_id', '=', account_id)])
+            if adl_ids:
+                adl_br = self.proxy.acc_dest_link.browse(choice(adl_ids))
+                
+                destination_ids = [adl_br.destination_id.id]
+                
+                # FP
+                if adl_br.funding_pool_ids:
+                    funding_pool_ids = [f.id for f in adl_br.funding_pool_ids]
+                    funding_pool_ids.append(funding_pool_pf_id)
+                else:
+                    funding_pool_ids = [funding_pool_pf_id]
+                funding_pool_id = choice(funding_pool_ids)
+                
+                # random CC compatible with FP
+                if funding_pool_id == funding_pool_pf_id:
+                    # PF FP so any CC valid
+                    cost_center_ids = self.proxy.ana_acc.search(
+                        [('category', '=', 'OC')])
+                else:
+                    fp_br = self.proxy.ana_acc.browse(funding_pool_id)
+                    cost_center_ids = [ cc.id for cc in fp_br.cost_centers_ids]
+                cost_center_id = choice(cost_center_ids)
+            else:
+                cost_center_id = instance.top_cost_center_id \
+                    and instance.top_cost_center_id.id or False
+                funding_pool_id = funding_pool_pf_id
+                account = self.proxy.acc.browse(account_id)
+                destination_ids = account.destination_ids
+        if not destination_ids:
+            raise FinanceFlowException('no destinations found')
+        destination_id = choice(destination_ids)
+            
         # create ad
         curr_date = self.current_date2orm()
         name = "auto AD %s" % (curr_date, )
         distrib_id = self.proxy.ad.create({'name': name})
         data = [
-            ('cost.center.distribution.line', default_cost_center_id, False),
-            ('funding.pool.distribution.line', default_funding_pool_id,
-                default_cost_center_id),
+            ('cost.center.distribution.line', cost_center_id, False),
+            ('funding.pool.distribution.line', funding_pool_id, cost_center_id),
         ]
         for analytic_obj, value, cc_id in data:
             vals = {

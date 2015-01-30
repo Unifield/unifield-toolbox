@@ -48,6 +48,7 @@ MODELS = {
     'inv': 'account.invoice',
     'inv_imp': 'wizard.import.invoice',
     'inv_imp_l': 'wizard.import.invoice.lines',
+    'acc_dest_link': 'account.destination.link',
 }
 
 _COLORS = {
