@@ -433,7 +433,7 @@ class FinanceFlowBase(object):
         # validate JE
         self.proxy.am.button_validate([move_id])
         
-    def create_register_line(self, register_id, code, amount,
+    def create_register_line(self, register_id, code_or_id, amount,
             generate_distribution=False,
             date=False, document_date=False,
             third_partner_id=False, third_employee_id=False,
@@ -441,7 +441,8 @@ class FinanceFlowBase(object):
         """
         create a register line in the given register
         :param register_id: parent register id
-        :param code: account code
+        :param code_or_id: account code to search or account_id
+        :type code_or_id: str/int/long
         :param amount: > 0 amount IN, < 0 amount OUT
         :param generate_distribution: (optional) if set to True generate a compatible AD and attach it to the register line
         :param datetime date: posting date
@@ -452,21 +453,23 @@ class FinanceFlowBase(object):
         :return: register line id and AD id
         :rtype: tuple (register_id/ad_id or False)
         """
-        # TODO this function is not tested yet
         if not register_id:
             raise FinanceFlowException("register id missing")
 
-        # check account code
-        code_ids = self.proxy.acc.search(
-            ['|', ('name', 'ilike', code), ('code', 'ilike', code)])
-        if len(code_ids) != 1:
-            tpl = "error searching for this account code: %s. need %s codes"
-            raise FinanceFlowException(tpl % (code,
-                len(code_ids) > 1 and 'less' or 'more', ))
+        if is_instance(code_or_id, (str, unicode)):
+            # check account code
+            code_ids = self.proxy.acc.search(
+                ['|', ('name', 'ilike', code), ('code', 'ilike', code)])
+            if len(code_ids) != 1:
+                tpl = "error searching for this account code: %s. need %s codes"
+                raise FinanceFlowException(tpl % (code,
+                    len(code_ids) > 1 and 'less' or 'more', ))
+            account_id = code_ids[0]
+        else:
+            account_id = code_or_id
 
         register_br = self.proxy.reg.browse(register_id)
-        account_br = self.proxy.acc.browse(code_ids[0])
-        account_id = account.id
+        account_br = self.proxy.acc.browse(account_id)
 
         # check dates
         if not date:
@@ -474,7 +477,8 @@ class FinanceFlowBase(object):
             date_stop = register_br.period_id.date_stop or False
             if not date_start or not date_stop:
                 tpl = "no date found for the period %s"
-                raise FinanceFlowException(tpl % (register_br.period_id.name, ))
+                raise FinanceFlowException(tpl % (
+                    register_br.period_id.name, ))
             random_date = self.proxy.random_date(
                 datetime.strptime(str(date_start), '%Y-%m-%d'),
                 datetime.strptime(str(date_stop), '%Y-%m-%d')
@@ -499,6 +503,7 @@ class FinanceFlowBase(object):
         if third_journal_id:
             vals['transfer_journal_id'] = third_journal_id
 
+        # created and AD link
         regl_id = self.proxy.regl.create(vals)
         if generate_distribution and account_br.is_analytic_addicted:
             distrib_id = self.create_analytic_distribution(
