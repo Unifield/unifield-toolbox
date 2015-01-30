@@ -33,6 +33,7 @@ MODELS = {
     'fp': 'funding.pool.distribution.line',
     'acc_type': 'account.account.type',
     'acc': 'account.account',
+    'acc_type': 'account.account.type',
     'journal': 'account.journal',
     'ana_journal': 'account.analytic.journal',
     'partner': 'res.partner',
