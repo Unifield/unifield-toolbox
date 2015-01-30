@@ -639,7 +639,7 @@ class FinanceSetupFlow(FinanceFlowBase):
                 name = "auto %s %s" % (t, ccy_code, )
                 domain = [
                     ('type', '=', t),
-                    ('currency', '=', ccy_ids[0]),
+                    ('currency', '=', ccy_br.id),
                     ('name', '=', name),
                 ]
                 aj_ids = self.proxy.journal.search(domain)
