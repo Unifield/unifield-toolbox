@@ -5,12 +5,14 @@ from ConfigParser import NoSectionError
 from ConfigParser import NoOptionError
 from oerplib import OERP
 from supply_flow import SupplyFlow
-from finance_flow import FinanceSetupFlow
+from finance_flow import FinanceSetup
+from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
 
 import logging
 import time
 import os
+import sys
 
 MODELS = {
     'ir_data': 'ir.model.data',
@@ -227,10 +229,14 @@ class TestProxy(object):
 
 
 if __name__ == '__main__':
+    args = sys.argv[1:]  # skip this script
+    command = args and args[0] or False
+    
     proxy = TestProxy()
 
-    finance_setup = FinanceSetupFlow(proxy)
-    finance_setup.run()
+    FinanceSetup(proxy).run()
+    if command == 'finance_gen':
+        FinanceMassGen(proxy).run()
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""

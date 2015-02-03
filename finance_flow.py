@@ -630,9 +630,9 @@ class FinanceFlowBase(object):
         return True
 
 
-class FinanceSetupFlow(FinanceFlowBase):
+class FinanceSetup(FinanceFlowBase):
     def __init__(self, proxy):
-        super(FinanceSetupFlow, self).__init__(proxy)
+        super(FinanceSetup, self).__init__(proxy)
 
     def open_fy(self):
         """
@@ -732,9 +732,22 @@ class FinanceSetupFlow(FinanceFlowBase):
         
         # open registers for active currencies
         self.open_fy_registers(self.proxy.ccy.search([]))
+        
 
+class FinanceMassGen(FinanceFlowBase):
+    """
+    Mass data generation of finance data
+    """
+    def __init__(self, proxy):
+        super(FinanceMassGen, self).__init__(proxy)
+
+    def run(self):
+        self.proxy.log('finance mass generation', color_code='yellow')
 
 class FinanceFlow(FinanceFlowBase):
+    """
+    Flow to apply when supply has generated an invoice by reception
+    """
     def __init__(self, proxy):
         super(FinanceFlow, self).__init__(proxy)
 
