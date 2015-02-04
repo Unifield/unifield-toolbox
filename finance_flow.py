@@ -292,27 +292,17 @@ class FinanceFlowBase(object):
             adl_ids = self.proxy.acc_dest_link.search(
                 [('account_id', '=', account_id)])
             if adl_ids:
+                # random dest from account/dest tuple
                 adl_br = self.proxy.acc_dest_link.browse(choice(adl_ids))
-                
                 destination_ids = [adl_br.destination_id.id]
                 
-                # FP
-                if adl_br.funding_pool_ids:
-                    funding_pool_ids = [f.id for f in adl_br.funding_pool_ids]
-                    funding_pool_ids.append(funding_pool_pf_id)
-                else:
-                    funding_pool_ids = [funding_pool_pf_id]
-                funding_pool_id = choice(funding_pool_ids)
-                
-                # random CC compatible with FP
-                if funding_pool_id == funding_pool_pf_id:
-                    # PF FP so any CC valid
-                    cost_center_ids = self.proxy.ana_acc.search(
-                        [('category', '=', 'OC')])
-                else:
-                    fp_br = self.proxy.ana_acc.browse(funding_pool_id)
-                    cost_center_ids = [ cc.id for cc in fp_br.cost_centers_ids]
+                # random CC
+                cost_center_ids = self.proxy.ana_acc.search(
+                    [('category', '=', 'OC')])
                 cost_center_id = choice(cost_center_ids)
+                
+                # PF FP
+                funding_pool_id = funding_pool_pf_id
             else:
                 cost_center_id = instance.top_cost_center_id \
                     and instance.top_cost_center_id.id or False
@@ -321,6 +311,10 @@ class FinanceFlowBase(object):
                 destination_ids = account.destination_ids
         if not destination_ids:
             raise FinanceFlowException('no destinations found')
+        if not cost_center_id:
+            raise FinanceFlowException('no cost center found')
+        if not funding_pool_id:
+            raise FinanceFlowException('no funding pool found')
         destination_id = choice(destination_ids)
             
         # create ad
