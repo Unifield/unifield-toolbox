@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 
 from chrono import TestChrono
 
+TEST_MODE = True
+
 
 class FinanceFlowException(Exception):
     pass
@@ -14,6 +16,15 @@ class FinanceFlowBase(object):
     def __init__(self, proxy):
         self.proxy = proxy
         self.cache_clear()
+        
+    def get_cfg(self, key, default=None):
+        return self.proxy.config.get('finance', key, default)
+        
+    def get_cfg_int(self, key, default=None):
+        res = self.proxy.config.getint('finance', key)
+        if not res and default is not None:
+            res = default
+        return res
         
     def cache_clear(self):
         """
@@ -313,8 +324,7 @@ class FinanceFlowBase(object):
         destination_id = choice(destination_ids)
             
         # create ad
-        curr_date = self.current_date2orm()
-        name = "auto AD %s" % (curr_date, )
+        name = 'auto AD'
         distrib_id = self.proxy.ad.create({'name': name})
         data = [
             ('cost.center.distribution.line', cost_center_id, False),
@@ -323,7 +333,7 @@ class FinanceFlowBase(object):
         for analytic_obj, value, cc_id in data:
             vals = {
                 'distribution_id': distrib_id,
-                'name': "auto AD",
+                'name': name,
                 'analytic_id': value,
                 'cost_center_id': cc_id,
                 'percentage': 100.0,
@@ -333,9 +343,9 @@ class FinanceFlowBase(object):
             self.proxy.get(analytic_obj).create(vals)
         return distrib_id
 
-    def create_journal_entry(self, month, with_ad):
+    def create_journal_entry(self, month, items_count, with_ad):
         """
-        create a JE (with 2 JI in it (expense and counterpart lines)
+        create a JE (with items_count JI in it (expense and counterpart lines)
         :param with_ad: True if AD should be generated
         :type with_ad: boolean
         """
@@ -344,8 +354,6 @@ class FinanceFlowBase(object):
         day = 28 if rday > 28 and month == 2 else rday
         day_str = "%02d" % (day, )
         curr_date = strftime('%Y-' + month_str + '-' + day_str)
-
-        random_amount = randint(100, 10000)
 
         # purchase journal
         journal_id = self.get_purchase_journal()
@@ -370,69 +378,76 @@ class FinanceFlowBase(object):
             'manual_name': name,
         }
         move_id = self.proxy.am.create(vals)
-        if not id:
+        if not move_id:
             raise FinanceFlowException('account move creation failed :: %s' % (
                 vals, ))
 
         # create JI
-        name = "auto JI %s" % (curr_date, )
-        if with_ad:
-            account_ids = self.cache_get('ji_account_ids_ad')
-            if not account_ids:
-                domain = [
-                    ('is_analytic_addicted', '=', True),
-                    ('type', '=', 'other'),
-                    ('code', '>', '6'),
-                ]
-                account_ids = self.proxy.acc.search(domain)
-                self.cache_set('ji_account_ids_ad', account_ids)
-        else:
-            account_ids = self.cache_get('ji_account_ids')
-            if not account_ids:
-                domain = [
-                    ('is_analytic_addicted', '!=', True),
-                    ('type', '=', 'payable'),
-                ]
-                account_ids = self.proxy.acc.search(domain)
-                self.cache_set('ji_account_ids', account_ids)
-        random_account_id = choice(account_ids)
-        vals = {
-            'move_id': move_id,
-            'journal_id': journal_id,
-            'period_id': period_id,
-            'date': curr_date,
-            'document_date': curr_date,
-            'account_id': random_account_id,
-            'name': name,
-            'amount_currency': random_amount,
-        }
-        if with_ad:
-            distrib_id = self.create_analytic_distribution(
-                account_id=random_account_id)
-            vals.update({'analytic_distribution_id': distrib_id})
-        aml_id = self.proxy.aml.create(vals)
-        if not aml_id:
-            tpl = 'account move line creation failed :: %s'
-            raise FinanceFlowException(tpl % (vals, ))
+        items_count = items_count / 2  # counter part included
+        index = 0
+        while index < items_count:
+            name = "auto JI %s" % (curr_date, )
+            random_amount = randint(100, 10000)
+            
+            if with_ad:
+                account_ids = self.cache_get('ji_account_ids_ad')
+                if not account_ids:
+                    domain = [
+                        ('is_analytic_addicted', '=', True),
+                        ('type', '=', 'other'),
+                        ('code', '>', '6'),
+                    ]
+                    account_ids = self.proxy.acc.search(domain)
+                    self.cache_set('ji_account_ids_ad', account_ids)
+            else:
+                account_ids = self.cache_get('ji_account_ids')
+                if not account_ids:
+                    domain = [
+                        ('is_analytic_addicted', '!=', True),
+                        ('type', '=', 'payable'),
+                    ]
+                    account_ids = self.proxy.acc.search(domain)
+                    self.cache_set('ji_account_ids', account_ids)
+            random_account_id = choice(account_ids)
+            vals = {
+                'move_id': move_id,
+                'journal_id': journal_id,
+                'period_id': period_id,
+                'date': curr_date,
+                'document_date': curr_date,
+                'account_id': random_account_id,
+                'name': name,
+                'amount_currency': random_amount,
+            }
+            if with_ad:
+                distrib_id = self.create_analytic_distribution(
+                    account_id=random_account_id)
+                vals.update({'analytic_distribution_id': distrib_id})
+            aml_id = self.proxy.aml.create(vals)
+            if not aml_id:
+                tpl = 'account move line creation failed :: %s'
+                raise FinanceFlowException(tpl % (vals, ))
 
-        # create JI counterpart
-        name = "auto JI %s counterpart" % (curr_date, )
-        domain = [
-            ('is_analytic_addicted', '!=', True),
-            ('type', '=', 'receivable'),
-        ]
-        counterpart_account_ids = self.proxy.acc.search(domain)
-        random_counterpart_account_id = choice(counterpart_account_ids)
-        vals.update({
-            'account_id': random_counterpart_account_id,
-            'amount_currency': -1 * random_amount,
-            'name': name,
-            'analytic_distribution_id': False,
-        })
-        aml_id = self.proxy.aml.create(vals)
-        if not aml_id:
-            tpl = 'account move line counterpart creation failed :: %s'
-            raise FinanceFlowException(tpl % (vals, ))
+            # create JI counterpart(no ad)
+            name = "auto JI %s counterpart" % (curr_date, )
+            domain = [
+                ('is_analytic_addicted', '!=', True),
+                ('type', '=', 'receivable'),
+            ]
+            counterpart_account_ids = self.proxy.acc.search(domain)
+            random_counterpart_account_id = choice(counterpart_account_ids)
+            vals.update({
+                'account_id': random_counterpart_account_id,
+                'amount_currency': -1 * random_amount,
+                'name': name,
+                'analytic_distribution_id': False,
+            })
+            aml_id = self.proxy.aml.create(vals)
+            if not aml_id:
+                tpl = 'account move line counterpart creation failed :: %s'
+                raise FinanceFlowException(tpl % (vals, ))
+                
+            index += 1
 
         # validate JE
         self.proxy.am.button_validate([move_id])
@@ -743,6 +758,22 @@ class FinanceMassGen(FinanceFlowBase):
 
     def run(self):
         self.proxy.log('finance mass generation', color_code='yellow')
+        self.direct_entries()
+        
+    def direct_entries(self):
+        je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
+        ji_min_count = self.get_cfg_int('ji_min_count')
+        ji_max_count = self.get_cfg_int('ji_max_count')
+        
+        months = [1] if TEST_MODE else [ m for m in xrange(1, 13) ]
+        for m in months:
+            index = 0
+            while index < je_per_month:
+                items_count = 2 if TEST_MODE else randrange(
+                    ji_min_count, ji_max_count)
+                self.create_journal_entry(m, items_count, True)
+                index += 1
+                
 
 class FinanceFlow(FinanceFlowBase):
     """
