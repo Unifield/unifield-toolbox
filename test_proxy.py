@@ -4,7 +4,7 @@ from ConfigParser import ConfigParser
 from ConfigParser import NoSectionError
 from ConfigParser import NoOptionError
 from oerplib import OERP
-from supply_flow import SupplyFlow
+
 from finance_flow import FinanceSetup
 from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
@@ -27,6 +27,7 @@ MODELS = {
     'pol': 'purchase.order.line',
     'data': 'ir.model.data',
     'pick': 'stock.picking',
+    'ship': 'shipment',
     'move': 'stock.move',
     'prod': 'product.product',
     'ana_acc': 'account.analytic.account',
@@ -44,6 +45,19 @@ MODELS = {
     'proc': 'procurement.order',
     'out_proc': 'outgoing.delivery.processor',
     'in_proc': 'stock.incoming.processor',
+    'in_proc_move': 'stock.move.in.processor',
+    'lot': 'stock.production.lot',
+    'pt_proc': 'create.picking.processor',
+    'ptl_proc': 'create.picking.move.processor',
+    'vpt_proc': 'validate.picking.processor',
+    'ppl_proc': 'ppl.processor',
+    'ship_proc': 'shipment.processor',
+    'ppl_family': 'ppl.family.processor',
+    'inv': 'stock.inventory',
+    'inv_line': 'stock.inventory.line',
+    'loc': 'stock.location',
+    'tender': 'tender',
+    'tender_line': 'tender.line',
     'reg': 'account.bank.statement',
     'reg_cr': 'wizard.register.creation',
     'regl': 'account.bank.statement.line',
@@ -62,6 +76,7 @@ _COLORS = {
     'magenta': '\033[1;35m',
     'red': '\033[1;31m',
     'yellow': '\033[1;33m',
+>>>>>>> MERGE-SOURCE
 }
 
 def color_str(msg, color_code):

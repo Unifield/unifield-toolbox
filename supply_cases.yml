@@ -1,0 +1,162 @@
+-
+  This is all the supply test cases
+-
+#  PO from scratch
+#  PO regular 10 lines
+#  50% BM & ED products
+#  50% received
+#  50% of those received have 50% back order (partial qty of lines)
+#-
+#  model: purchase.order
+#  qty_per_month: 1
+#  nb_lines: 10
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#-
+#  PO from FO into Cross Docking
+#  PO regular 10 lines
+#  50% BM & ED products
+#  50% received
+#  50% of those received have 50% back order (partial qty of lines).
+#  50% of these have at least 2 Bos per PO. 
+#  Of those received PPS processed except 25% left at pack stage
+#-
+#  model: field.order
+#  qty_per_month: 1
+#  nb_lines: 10
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#  two_backorders: 50
+#  picked: 100
+#  packed: 25
+#  shipped: 100
+#-
+#  PO form IR internal
+#  PO regular 10 lines
+#  50% BM& ED products
+#  50% received
+#  50% of those received have 50% back order (partial qty of lines)
+#-
+#  model: internal.request
+#  ir_type: internal
+#  qty_per_month: 1
+#  nb_lines: 10
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#-
+#  PO from IR external (into Cross Docking)
+#  PO regular 10 lines
+#  50% BM& ED products
+#  50% received
+#  50% of those received have 50% back order (partial qty of lines).
+#  All have out processed.
+#  PO type .33% MED, 33% LOG, 33% Other.
+#  Priority 50% Emergency. 50% normal. 
+#-
+#  model: internal.request
+#  ir_type: external
+#  qty_per_month: 1
+#  nb_lines: 10
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#  delivered: 100
+#  med_po: 33
+#  log_po: 33
+#  other_po: 34
+#  emergency_po: 50
+#  normal_po: 50
+#  PO from FO via tender
+#  Tender minimum 10 lignes et 3 fournisseurs.
+#  50 % received in IN and PPS
+#-
+#  model: field.order
+#  qty_per_month: 2
+#  with_tender: True
+#  min_supplier: 3
+#  max_supplier: 6
+#  min_lines: 10
+#  max_lines: 20
+#  bm_products: 50
+#  received: 50
+#  picked: 100
+#  packed: 100
+#  shipped: 100
+#  PO from IR via tender
+#  Tender 10 lignes et 3 fournisseurs.
+#  50 % received
+#-
+#  model: internal.request
+#  ir_type: internal
+#  qty_per_month: 4
+#  with_tender: True
+#  min_supplier: 3
+#  max_supplier: 6
+#  min_lines: 10
+#  max_lines: 20
+#  bm_products: 50
+#  received: 50
+  FO from stock & on order                                                      
+  50 lines                                                                      
+  50% from stock                                                                
+  100% processed PPS,                                                           
+  FO type .33% MED, 33% LOG, 33% Other.                                         
+  Priority 50% Emergency. 50% normal.                                           
+-                                                                               
+  model: field.order                                                            
+  from_stock: 50                                                                
+  qty_per_month: 5                                                              
+  nb_lines: 10                                                                  
+  received: 100                                                                 
+  picked: 100                                                                   
+  packed: 100                                                                   
+  shipped: 100                                                                  
+  med_fo: 33                                                                    
+  log_fo: 33                                                                    
+  other_fo: 34                                                                  
+  emergency_fo: 50                                                              
+  normal_fo: 50 
+-
+  IR from External Requestor sourced from stock
+  10 lines
+  100% OUT processed
+-
+  model: internal.request
+  ir_type: external
+  qty_per_month: 10
+  nb_lines: 3
+-
+  IR from Internal Requestor sourced from stock
+  10 lines
+  50% prods med BM/ED
+-
+  model: internal.request
+  ir_type: internal
+  from_stock: 100
+  qty_per_month: 3
+  nb_lines: 10
+  bm_products: 50
+-
+  FO from stock & on order
+  50 lines
+  50% from stock
+  100% processed PPS,
+  FO type .33% MED, 33% LOG, 33% Other.
+  Priority 50% Emergency. 50% normal. 
+-
+  model: field.order
+  from_stock: 50
+  qty_per_month: 5
+  nb_lines: 10
+  received: 100
+  picked: 100
+  packed: 100
+  shipped: 100
+  med_fo: 33
+  log_fo: 33
+  other_fo: 34
+  emergency_fo: 50
+  normal_fo: 50
