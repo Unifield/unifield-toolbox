@@ -39,6 +39,7 @@ MODELS = {
     'journal': 'account.journal',
     'ana_journal': 'account.analytic.journal',
     'partner': 'res.partner',
+    'emp': 'hr.employee',
     'addr': 'res.partner.address',
     'proc': 'procurement.order',
     'out_proc': 'outgoing.delivery.processor',
@@ -235,8 +236,8 @@ if __name__ == '__main__':
     proxy = TestProxy()
 
     FinanceSetup(proxy).run()
-    if command == 'finance_gen':
-        FinanceMassGen(proxy).run()
+    if command in ('finance_je', 'finance_reg', ):
+        FinanceMassGen(proxy).run(command)
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""

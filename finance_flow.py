@@ -49,19 +49,42 @@ class FinanceFlowBase(object):
         :return:
         """
         return self._cache.get(key, False)
+        
+    def get_random_amount(self, min=100, max=10000):
+        """
+        get a random amount
+        """
+        return randint(min, max)
 
     def get_partner(self, partner_type):
         """
         get first partner id from type
         :param partner_type: partner type
         :type partner_type: str
-        :return:
         """
         partner_ids = self.proxy.partner.search(
             [('partner_type', '=', partner_type)])
         if not partner_ids:
             raise FinanceFlowException('partner not found')
         return partner_ids[0]
+        
+    def get_employee(self):
+        """
+        get first expat employee id
+        create a default one if no any employee
+        """
+        emp_ids = self.proxy.emp.search([('employee_type', '=', 'ex')])
+        if emp_ids:
+            res = emp_ids[0]
+        else:
+            # create default employee
+            res = self.proxy.emp.create({
+                'name': 'Expat Employee',
+                'employee_type': 'ex',
+            })
+            if not res:
+                raise FinanceFlowException('can not create default employee')
+        return res
 
     def get_purchase_journal(self):
         """
@@ -105,6 +128,27 @@ class FinanceFlowBase(object):
         if not period_ids:
             raise FinanceFlowException("%s period not found" % (dt, ))
         return period_ids[0]
+        
+    def get_random_date_for_month(self, month):
+        """
+        get a random date in the given month
+        :param month: month number
+        :type month: int
+        :rtype date str for orm
+        """
+        month_str = "%02d" % (month, )
+        rday = randint(1, 30)
+        day = 28 if rday > 28 and month == 2 else rday
+        day_str = "%02d" % (day, )
+        return strftime('%Y-' + month_str + '-' + day_str)
+        
+    def get_random_date_for_period(self, period_br):
+        """
+        get a random date in the given period's month
+        :param period_br: browsed period
+        :rtype date str for orm
+        """
+        return self.get_random_date_for_month(period_br.date_start.month)
         
     def create_journal(self, name, code, journal_type,
         analytic_journal_id=False, account_code=False, currency_name=False,
@@ -282,7 +326,7 @@ class FinanceFlowBase(object):
         if not account_id:
             # no account: any DEST, default instance CC and PF funding pool
             destination_ids = self.proxy.ana_acc.search(
-                [('category', '=', 'DEST')])
+                [('category', '=', 'DEST'), ('type', '=', 'normal')])
             cost_center_id = company.instance_id.top_cost_center_id \
                 and company.instance_id.top_cost_center_id.id or False
             funding_pool_id = funding_pool_pf_id
@@ -298,7 +342,7 @@ class FinanceFlowBase(object):
                 
                 # random CC
                 cost_center_ids = self.proxy.ana_acc.search(
-                    [('category', '=', 'OC')])
+                    [('category', '=', 'OC'), ('type', '=', 'normal')])
                 cost_center_id = choice(cost_center_ids)
                 
                 # PF FP
@@ -343,29 +387,25 @@ class FinanceFlowBase(object):
         :param with_ad: True if AD should be generated
         :type with_ad: boolean
         """
-        month_str = "%02d" % (month, )
-        rday = randint(1, 30)
-        day = 28 if rday > 28 and month == 2 else rday
-        day_str = "%02d" % (day, )
-        curr_date = strftime('%Y-' + month_str + '-' + day_str)
+        entry_date = self.get_random_date_for_month(month)
 
         # purchase journal
         journal_id = self.get_purchase_journal()
 
         # current period
-        period_id = self.get_period(curr_date)
+        period_id = self.get_period(entry_date)
 
         # partner (external)
         partner_id = self.get_partner('external')
 
         # create JE
-        name = 'auto JE %s' % (curr_date, )
+        name = 'auto JE %s' % (entry_date, )
         entry_name = name
         vals = {
             'journal_id': journal_id,
             'period_id': period_id,
-            'date': curr_date,
-            'document_date': curr_date,
+            'date': entry_date,
+            'document_date': entry_date,
             'partner_id': partner_id,
             'status': 'manu',
             'name': name,
@@ -380,8 +420,8 @@ class FinanceFlowBase(object):
         items_count = items_count / 2  # counter part included
         index = 0
         while index < items_count:
-            name = "auto JI %s" % (curr_date, )
-            random_amount = randint(100, 10000)
+            name = "auto JI %s" % (entry_date, )
+            random_amount = self.get_random_amount()
             
             if with_ad:
                 account_ids = self.cache_get('ji_account_ids_ad')
@@ -407,8 +447,8 @@ class FinanceFlowBase(object):
                 'move_id': move_id,
                 'journal_id': journal_id,
                 'period_id': period_id,
-                'date': curr_date,
-                'document_date': curr_date,
+                'date': entry_date,
+                'document_date': entry_date,
                 'account_id': random_account_id,
                 'name': name,
                 'amount_currency': random_amount,
@@ -423,7 +463,7 @@ class FinanceFlowBase(object):
                 raise FinanceFlowException(tpl % (vals, ))
 
             # create JI counterpart(no ad)
-            name = "auto JI %s counterpart" % (curr_date, )
+            name = "auto JI %s counterpart" % (entry_date, )
             domain = [
                 ('is_analytic_addicted', '!=', True),
                 ('type', '=', 'receivable'),
@@ -446,14 +486,15 @@ class FinanceFlowBase(object):
         # validate JE
         self.proxy.am.button_validate([move_id])
         
-    def create_register_line(self, register_id, code_or_id, amount,
+    def create_register_line(self, regbr_or_id, code_or_id, amount,
             generate_distribution=False,
             date=False, document_date=False,
             third_partner_id=False, third_employee_id=False,
             third_journal_id=False):
         """
         create a register line in the given register
-        :param register_id: parent register id
+        :param regbr_or_id: parent register browsed object or id
+        :type regbr_or_id: object/int/long
         :param code_or_id: account code to search or account_id
         :type code_or_id: str/int/long
         :param amount: > 0 amount IN, < 0 amount OUT
@@ -466,10 +507,16 @@ class FinanceFlowBase(object):
         :return: register line id and AD id
         :rtype: tuple (register_id/ad_id or False)
         """
-        if not register_id:
-            raise FinanceFlowException("register id missing")
+        # register
+        if not regbr_or_id:
+            raise FinanceFlowException("register missing")
+        if isinstance(regbr_or_id, (int, long)):
+            register_br = self.proxy.reg.browse(regbr_or_id)
+        else:
+            register_br = regbr_or_id
 
-        if is_instance(code_or_id, (str, unicode)):
+        # general account
+        if isinstance(code_or_id, (str, unicode)):
             # check account code
             code_ids = self.proxy.acc.search(
                 ['|', ('name', 'ilike', code), ('code', 'ilike', code)])
@@ -480,8 +527,6 @@ class FinanceFlowBase(object):
             account_id = code_ids[0]
         else:
             account_id = code_or_id
-
-        register_br = self.proxy.reg.browse(register_id)
         account_br = self.proxy.acc.browse(account_id)
 
         # check dates
@@ -502,7 +547,7 @@ class FinanceFlowBase(object):
 
         # vals
         vals = {
-            'statement_id': register_id,
+            'statement_id': register_br.id,
             'account_id': account_id,
             'document_date': document_date,
             'date': date,
@@ -750,9 +795,13 @@ class FinanceMassGen(FinanceFlowBase):
     def __init__(self, proxy):
         super(FinanceMassGen, self).__init__(proxy)
 
-    def run(self):
-        self.proxy.log('finance mass generation', color_code='yellow')
-        self.direct_entries()
+    def run(self, command):
+        self.proxy.log("finance mass generation %s" % (command, ),
+            color_code='yellow')
+        if command == 'finance_je':
+            self.direct_entries()
+        elif command == 'finance_reg':
+            self.register_lines()
         
     def direct_entries(self):
         je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
@@ -768,6 +817,47 @@ class FinanceMassGen(FinanceFlowBase):
                 self.create_journal_entry(m, items_count, True)
                 index += 1
                 
+    def register_lines(self):
+        line_count = 1 if TEST_MODE \
+            else self.get_cfg_int('reg_lines_per_reg_count')
+        
+        reg_ids = self.proxy.reg.search([])
+        for reg_br in self.proxy.reg.browse(reg_ids):
+            index = 0
+            while index < line_count:
+                self.create_random_expense_register_line(reg_br)
+            if TEST_MODE:
+                break
+                
+    def create_random_expense_register_line(self, reg_br):
+        expense_account_count = self.get_cfg_int(
+            'reg_lines_expenses_account_count')
+            
+        # random expense account
+        account_ids = self.get_account_from_account_type('expense', 
+            is_analytic_addicted=True)
+        if len(account_ids) > expense_account_count:
+            account_ids = account_ids[:expense_account_count]
+            
+        # random date in register month
+        entry_date = self.get_random_date_for_period(reg_br.period_id)
+        
+        # random third party: partner or emp or no
+        partner_id = False
+        emp_id = False
+        tp_mode = choice(['p', 'e', '-', ])
+        if tp_mode == 'p':
+            partner_id = self.get_partner('external')
+        elif tp_mode == 'e':
+            emp_id = self.get_employee()
+        
+        self.create_register_line(reg_br.id,
+            choice(account_ids),  # random expense account
+            self.get_random_amount(),  # random amount
+            generate_distribution=True,
+            date=entry_date, document_date=entry_date,
+            third_partner_id=partner_id, third_employee_id=emp_id,
+            third_journal_id=False)
 
 class FinanceFlow(FinanceFlowBase):
     """
