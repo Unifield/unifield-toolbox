@@ -76,7 +76,6 @@ _COLORS = {
     'magenta': '\033[1;35m',
     'red': '\033[1;31m',
     'yellow': '\033[1;33m',
->>>>>>> MERGE-SOURCE
 }
 
 def color_str(msg, color_code):
