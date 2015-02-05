@@ -113,7 +113,10 @@ class FinanceFlowBase(object):
         if not acc_type_ids:
             raise FinanceFlowException("account type '%s' not found" % (
                 account_type, ))
-        domain = [('user_type', '=', acc_type_ids[0])]
+        domain = [
+            ('type', '!=', 'view'),
+            ('user_type', '=', acc_type_ids[0]),
+        ]
         if is_analytic_addicted is not None:
             domain += [('is_analytic_addicted', '=', is_analytic_addicted)]
         return self.proxy.acc.search(domain)
@@ -505,7 +508,7 @@ class FinanceFlowBase(object):
         :param third_employee_id: emp id (operational advance)
         :param third_journal_id: journal id (internal transfer)
         :return: register line id and AD id
-        :rtype: tuple (register_id/ad_id or False)
+        :rtype: tuple (register_line_id/ad_id or False)
         """
         # register
         if not regbr_or_id:
@@ -803,7 +806,8 @@ class FinanceMassGen(FinanceFlowBase):
         if command == 'finance_je':
             self.direct_entries()
         elif command == 'finance_reg':
-            self.register_lines()
+            #self.register_lines()
+            self.operational_advances()
         
     def direct_entries(self):
         je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
@@ -831,7 +835,7 @@ class FinanceMassGen(FinanceFlowBase):
                 if TEST_MODE:
                     return
                 
-    def create_random_expense_register_line(self, reg_br):
+    def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
             'reg_lines_expenses_account_count')
             
@@ -860,6 +864,73 @@ class FinanceMassGen(FinanceFlowBase):
             date=entry_date, document_date=entry_date,
             third_partner_id=partner_id, third_employee_id=emp_id,
             third_journal_id=False, do_hard_post=True)
+            
+    def operational_advances(self):
+        line_count = 1 if TEST_MODE \
+            else self.get_cfg_int('op_advance_reg_lines_count')
+        
+        journal_ids = self.proxy.journal.search([('type', '=', 'cash')])
+        if not journal_ids:
+            raise FinanceFlowException('no cash journal')
+        reg_ids = self.proxy.reg.search([('journal_id', '=', journal_ids[0])])
+        for reg_br in self.proxy.reg.browse(reg_ids):
+            index = 0
+            while index < line_count:
+                self._create_operational_advance_line(reg_br)
+                if TEST_MODE:
+                    return
+                    
+    def _create_operational_advance_line(self, reg_br):
+        # random operational advance account
+        domain = [
+            ('type', '!=', 'view'),
+            ('type_for_register', '=', 'advance'),
+        ]
+        account_ids = self.proxy.acc.search(domain)
+        if not account_ids:
+            raise FinanceFlowException('no operational advance account found')
+            
+        amount = self.get_random_amount()
+            
+        # random date in register month
+        entry_date = self.get_random_date_for_period(reg_br.period_id)
+        
+        # third-party expat employee for the operational advance
+        emp_id = self.get_employee()
+        
+        # create operational advance line and hard post it...
+        register_line_id, ad_id = self.create_register_line(reg_br.id,
+            choice(account_ids),  # random expense account
+            amount, generate_distribution=True,
+            date=entry_date, document_date=entry_date,
+            third_employee_id=emp_id, do_hard_post=True)
+        if register_line_id:
+            # ... after hard post, simulate the advance return
+            wiz_ar_id = self.proxy.reg_adv_return.create({})
+            if wiz_ar_id:
+                # on an expense 6 account with AD
+                account_id = choice(self.get_account_from_account_type(
+                    'expense', is_analytic_addicted=True))
+                ad_id = self.create_analytic_distribution(account_id=account_id)
+                    
+                # expense line (with full amount return)
+                line_vals = {
+                    'document_date': entry_date,
+                    'description': "adv return %s" % (entry_date, ),
+                    'account_id': account_id,
+                    'partner_id': False,
+                    'employee_id': emp_id,
+                    'amount': amount,
+                    'analytic_distribution_id': ad_id,
+                }
+                
+                vals = {
+                    'returned_amount': amount,
+                    'advance_line_ids': [(0, 0, line_vals)],
+                }
+                self.proxy.reg_adv_return.write([wiz_ar_id], vals)
+                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id])
+                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id])
 
 class FinanceFlow(FinanceFlowBase):
     """

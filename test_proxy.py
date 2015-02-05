@@ -61,6 +61,7 @@ MODELS = {
     'reg': 'account.bank.statement',
     'reg_cr': 'wizard.register.creation',
     'regl': 'account.bank.statement.line',
+    'reg_adv_return': 'wizard.cash.return',
     'am': 'account.move',
     'aml': 'account.move.line',
     'inv': 'account.invoice',
