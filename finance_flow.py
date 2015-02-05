@@ -490,7 +490,7 @@ class FinanceFlowBase(object):
             generate_distribution=False,
             date=False, document_date=False,
             third_partner_id=False, third_employee_id=False,
-            third_journal_id=False):
+            third_journal_id=False, do_hard_post=False):
         """
         create a register line in the given register
         :param regbr_or_id: parent register browsed object or id
@@ -566,10 +566,12 @@ class FinanceFlowBase(object):
         if generate_distribution and account_br.is_analytic_addicted:
             distrib_id = self.create_analytic_distribution(
                 account_id=account_id)
-            self.proxy.regl.write(regl_id,
+            self.proxy.regl.write([regl_id],
                 {'analytic_distribution_id': distrib_id}, {})
         else:
             distrib_id = False
+        if do_hard_post:
+            self.proxy.regl.button_hard_posting([regl_id], {})
         return regl_id, distrib_id
 
     def register_import_invoice(self, invoice_id):
@@ -857,7 +859,7 @@ class FinanceMassGen(FinanceFlowBase):
             generate_distribution=True,
             date=entry_date, document_date=entry_date,
             third_partner_id=partner_id, third_employee_id=emp_id,
-            third_journal_id=False)
+            third_journal_id=False, do_hard_post=True)
 
 class FinanceFlow(FinanceFlowBase):
     """
