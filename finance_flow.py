@@ -566,11 +566,11 @@ class FinanceFlowBase(object):
         if generate_distribution and account_br.is_analytic_addicted:
             distrib_id = self.create_analytic_distribution(
                 account_id=account_id)
-            self.proxy.regl.write([regl_id],
-                {'analytic_distribution_id': distrib_id})
+            self.proxy.regl.write(regl_id,
+                {'analytic_distribution_id': distrib_id}, {})
         else:
             distrib_id = False
-        return res, distrib_id
+        return regl_id, distrib_id
 
     def register_import_invoice(self, invoice_id):
         ai_br = self.proxy.inv.browse(invoice_id)
@@ -770,9 +770,9 @@ class FinanceSetup(FinanceFlowBase):
                     month_str = "%02d" % (m, )
                     curr_date = strftime('%Y-' + month_str + '-01')
                     period_id = self.get_period(curr_date)
-                    wrc_id = self.proxy.reg_cr.create({'period_id': period_id})
-                    self.proxy.reg_cr.button_confirm_period([wrc_id])
-                    self.proxy.reg_cr.button_create_registers([wrc_id])
+                    wrc_id = self.proxy.reg_cr.create({'period_id': period_id}, {})
+                    self.proxy.reg_cr.button_confirm_period([wrc_id], {'fake': 1})
+                    self.proxy.reg_cr.button_create_registers([wrc_id], {'fake': 1})
 
                     reg_ids = self.proxy.reg.search(
                         [('period_id', '=', period_id)])
@@ -826,8 +826,8 @@ class FinanceMassGen(FinanceFlowBase):
             index = 0
             while index < line_count:
                 self.create_random_expense_register_line(reg_br)
-            if TEST_MODE:
-                break
+                if TEST_MODE:
+                    return
                 
     def create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
