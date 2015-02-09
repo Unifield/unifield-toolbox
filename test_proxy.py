@@ -176,13 +176,9 @@ class TestProxy(object):
         """
         msg = '%s :: %s' % (
             time.strftime('%Y-%M-%d %H:%M:%S'),
-            msg,
+            color_str(msg, color_code) if color_code else msg,
         )
-
-        logging.info(msg)  # log without color
-        if color_code:
-            msg = color_str(msg, color_code)
-        print msg
+        logging.info(msg)
         return True
 
     def exec_workflow(self, *args):
