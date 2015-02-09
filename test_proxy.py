@@ -8,6 +8,7 @@ from oerplib import OERP
 from finance_flow import FinanceSetup
 from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
+from finance_flow import finance_internal_test
 
 import logging
 import time
@@ -66,7 +67,7 @@ MODELS = {
     'aml': 'account.move.line',
     'inv': 'account.invoice',
     'inv_imp': 'wizard.import.invoice',
-    'inv_imp_l': 'wizard.import.invoice.lines',
+    'inv_imp_line': 'wizard.import.invoice.lines',
     'acc_dest_link': 'account.destination.link',
 }
 
@@ -215,7 +216,7 @@ class TestProxy(object):
         random_second = randrange(int_delta)
         return (start + timedelta(seconds=random_second))
 
-    def get_iter_item(self, iter, index):
+    def get_iter_item(self, iterable, index):
         """
         get iterable item at given index
         used to get a specific item of an oerplib browsed list's item
@@ -225,7 +226,7 @@ class TestProxy(object):
         :return item or None
         """
         i = 0
-        for item in iter:
+        for item in iterable:
             if i == index:
                 return item
             i += 1
@@ -253,6 +254,8 @@ if __name__ == '__main__':
     FinanceSetup(proxy).run()
     if command in ('finance_je', 'finance_reg', ):
         FinanceMassGen(proxy).run(command)
+    elif command == 'finance_test':
+        finance_internal_test(proxy)
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""

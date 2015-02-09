@@ -577,7 +577,7 @@ class FinanceFlowBase(object):
             self.proxy.regl.button_hard_posting([regl_id], {})
         return regl_id, distrib_id
 
-    def register_import_invoice(self, invoice_id):
+    def register_import_invoice(self, invoice_id):        
         ai_br = self.proxy.inv.browse(invoice_id)
 
         # check if adhoc state: 'draft' or 'open'
@@ -588,9 +588,10 @@ class FinanceFlowBase(object):
             return False
 
         # check if opened (else do it: as it was finance side validated)
-        posting_date = self.date2orm(ai_br.date_invoice)
+        posting_date = self.proxy.date2orm(ai_br.date_invoice)
         if ai_br.state == 'draft':
-            # open (bypass wizard.invoice_date check by setting missing values)
+            # - open it
+            # - bypass wizard.invoice_date check by setting missing values
             vals = {}
             if not ai_br.document_date:
                 vals['document_date'] = posting_date
@@ -603,18 +604,21 @@ class FinanceFlowBase(object):
 
         # invoice's register (from invoice posting date)
         # randomly pick and browse one of 3 cash/bank/cheque register
+        # of the adhoc currency
         period_id = self.get_period(posting_date)
-        type = choice([ 'cash', 'bank', 'cheque', ])
+        rtype = choice([ 'cash', 'bank', 'cheque', ])
         domain = [
             ('period_id', '=', period_id),
-            ('journal_id.type', '=', type),  # see register_accounting
+            ('journal_id.currency', '=', ai_br.currency_id.id),
+            ('journal_id.type', '=', rtype),  # see register_accounting
                                              # account_bank_statement.py
                                              # get_statement() (server action)
         ]
         reg_ids = self.proxy.reg.search(domain)
         if not reg_ids:
-            tpl = "no '%s' register found for period '%s'"
-            raise FinanceFlowException(tpl % (type, posting_date))
+            tpl = "no '%s' register found for period '%s' and currency '%s'"
+            raise FinanceFlowException(tpl % (rtype, posting_date,
+                ai_br.currency_id.code))
         reg_id = reg_ids[0]
         reg_br = self.proxy.reg.browse(reg_id)
 
@@ -631,7 +635,7 @@ class FinanceFlowBase(object):
             'currency_id': reg_br.currency.id,
         }
         context = {
-            'from_cheque': type == 'cheque' or False,
+            'from_cheque': rtype == 'cheque' or False,
             'st_id': reg_id,
             'st_period_id': period_id,
         }
@@ -647,25 +651,25 @@ class FinanceFlowBase(object):
             ('move_id', '=', ai_br.move_id.id),
         ]
         aml_ids = self.proxy.aml.search(domain)
-        if aml_ids:  # so not already
+        if aml_ids:  # so not already imported
             # single import
             self.proxy.inv_imp.write([wii_id],
                 {'line_ids': [(6, 0, [aml_ids[0]])]}, context)
             self.proxy.inv_imp.single_import([wii_id], context)
 
             # confirm
-            if type == 'cheque':
+            if rtype == 'cheque':
                 # provide cheque number before confirm
                 wii_br = self.proxy.inv_imp.browse(wii_id)
                 if wii_br and wii_br.invoice_lines_ids:
-                    line = self.get_iter_item(wii_br.invoice_lines_ids, 0)
+                    line = self.proxy.get_iter_item(wii_br.invoice_lines_ids, 0)
                     if line:
                         cheque_number = "CHK %s" % (ai_br.name or '', )
-                        self.proxy.inv_impl.write([line.id],
+                        self.proxy.inv_imp_line.write([line.id],
                             {'cheque_number': cheque_number}, context)
             self.proxy.inv_imp.action_confirm([wii_id], context)
-            self.log("import invoice '%s' in '%s' '%s' register" % (
-                ai_br.name or '', type, posting_date, ))
+            self.proxy.log("import invoice '%s' in '%s' '%s' register" % (
+                ai_br.name or '', rtype, posting_date, ))
 
             # simulate imported invoice register line hard post
             ai_br = self.proxy.inv.browse(invoice_id)
@@ -675,7 +679,7 @@ class FinanceFlowBase(object):
             # statement/current date/ref<=>invoice origin/expense amount(< 0)
             domain = [
                 ('statement_id', '=', reg_id),
-                ('date', '=', self.current_date2orm()),
+                ('date', '=', self.proxy.current_date2orm()),
                 ('ref', '=', ai_br.origin),
                 ('amount', '=', ai_br.amount_total * -1),
             ]
@@ -683,8 +687,8 @@ class FinanceFlowBase(object):
             if reg_line_ids:
                 #self.proxy.regl.button_temp_posting([reg_line_ids[0]], context)
                 self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
-            self.log("import invoice '%s' in '%s' '%s' register hard post" % (
-                ai_br.name or '', type, posting_date, ))
+            tpl = "import invoice '%s' in '%s' '%s' register hard post"
+            self.proxy.log(tpl % (ai_br.name or '', rtype, posting_date, ))
 
         return True
 
@@ -713,13 +717,13 @@ class FinanceSetup(FinanceFlowBase):
                 raise FinanceFlowException("Current FY creation failed")
             self.proxy.log('Current FY created', 'yellow')
 
-        # check periods
+        # check periods (by period id)
         domain = [
             ('fiscalyear_id', '=', fy_ids[0]),
             ('special', '!=', True),  # skip 13-15 periods
             ('state', '=', 'created'),  # draft
         ]
-        period_ids = self.proxy.per.search(domain)
+        period_ids = self.proxy.per.search(domain, 0, None, 'period_id')
         if period_ids:
             # periods to open (by chronological order)
             self.proxy.per.action_open_period(period_ids)
@@ -775,9 +779,15 @@ class FinanceSetup(FinanceFlowBase):
                     month_str = "%02d" % (m, )
                     curr_date = strftime('%Y-' + month_str + '-01')
                     period_id = self.get_period(curr_date)
-                    wrc_id = self.proxy.reg_cr.create({'period_id': period_id}, {})
-                    self.proxy.reg_cr.button_confirm_period([wrc_id], {'fake': 1})
-                    self.proxy.reg_cr.button_create_registers([wrc_id], {'fake': 1})
+                    instance_id = self.proxy.login.company_id.instance_id.id
+                    fake_context = {'fake': 1}
+                    vals = {
+                        'period_id': period_id,
+                        'instance_id': instance_id,
+                    }
+                    wrc_id = self.proxy.reg_cr.create(vals, fake_context)
+                    self.proxy.reg_cr.button_confirm_period([wrc_id], fake_context)
+                    self.proxy.reg_cr.button_create_registers([wrc_id], fake_context)
 
                     reg_ids = self.proxy.reg.search(
                         [('period_id', '=', period_id)])
@@ -929,8 +939,9 @@ class FinanceMassGen(FinanceFlowBase):
                     'advance_line_ids': [(0, 0, line_vals)],
                 }
                 self.proxy.reg_adv_return.write([wiz_ar_id], vals)
-                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id])
-                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id])
+                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id], {})
+                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id], {})
+
 
 class FinanceFlow(FinanceFlowBase):
     """
@@ -939,5 +950,9 @@ class FinanceFlow(FinanceFlowBase):
     def __init__(self, proxy):
         super(FinanceFlow, self).__init__(proxy)
 
-    def run(self, invoice_id):
-        pass
+    def proceed_invoice(self, invoice_id):
+        self.register_import_invoice(invoice_id)
+        
+        
+def finance_internal_test(proxy):
+    FinanceFlow(proxy).proceed_invoice(1)  # test invoice
