@@ -816,7 +816,8 @@ class FinanceMassGen(FinanceFlowBase):
         if command == 'finance_je':
             self.direct_entries()
         elif command == 'finance_reg':
-            #self.register_lines()
+            self.register_lines()
+        elif command == 'finance_op_adv':
             self.operational_advances()
         
     def direct_entries(self):
@@ -841,7 +842,7 @@ class FinanceMassGen(FinanceFlowBase):
         for reg_br in self.proxy.reg.browse(reg_ids):
             index = 0
             while index < line_count:
-                self.create_random_expense_register_line(reg_br)
+                self._create_random_expense_register_line(reg_br)
                 if TEST_MODE:
                     return
                 
@@ -934,13 +935,18 @@ class FinanceMassGen(FinanceFlowBase):
                     'analytic_distribution_id': ad_id,
                 }
                 
+                fake_context = {'fake': 1}
                 vals = {
-                    'returned_amount': amount,
+                    'initial_amount': amount,
+                    'additional_amount': 0.,
                     'advance_line_ids': [(0, 0, line_vals)],
                 }
                 self.proxy.reg_adv_return.write([wiz_ar_id], vals)
-                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id], {})
-                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id], {})
+                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id], fake_context)
+                # note checked delta in action_confirm_cash_return
+                # wizard.initial_amount + wizard.additional_amount -  wizard.total_amount > 10**-3
+                # wizard.total_amount <=> total of wizard lines amount
+                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id], fake_context)
 
 
 class FinanceFlow(FinanceFlowBase):

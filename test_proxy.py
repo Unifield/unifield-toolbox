@@ -248,7 +248,7 @@ if __name__ == '__main__':
     proxy = TestProxy()
 
     FinanceSetup(proxy).run()
-    if command in ('finance_je', 'finance_reg', ):
+    if command in ('finance_je', 'finance_reg', 'finance_op_adv', ):
         FinanceMassGen(proxy).run(command)
     elif command == 'finance_test':
         finance_internal_test(proxy)
