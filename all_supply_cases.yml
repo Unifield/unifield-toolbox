@@ -565,39 +565,39 @@
   ir_type: external
   qty_per_month: 1
   nb_lines: 100
-#-
-#  Initial stock inventory
-#  In main warehouse
-#     50% of products to be Dinj / Dora - most with 2 x BM/ED.
-#     10% should have 6XBM/ED and 2 or 3 prods with 8 x BM/ED
-#-
-#  model: initial.stock.inventory
-#  nb_per_month: 0
-#  nb_lines: 700
-#-
-#  Initial stock inventory
-#  In internal consumption Unit, split as above.
-#-
-#  model: initial.stock.inventory
-#  nb_per_month: 0
-#  nb_lines: 100
-#-
-#  Physical inventory
-#  same as for 2 locations above with some change in Qtys for 30 % of lines
-#-
-#  model: stock.inventory
-#  nb_per_month: 0
-#  nb_lines: 700
-#-
-#  Physical inventory
-#  same as for 2 locations above with some change in Qtys for 30 % of lines
-#-
-#  model: stock.inventory
-#  nb_per_month: 0
-#  nb_lines: 100
-#-
-#  Consumption reports
-#  total of 5 Consumption reports - reduces stock in Internal location by 50%
-#-
-#  model: consumption.report
-#  nb_per_month: 5
+-
+  Initial stock inventory
+  In main warehouse
+     50% of products to be Dinj / Dora - most with 2 x BM/ED.
+     10% should have 6XBM/ED and 2 or 3 prods with 8 x BM/ED
+-
+  model: initial.stock.inventory
+  nb_per_month: 1
+  nb_lines: 700
+-
+  Initial stock inventory
+  In internal consumption Unit, split as above.
+-
+  model: initial.stock.inventory
+  nb_per_month: 1
+  nb_lines: 100
+-
+  Physical inventory
+  same as for 2 locations above with some change in Qtys for 30 % of lines
+-
+  model: stock.inventory
+  nb_per_month: 1
+  nb_lines: 700
+-
+  Physical inventory
+  same as for 2 locations above with some change in Qtys for 30 % of lines
+-
+  model: stock.inventory
+  nb_per_month: 1
+  nb_lines: 100
+-
+  Consumption reports
+  total of 5 Consumption reports - reduces stock in Internal location by 50%
+-
+  model: consumption.report
+  nb_per_month: 5

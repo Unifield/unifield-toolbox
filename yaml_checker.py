@@ -43,7 +43,7 @@ class YamlSupplyTestCase(object):
                 if isinstance(i, dict):
                     cls.cases.append(YamlSupplyTestCase(name, i))
                     name = ''
-                else:
+                elif i:
                     name += i
         except IOError as e:
             print 'The script failed because no YAML file found !'
@@ -152,6 +152,8 @@ class YamlSupplyTestCase(object):
                 """The sum of the two parameters 'emergency_fo' and
  'normal_fo' must be equal to 100."""
             )
+        # Use consumption unit
+        self.use_cu = values.get('use_cu', False)
 
     def __repr__(self):
         return """
@@ -185,6 +187,7 @@ class YamlSupplyTestCase(object):
         %% of Other FO: %(other_fo)s
         %% of Emergency FO: %(emergency_fo)s
         %% of Normal FO: %(normal_fo)s
+        Use Consumption Unit: %(use_cu)s
         """ % {
             'name': self.name,
             'model': self.model,
@@ -216,6 +219,7 @@ class YamlSupplyTestCase(object):
             'other_fo': self.other_fo,
             'emergency_fo': self.emergency_fo,
             'normal_fo': self.normal_fo,
+            'use_cu': self.use_cu,
         }
 
     def run(self):
@@ -248,6 +252,12 @@ class YamlSupplyTestCase(object):
                     tc = InternalIRFromStockTestCase(proxy, self)
                 else:
                     tc = POFromInternalIRTestCase(proxy, self)
+        elif self.model == 'initial.stock.inventory':
+            tc = InitialInventoryTestCase(proxy, self)
+        elif self.model == 'stock.inventory':
+            tc = PhysicalInventoryTestCase(proxy, self)
+        elif self.model == 'consumption.report':
+            tc = ConsumptionReportTestCase(proxy, self)
         else:
             raise NotImplemented('Not implemented yet !')
 

@@ -34,7 +34,7 @@ class SupplyTestCase(object):
         """
         if self.tc.with_tender:
             self.tc.nb_lines = self.tc.max_lines
-        total_products = self.tc.qty_per_month * self.tc.nb_lines
+        total_products = (self.tc.qty_per_month or 1) * self.tc.nb_lines
 
         nb_other_prd = total_products
         nb_srv_prd = nb_bm_prd = None
@@ -123,10 +123,10 @@ class SupplyTestCase(object):
             nb_two_bo = int((self.tc.two_backorders * bo) / 100)
 
         in_bo = RandomList(False)
-        in_bo += [True]*nb_bo 
+        in_bo += [True]*nb_bo
         in_bo += [False]*(nb_received-nb_bo)
         two_bo = RandomList(False)
-        two_bo += [True]*nb_two_bo 
+        two_bo += [True]*nb_two_bo
         two_bo += [False]*(nb_bo-nb_two_bo)
 
         def get_rcv_tuple():
@@ -154,7 +154,7 @@ class SupplyTestCase(object):
             nb_delivered = int((self.tc.delivered * nb_delivered) / 100)
 
         self.delivered = RandomList(False)
-        self.delivered += [True]*nb_delivered 
+        self.delivered += [True]*nb_delivered
         self.delivered += [False]*(nb_received-nb_delivered)
 
     def get_pps(self):
@@ -192,10 +192,10 @@ class SupplyTestCase(object):
             nb_shipped = 1
 
         packed = RandomList()
-        packed += [True]*nb_packed 
+        packed += [True]*nb_packed
         packed += [False]*(nb_picked-nb_packed)
         shipped = RandomList()
-        shipped += [True]*nb_shipped 
+        shipped += [True]*nb_shipped
         shipped += [False]*(nb_packed-nb_shipped)
 
         def _get_pps():
@@ -340,7 +340,7 @@ class SupplyTestCase(object):
         if month is None:
             month = time.strftime('%Y-12')
 
-        inv_id = self.proxy.inv.create({
+        inv_id = self.proxy.inventory.create({
             'name': self.tc.name,
             'date': '%s-01' % month,
         })
@@ -382,7 +382,7 @@ class SupplyTestCase(object):
                 'inventory_id': inv_id,
                 'product_uom': fol.product_uom.id,
             }
-            values.update(self.proxy.inv_line.on_change_product_id_specific_rules(
+            values.update(self.proxy.inventory_line.on_change_product_id_specific_rules(
                 False,
                 loc_id,
                 fol.product_id.id,
@@ -390,10 +390,10 @@ class SupplyTestCase(object):
                 fol.product_uom.id,
                 '%s-01' % month,).get('value', {}))
             values['product_qty'] += fol.product_uom_qty
-            self.proxy.inv_line.create(values)
+            self.proxy.inventory_line.create(values)
 
-        self.proxy.inv.action_confirm([inv_id])
-        self.proxy.inv.action_done([inv_id])
+        self.proxy.inventory.action_confirm([inv_id])
+        self.proxy.inventory.action_done([inv_id])
 
     def validate_po(self, po_id):
         """
@@ -488,9 +488,16 @@ class SupplyTestCase(object):
 
             self.proxy.in_proc.do_incoming_shipment([in_proc_id])
             in_state = self.proxy.pick.read(incoming, ['state'])['state']
+            in_name = self.proxy.pick.read(incoming, ['name'])['name']
             while in_state != 'done' and not backordered:
                 time.sleep(1)
                 in_state = self.proxy.pick.read(incoming, ['state'])['state']
+
+            invoice_ids = self.proxy.inv.search([
+                ('name', 'like', in_name),
+            ])
+            if invoice_ids:
+                self.proxy.hook_invoice(invoice_ids[0])
 
         if backordered and two_bo:
             self.received_in(po_id, True, False)
@@ -933,6 +940,7 @@ class IRTestCase(SupplyTestCase):
             'order_id': ir_id,
             'product_id': product_id,
             'product_uom_qty': product_qty,
+            'product_uom': prd_brw.uom_id.id,
         }
 
         line_values.update(self.proxy.sol.requested_product_id_change(
@@ -965,7 +973,7 @@ class IRTestCase(SupplyTestCase):
 
         order_rd = self.proxy.so.read(ir_id, ['state', 'procurement_request'])
         order_state = order_rd['state']
-        while order_state != 'progress':
+        while order_state not in ('progress', 'done'):
             time.sleep(0.5)
             order_state = self.proxy.so.read(ir_id, ['state'])['state']
 
@@ -1433,7 +1441,7 @@ class InternalIRFromStockTestCase(IRTestCase):
             ir_values = self.get_ir_values(month)
             ir_id = self.proxy.so.create(ir_values)
             ir_line_ids = []
-            for j in range(random.randint(self.tc.min_lines, self.tc.max_lines)):
+            for j in range(self.tc.nb_lines):
                 ir_line_values = self.get_ir_line_values(ir_id)
                 ir_line_ids.append(
                     self.proxy.sol.create(ir_line_values)
@@ -1442,7 +1450,7 @@ class InternalIRFromStockTestCase(IRTestCase):
             self.validate_ir(ir_id)
             ir_id, po_ids = self.confirm_ir(ir_id, ir_line_ids)
 
-            deliver = self.delivered.pop(random.randint(0, len(self.delivered)-1))
+            deliver = self.delivered.pop()
             if deliver:
                 self.make_out(ir_id)
 
@@ -1556,35 +1564,364 @@ class FOFromStockOnOrderTestCase(FOTestCase):
 
 
 class InitialInventoryTestCase(SupplyTestCase):
-    pass
+    
+    def create_lines(self, inv_id):
+        """
+        Create an inventory lines
+        """
+        nomen_obj = self.proxy.conn.get('product.nomenclature')
+
+        location_id = self.proxy.data.get_object_reference(
+            'stock', 'stock_location_stock')[1]
+        med_loc_id = self.proxy.data.get_object_reference(
+            'msf_config_locations', 'stock_location_medical')[1]
+        log_loc_id = self.proxy.data.get_object_reference(
+            'stock_override', 'stock_location_logistic')[1]
+        med_nomen_id = nomen_obj.search([('name', '=', 'MED')])[0]
+        log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
+        log_rt_id = self.proxy.data.get_object_reference(
+            'reason_types_moves', 'reason_type_loss')[1]
+
+        x8bm = 3
+        x6bm = int(self.tc.nb_lines * 0.10)
+
+        for i in range(self.tc.nb_lines):
+            product_id = self.products.pop()
+            prd_brw = self.proxy.prod.browse(product_id)
+
+            if prd_brw.nomen_manda_0.id == med_nomen_id:
+                loc_id = med_loc_id
+            elif prd_brw.nomen_manda_0.id == log_nomen_id:
+                loc_id = log_loc_id
+
+            def create_line():
+                expiry_date = False
+                prodlot_name = False
+                if prd_brw.perishable:
+                    expiry_date = '20%s-%s-%s' % (
+                        random.randint(int(time.strftime('%y')), 99),
+                        random.randint(1, 12),
+                        random.randint(1, 28),
+                    )
+                    if prd_brw.batch_management:
+                        prodlot_name = '%s_%s_%s_%s' % (
+                            expiry_date,
+                            prd_brw.id,
+                            'INI_INV',
+                            random.randint(1, 1000),
+                        )
+
+                values = {
+                    'location_id': loc_id,
+                    'expiry_date': expiry_date,
+                    'reason_type_id': log_rt_id,
+                    'prodlot_name': prodlot_name,
+                    'product_id': prd_brw.id,
+                    'inventory_id': inv_id,
+                    'product_uom': prd_brw.uom_id.id,
+                }
+                values.update(self.proxy.ini_inv_line.product_change(
+                    False,
+                    prd_brw.id,
+                    loc_id,
+                    'product_id',
+                    True,
+                    prodlot_name).get('value', {}))
+
+                values['product_qty'] = random.randrange(1, 3000)
+                self.proxy.ini_inv_line.create(values)
+
+            nb_cl = 1
+            if prd_brw.perishable:
+                nb_cl = 2
+                if x8bm:
+                    nb_cl = 8
+                    x8bm -= 1
+                elif x6bm:
+                    nb_cl = 6
+                    x6bm -= 1
+
+            for i in range(nb_cl):
+                create_line()
+
+    def run(self, month=None):
+        """
+        Run the test case a number of times defined by the test case.
+        :param month: Month on which documents must be created
+        """
+        for i in range(self.tc.qty_per_month or 1):
+            inv_id = self.proxy.ini_inv.create({
+                'name': 'Test initial inventory',
+            })
+            self.create_lines(inv_id)
+
+            self.proxy.ini_inv.action_confirm([inv_id])
+            self.proxy.ini_inv.action_done([inv_id])
 
 
 class PhysicalInventoryTestCase(SupplyTestCase):
-    pass
+    
+    def create_lines(self, inv_id):
+        """
+        Create an inventory lines
+        """
+        nomen_obj = self.proxy.conn.get('product.nomenclature')
+
+        if self.tc.use_cu:
+            cu_ids = self.proxy.loc.search([
+                ('name', '=', 'Test CU'),
+                ('location_category', '=', 'consumption_unit'),
+                ('usage', '=', 'internal'),
+            ])
+            if cu_ids:
+                cu_id = cu_ids[0]
+            else:
+                cu_id = self.proxy.loc.create({
+                    'name': 'Test CU',
+                    'location_category': 'consumption_unit',
+                    'usage': 'internal',
+                    'location_id': self.proxy.data.get_object_reference(
+                        'msf_config_locations',
+                        'stock_location_consumption_units_view')[1],
+                })
+        else:
+            cu_id = False
+
+        location_id = self.proxy.data.get_object_reference(
+            'stock', 'stock_location_stock')[1]
+        med_loc_id = self.proxy.data.get_object_reference(
+            'msf_config_locations', 'stock_location_medical')[1]
+        log_loc_id = self.proxy.data.get_object_reference(
+            'stock_override', 'stock_location_logistic')[1]
+        med_nomen_id = nomen_obj.search([('name', '=', 'MED')])[0]
+        log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
+        log_rt_id = self.proxy.data.get_object_reference(
+            'reason_types_moves', 'reason_type_loss')[1]
+
+        x8bm = 3
+        x6bm = int(self.tc.nb_lines * 0.10)
+        change_qty = 0
+
+        for i in range(self.tc.nb_lines):
+            change_qty += 1
+            product_id = self.products.pop()
+            prd_brw = self.proxy.prod.browse(product_id)
+
+            if self.tc.use_cu:
+                loc_id = cu_id
+            elif prd_brw.nomen_manda_0.id == med_nomen_id:
+                loc_id = med_loc_id
+            elif prd_brw.nomen_manda_0.id == log_nomen_id:
+                loc_id = log_loc_id
+
+            def create_line(change_qty):
+                expiry_date = False
+                prod_lot_id = False
+                expiry_date = '20%s-%s-%s' % (
+                    random.randint(int(time.strftime('%y')), 99),
+                    random.randint(1, 12),
+                    random.randint(1, 28),
+                )
+                if prd_brw.batch_management:
+                    prod_lot_id = self.proxy.lot.create({
+                        'product_id': prd_brw.id,
+                        'name': '%s_%s_%s_%s' % (
+                            expiry_date,
+                            prd_brw.id,
+                            'INI_INV',
+                            random.randint(1, 1000),
+                        ),
+                        'life_date': expiry_date,
+                    })
+
+                values = {
+                    'location_id': loc_id,
+                    'expiry_date': expiry_date,
+                    'reason_type_id': log_rt_id,
+                    'prod_lot_id': prod_lot_id,
+                    'product_id': prd_brw.id,
+                    'inventory_id': inv_id,
+                    'product_uom': prd_brw.uom_id.id,
+                }
+                values.update(self.proxy.inventory_line.on_change_product_id_specific_rules(
+                    False,
+                    loc_id,
+                    prd_brw.id,
+                    prod_lot_id,
+                    prd_brw.uom_id.id,
+                    '01-01-01',).get('value', {}))
+                product_qty = values['product_qty']
+                if change_qty == 3:
+                    change_qty = 0
+                    product_qty += random.randrange(1, 1000)
+                values.update({
+                    'product_qty': product_qty,
+                    'prod_lot_id': prod_lot_id,
+                    'expiry_date': expiry_date,
+                })
+                self.proxy.inventory_line.create(values)
+
+            nb_cl = 1
+            if prd_brw.perishable:
+                nb_cl = 2
+                if x8bm:
+                    nb_cl = 8
+                    x8bm -= 1
+                elif x6bm:
+                    nb_cl = 6
+                    x6bm -= 1
+
+            for i in range(nb_cl):
+                create_line(change_qty)
+
+    def run(self, month=None):
+        """
+        Run the test case a number of times defined by the test case.
+        :param month: Month on which documents must be created
+        """
+        for i in range(self.tc.qty_per_month or 1):
+            inv_id = self.proxy.inventory.create({
+                'name': 'Test physical inventory',
+            })
+            self.create_lines(inv_id)
+
+            self.proxy.inventory.action_confirm([inv_id])
+            self.proxy.inventory.action_done([inv_id])
 
 
 class ConsumptionReportTestCase(SupplyTestCase):
 
-    def run_complete_flow(self):
-        self.create_order()
-        # FO validation
-        self.fo_validation_chrono.measure(self.valid_fo)
-        self.source_lines()
-        # FO confirmation
-        self.fo_confirmation_chrono.measure(self.confirm_fo)
-        self.get_new_generated_fo()
-        # PO creation
-        self.po_creation_chrono.measure(self.run_scheduler)
-        self.get_generated_po()
-        # PO validation
-        self.po_validation_chrono.measure(self.run_po_validation)
-        # PO confirmation
-        self.po_confirmation_chrono.measure(self.run_po_confirmation)
-        self.get_generated_in()
-        # IN processing
-        self.in_processing_chrono.measure(self.process_in)
-        self.get_generated_out()
-        # OUT conversion
-        self.out_convert_chrono.measure(self.out_convert_to_standard)
-        # OUT processing
-        self.out_processing_chrono.measure(self.out_processing)
+    def run(self, month=None):
+        """
+        Run the test case a number of times defined by the test case.
+        :param month: Month on which documents must be created
+        """
+        nomen_obj = self.proxy.conn.get('product.nomenclature')
+        cust_id = self.proxy.data.get_object_reference(
+            'stock', 'stock_location_internal_customers')[1]
+        med_loc_id = self.proxy.data.get_object_reference(
+            'msf_config_locations', 'stock_location_medical')[1]
+        log_loc_id = self.proxy.data.get_object_reference(
+            'stock_override', 'stock_location_logistic')[1]
+        med_nomen_id = nomen_obj.search([('name', '=', 'MED')])[0]
+        log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
+
+        if month is None:
+            month = int(time.strftime('%m'))-1
+
+        for i in range(self.tc.qty_per_month or 5):
+            med_rac_id = self.proxy.rac.create({
+                'cons_location_id': med_loc_id,
+                'activity_id': cust_id,
+                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
+                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+            })
+            log_rac_id = self.proxy.rac.create({
+                'cons_location_id': log_loc_id,
+                'activity_id': cust_id,
+                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
+                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+            })
+
+            log_product_ids = self.proxy.prod.search([
+                ('nomen_manda_0', '=', log_nomen_id),
+                ('type', '=', 'product'),
+            ])
+            med_product_ids = self.proxy.prod.search([
+                ('nomen_manda_0', '=', med_nomen_id),
+                ('type', '=', 'product'),
+            ])
+
+            for lp in self.proxy.prod.browse(log_product_ids[:25]):
+                l_values = {
+                    'product_id': lp.id,
+                    'uom_id': lp.uom_id.id,
+                    'rac_id': log_rac_id,
+                }
+                l_values.update(self.proxy.racl.product_onchange(
+                    False,
+                    lp.id,
+                    log_loc_id,
+                    lp.uom_id.id,
+                    False,
+                ).get('value', {}))
+                l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
+
+                self.proxy.racl.create(l_values)
+
+            nb_med = 0
+            for mp in self.proxy.prod.browse(med_product_ids):
+                if nb_med > 25:
+                    break
+
+                lot_ids = self.proxy.lot.search([
+                    ('product_id', '=', mp.id),
+                ])
+                if not lot_ids:
+                    continue
+                for lot in self.proxy.lot.browse(lot_ids):
+                    l_values = {
+                        'product_id': mp.id,
+                        'uom_id': mp.uom_id.id,
+                        'rac_id': med_rac_id,
+                        'prodlot_id': lot.id,
+                        'expiry_date': lot.life_date.strftime('%Y-%m-%d'),
+                    }
+                    l_values.update(self.proxy.racl.product_onchange(
+                        False,
+                        mp.id,
+                        med_loc_id,
+                        mp.uom_id.id,
+                        lot.id,
+                    ).get('value', {}))
+
+                    if mp.perishable and not mp.batch_management:
+                        l_values.update(self.proxy.racl.change_expiry(
+                            False,
+                            lot.life_date.strftime('%Y-%m-%d'),
+                            mp.id,
+                            med_loc_id,
+                            mp.uom_id.id,
+                            '',
+                        ).get('value', {}))
+                    else:
+                        l_values.update(self.proxy.racl.change_prodlot(
+                            False,
+                            mp.id,
+                            lot.id,
+                            lot.life_date.strftime('%Y-%m-%d'),
+                            med_loc_id,
+                            mp.uom_id.id,
+                            '',
+                        ).get('value', {}))
+
+                    l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
+
+                    self.proxy.racl.create(l_values)
+                nb_med += 1
+
+            self.proxy.rac.process_moves([med_rac_id, log_rac_id])
+
+#    def run_complete_flow(self):
+#        self.create_order()
+#        # FO validation
+#        self.fo_validation_chrono.measure(self.valid_fo)
+#        self.source_lines()
+#        # FO confirmation
+#        self.fo_confirmation_chrono.measure(self.confirm_fo)
+#        self.get_new_generated_fo()
+#        # PO creation
+#        self.po_creation_chrono.measure(self.run_scheduler)
+#        self.get_generated_po()
+#        # PO validation
+#        self.po_validation_chrono.measure(self.run_po_validation)
+#        # PO confirmation
+#        self.po_confirmation_chrono.measure(self.run_po_confirmation)
+#        self.get_generated_in()
+#        # IN processing
+#        self.in_processing_chrono.measure(self.process_in)
+#        self.get_generated_out()
+#        # OUT conversion
+#        self.out_convert_chrono.measure(self.out_convert_to_standard)
+#        # OUT processing
+#        self.out_processing_chrono.measure(self.out_processing)

@@ -53,8 +53,10 @@ MODELS = {
     'ppl_proc': 'ppl.processor',
     'ship_proc': 'shipment.processor',
     'ppl_family': 'ppl.family.processor',
-    'inv': 'stock.inventory',
-    'inv_line': 'stock.inventory.line',
+    'inventory': 'stock.inventory',
+    'inventory_line': 'stock.inventory.line',
+    'ini_inv': 'initial.stock.inventory',
+    'ini_inv_line': 'initial.stock.inventory.line',
     'loc': 'stock.location',
     'tender': 'tender',
     'tender_line': 'tender.line',
@@ -67,6 +69,8 @@ MODELS = {
     'inv_imp': 'wizard.import.invoice',
     'inv_imp_l': 'wizard.import.invoice.lines',
     'acc_dest_link': 'account.destination.link',
+    'rac': 'real.average.consumption',
+    'racl': 'real.average.consumption.line',
 }
 
 _COLORS = {
@@ -76,7 +80,6 @@ _COLORS = {
     'magenta': '\033[1;35m',
     'red': '\033[1;31m',
     'yellow': '\033[1;33m',
->>>>>>> MERGE-SOURCE
 }
 
 def color_str(msg, color_code):
@@ -242,6 +245,9 @@ class TestProxy(object):
         """
         obj = self.ir_data.get_object_reference(module, xmlid)
         return obj[1] if obj else False
+
+    def hook_invoice(self, invoice_id):
+        return
 
 
 if __name__ == '__main__':
