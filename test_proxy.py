@@ -8,6 +8,7 @@ from oerplib import OERP
 from finance_flow import FinanceSetup
 from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
+from finance_flow import finance_internal_test
 
 import logging
 import time
@@ -63,11 +64,12 @@ MODELS = {
     'reg': 'account.bank.statement',
     'reg_cr': 'wizard.register.creation',
     'regl': 'account.bank.statement.line',
+    'reg_adv_return': 'wizard.cash.return',
     'am': 'account.move',
     'aml': 'account.move.line',
     'inv': 'account.invoice',
     'inv_imp': 'wizard.import.invoice',
-    'inv_imp_l': 'wizard.import.invoice.lines',
+    'inv_imp_line': 'wizard.import.invoice.lines',
     'acc_dest_link': 'account.destination.link',
     'rac': 'real.average.consumption',
     'racl': 'real.average.consumption.line',
@@ -178,13 +180,9 @@ class TestProxy(object):
         """
         msg = '%s :: %s' % (
             time.strftime('%Y-%M-%d %H:%M:%S'),
-            msg,
+            color_str(msg, color_code) if color_code else msg,
         )
-
-        logging.info(msg)  # log without color
-        if color_code:
-            msg = color_str(msg, color_code)
-        print msg
+        logging.info(msg)
         return True
 
     def exec_workflow(self, *args):
@@ -218,7 +216,7 @@ class TestProxy(object):
         random_second = randrange(int_delta)
         return (start + timedelta(seconds=random_second))
 
-    def get_iter_item(self, iter, index):
+    def get_iter_item(self, iterable, index):
         """
         get iterable item at given index
         used to get a specific item of an oerplib browsed list's item
@@ -228,7 +226,7 @@ class TestProxy(object):
         :return item or None
         """
         i = 0
-        for item in iter:
+        for item in iterable:
             if i == index:
                 return item
             i += 1
@@ -257,8 +255,12 @@ if __name__ == '__main__':
     proxy = TestProxy()
 
     FinanceSetup(proxy).run()
-    if command in ('finance_je', 'finance_reg', ):
+    if command in ('finance_je', ):
         FinanceMassGen(proxy).run(command)
+    elif command == 'finance_test':
+        finance_internal_test(proxy)
+        
+    FinanceFlow(proxy).run()
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""
