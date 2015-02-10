@@ -892,6 +892,8 @@ class FinanceMassGen(FinanceFlowBase):
                     return
                     
     def _create_operational_advance_line(self, reg_br):
+        print reg_br.name + ' ' + reg_br.period_id.name
+        
         # random operational advance account
         domain = [
             ('type', '!=', 'view'),
@@ -917,7 +919,8 @@ class FinanceMassGen(FinanceFlowBase):
             third_employee_id=emp_id, do_hard_post=True)
         if register_line_id:
             # ... after hard post, simulate the advance return
-            wiz_ar_id = self.proxy.reg_adv_return.create({})
+            fake_context = {'fake': 1}
+            wiz_ar_id = self.proxy.reg_adv_return.create({}, fake_context)
             if wiz_ar_id:
                 # on an expense 6 account with AD
                 account_id = choice(self.get_account_from_account_type(
@@ -935,11 +938,15 @@ class FinanceMassGen(FinanceFlowBase):
                     'analytic_distribution_id': ad_id,
                 }
                 
-                fake_context = {'fake': 1}
                 vals = {
                     'initial_amount': amount,
+                    'returned_amount': 0,
                     'additional_amount': 0.,
+                    'advance_st_line_id': register_line_id,
                     'advance_line_ids': [(0, 0, line_vals)],
+                    'currency_id': reg_br.journal_id.currency.id,
+                    'date':  entry_date,  # date of return,
+                    'analytic_distribution_id': ad_id,
                 }
                 self.proxy.reg_adv_return.write([wiz_ar_id], vals)
                 self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id], fake_context)
