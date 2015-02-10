@@ -581,6 +581,7 @@
   model: initial.stock.inventory
   nb_per_month: 1
   nb_lines: 100
+  use_cu: True
 -
   Physical inventory
   same as for 2 locations above with some change in Qtys for 30 % of lines
@@ -595,6 +596,7 @@
   model: stock.inventory
   nb_per_month: 1
   nb_lines: 100
+  use_cu: True
 -
   Consumption reports
   total of 5 Consumption reports - reduces stock in Internal location by 50%

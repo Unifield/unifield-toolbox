@@ -1,12 +1,12 @@
 name,ref,partner_type,address/phone,address/email,address/city,address/country_id,zone,supplier_lt,customer_lt,property_account_payable,property_account_receivable,customer,supplier
-AKUGOBA GENERAL HARDWARE,FALSE,External,774263483,FALSE,KAMPALA,Uganda,National,0,0,,,TRUE,TRUE
-BASHIR HARDWARE,FALSE,External,782456022,FALSE,KAMPALA,Portugal,National,0,0,,,TRUE,TRUE
-DOSHI HARDWARE UGANDA LTD,FALSE,External,0414251216/17/18,sales@ug.doshigroup.com,KAMPALA,Uganda,National,0,0,,,TRUE,TRUE
-EPI_UG,FALSE,External,FALSE,FALSE,FALSE,Uganda,National,0,0,,,TRUE,FALSE
-KIDAMALO DAN DAUSON,FALSE,External,772569613,FALSE,KAMPALA,Uganda,National,0,0,,,TRUE,TRUE
-OCBA_SSD_COO,FALSE,External,FALSE,FALSE,FALSE,South Sudan,International,0,0,,,TRUE,FALSE
-OCG_CD_COO,FALSE,Intermission,FALSE,FALSE,FALSE,"Congo, The Democratic Republic of the",International,0,0,,,TRUE,TRUE
-OCG_SSD_COO,FALSE,Intermission,FALSE,FALSE,FALSE,South Sudan,International,0,0,,,TRUE,FALSE
-OCP_SSD_COO,FALSE,External,FALSE,FALSE,FALSE,South Sudan,International,0,0,,,TRUE,FALSE
-OCP_UG_COO,FALSE,External,FALSE,FALSE,FALSE,Uganda,National,0,0,,,TRUE,TRUE
-ORIGINAL SHAULIYAKO,FALSE,External,772625684,FALSE,KAMPALA,Uganda,National,0,0,,,TRUE,TRUE
+AKUGOBA GENERAL HARDWARE,FALSE,External,774263483,FALSE,KAMPALA,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+BASHIR HARDWARE,FALSE,External,782456022,FALSE,KAMPALA,Portugal,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+DOSHI HARDWARE UGANDA LTD,FALSE,External,0414251216/17/18,sales@ug.doshigroup.com,KAMPALA,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+EPI_UG,FALSE,External,FALSE,FALSE,FALSE,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,FALSE
+KIDAMALO DAN DAUSON,FALSE,External,772569613,FALSE,KAMPALA,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+OCBA_SSD_COO,FALSE,External,FALSE,FALSE,FALSE,South Sudan,International,0,0,Trade payables,Receivable from other missions,TRUE,FALSE
+OCG_CD_COO,FALSE,Intermission,FALSE,FALSE,FALSE,"Congo, The Democratic Republic of the",International,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+OCG_SSD_COO,FALSE,Intermission,FALSE,FALSE,FALSE,South Sudan,International,0,0,Trade payables,Receivable from other missions,TRUE,FALSE
+OCP_SSD_COO,FALSE,External,FALSE,FALSE,FALSE,South Sudan,International,0,0,Trade payables,Receivable from other missions,TRUE,FALSE
+OCP_UG_COO,FALSE,External,FALSE,FALSE,FALSE,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE
+ORIGINAL SHAULIYAKO,FALSE,External,772625684,FALSE,KAMPALA,Uganda,National,0,0,Trade payables,Receivable from other missions,TRUE,TRUE

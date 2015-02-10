@@ -4,6 +4,7 @@
 import random
 import yaml
 import os
+import time
 
 from test_proxy import TestProxy
 from supply_flow import POFromScratchTestCase
@@ -222,11 +223,12 @@ class YamlSupplyTestCase(object):
             'use_cu': self.use_cu,
         }
 
-    def run(self):
+    def run(self, month=None):
         """
         Run the case
         """
         proxy = TestProxy()
+
         tc = None
         if self.model == 'purchase.order':
             tc = POFromScratchTestCase(proxy, self)
@@ -262,9 +264,47 @@ class YamlSupplyTestCase(object):
             raise NotImplemented('Not implemented yet !')
 
         if tc is not None:
-            tc.run()
+            tc.run(month)
 
 if __name__ == '__main__':
     YamlSupplyTestCase.get_cases_from_file('supply_cases.yml')
-    for tc in YamlSupplyTestCase.cases:
-        tc.run()
+    months = [
+#        '2013-02',
+#        '2013-03',
+#        '2013-04',
+#        '2013-05',
+#        '2013-06',
+#        '2013-07',
+#        '2013-08',
+#        '2013-09',
+#        '2013-10',
+#        '2013-11',
+#        '2013-12',
+        '2014-01',
+        '2014-02',
+        '2014-03',
+        '2014-04',
+        '2014-05',
+        '2014-06',
+        '2014-07',
+        '2014-08',
+        '2014-09',
+        '2014-10',
+        '2014-11',
+        '2014-12',
+        '2015-01',
+    ]
+    for month in months:
+        print '###############################################################'
+        print '#'
+        print '# Month: %s' % month
+        print '#'
+
+        for tc in YamlSupplyTestCase.cases:
+            print '# Test case: %s' % tc.name
+            print '# Start time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
+            tc.run(month)
+            print '# End time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
+            print '#'
+            print '######################################'
+            print '#'

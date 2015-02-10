@@ -444,6 +444,7 @@ class SupplyTestCase(object):
         Make the reception of the IN
         :param po_id: ID of the purchase order attached to the IR to receive
         """
+        po_date = self.proxy.po.read(po_id, ['delivery_confirmed_date'])['delivery_confirmed_date']
         in_ids = self.proxy.pick.search([
             ('purchase_id', '=', po_id),
             ('state', '=', 'assigned'),
@@ -494,9 +495,12 @@ class SupplyTestCase(object):
                 in_state = self.proxy.pick.read(incoming, ['state'])['state']
 
             invoice_ids = self.proxy.inv.search([
-                ('name', 'like', in_name),
+                ('picking_id', '=', incoming),
             ])
             if invoice_ids:
+                self.proxy.inv.write(invoice_ids, {
+                    'date_invoice': po_date,
+                })
                 self.proxy.hook_invoice(invoice_ids[0])
 
         if backordered and two_bo:
@@ -526,6 +530,25 @@ class SupplyTestCase(object):
             'supplier': supplier_id,
             'po_cft': 'po',
         })
+
+    def update_incoming_shipment(self, po_id):
+        in_ids = self.proxy.pick.search([
+            ('purchase_id', '=', po_id),
+        ])
+        po_date = self.proxy.po.read(po_id, ['delivery_confirmed_date'])['delivery_confirmed_date']
+        move_ids = self.proxy.move.search([
+            ('picking_id', 'in', in_ids),
+        ])
+        self.proxy.move.write(move_ids, {
+            'date': po_date,
+            'date_expected': po_date,
+        })
+        self.proxy.pick.write(in_ids, {
+            'date': po_date,
+            'min_date': po_date,
+            'manual_min_date_stock_picking': po_date,
+        })
+
 
 class POFromScratchTestCase(SupplyTestCase):
 
@@ -651,6 +674,8 @@ class POFromScratchTestCase(SupplyTestCase):
             in_recept = self.in_received.pop()
             if in_recept[0]:
                 self.received_in(po_id, in_recept[1], in_recept[2])
+
+            self.update_incoming_shipment(po_id)
 
 
 class FOTestCase(SupplyTestCase):
@@ -827,6 +852,7 @@ class FOTestCase(SupplyTestCase):
         """
         Source and confirm sourcing of all FO lines
         """
+        fo_date = self.proxy.so.read(fo_id, ['date_order'])['date_order']
         po_ids = set()
         po_lines = []
 
@@ -879,6 +905,10 @@ class FOTestCase(SupplyTestCase):
 
         for po_line in self.proxy.pol.read(po_lines, ['order_id']):
             po_ids.add(po_line['order_id'][0])
+
+        self.proxy.po.write(list(po_ids), {
+            'date_order': fo_date,
+        })
 
         return new_order_ids, list(po_ids)
 
@@ -1140,8 +1170,10 @@ class POFromFOTestCase(FOTestCase):
                 if in_recept[0]:
                     self.received_in(po_id, in_recept[1], in_recept[2])
 
-                    tc_pps = self.pps.pop(random.randint(0, len(self.pps)-1))
+                    tc_pps = self.pps.pop()
                     self.make_pps(split_fo_ids, tc_pps)
+
+                self.update_incoming_shipment(po_id)
 
 
 class POFromInternalIRTestCase(IRTestCase):
@@ -1197,6 +1229,8 @@ class POFromInternalIRTestCase(IRTestCase):
                 in_recept = self.in_received.pop()
                 if in_recept[0]:
                     self.received_in(po_id, in_recept[1], in_recept[2])
+
+                self.update_incoming_shipment(po_id)
 
 
 class POFromExternalIRTestCase(IRTestCase):
@@ -1256,6 +1290,8 @@ class POFromExternalIRTestCase(IRTestCase):
                     if deliver:
                         self.make_out(ir_id)
 
+                self.update_incoming_shipment(po_id)
+
 
 class POFromFOTenderTestCase(FOTestCase, TenderTestCase):
 
@@ -1294,6 +1330,8 @@ class POFromFOTenderTestCase(FOTestCase, TenderTestCase):
 
                 if in_recept[0]:
                     self.received_in(po_id, in_recept[1], in_recept[2])
+
+                self.update_incoming_shipment(po_id)
 
             tc_pps = self.pps.pop()
             self.make_pps(new_fo_ids, tc_pps)
@@ -1359,6 +1397,8 @@ class POFromIRTenderTestCase(IRTestCase, TenderTestCase):
 
                 if in_recept[0]:
                     self.received_in(po_id, in_recept[1], in_recept[2])
+
+                self.update_incoming_shipment(po_id)
 
             if self.tc.ir_type == 'external':
                  deliver = self.delivered.pop(random.randint(0, len(self.delivered)-1))

@@ -1,69 +1,69 @@
 -
   This is all the supply test cases
 -
-  PO from scratch
-  PO regular 1 line
-  30% service type product
-  50% received
-  50% of those received havec 50% back order (partial qty of lines)
--
-  model: purchase.order
-  qty_per_month: 30
-  nb_lines: 1
-  service_products: 30
-  received: 50
-  backordered: 50
--
-  PO from scratch
-  PO regular 10 lines
-  50% BM & ED products
-  50% received
-  50% of those received have 50% back order (partial qty of lines)
--
-  model: purchase.order
-  qty_per_month: 20
-  nb_lines: 10
-  bm_products: 50
-  received: 50
-  backordered: 50
--
-  PO from scratch
-  PO regular 50 lines
-  50% BM & ED products
-  50% received (IN)
-  50% of those received have 50% back order (partial qty of lines)
--
-  model: purchase.order
-  qty_per_month: 6
-  nb_lines: 50
-  bm_products: 50
-  received: 50
-  backordered: 50
--
-  PO from scratch
-  PO regular 100 lines
-  50% BM & ED products
-  50% received (IN)
-  50% of those received have 50% back order (partial qty of lines)
--
-  model: purchase.order
-  qty_per_month: 4
-  nb_lines: 100
-  bm_products: 50
-  received: 50
-  backordered: 50
--
-  PO from scratch
-  PO regular 300 lines
-  50% BM & ED products
-  100% received
--
-  model: purchase.order
-  qty_per_month: 1
-  nb_lines: 300
-  bm_products: 50
-  received: 50
--
+#  PO from scratch
+#  PO regular 1 line
+#  30% service type product
+#  50% received
+#  50% of those received havec 50% back order (partial qty of lines)
+#-
+#  model: purchase.order
+#  qty_per_month: 30
+#  nb_lines: 1
+#  service_products: 30
+#  received: 50
+#  backordered: 50
+#-
+#  PO from scratch
+#  PO regular 10 lines
+#  50% BM & ED products
+#  50% received
+#  50% of those received have 50% back order (partial qty of lines)
+#-
+#  model: purchase.order
+#  qty_per_month: 20
+#  nb_lines: 10
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#-
+#  PO from scratch
+#  PO regular 50 lines
+#  50% BM & ED products
+#  50% received (IN)
+#  50% of those received have 50% back order (partial qty of lines)
+#-
+#  model: purchase.order
+#  qty_per_month: 6
+#  nb_lines: 50
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#-
+#  PO from scratch
+#  PO regular 100 lines
+#  50% BM & ED products
+#  50% received (IN)
+#  50% of those received have 50% back order (partial qty of lines)
+#-
+#  model: purchase.order
+#  qty_per_month: 4
+#  nb_lines: 100
+#  bm_products: 50
+#  received: 50
+#  backordered: 50
+#-
+#  PO from scratch
+#  PO regular 300 lines
+#  50% BM & ED products
+#  100% received
+#-
+#  model: purchase.order
+#  qty_per_month: 1
+#  nb_lines: 300
+#  bm_products: 50
+#  received: 50
+#-
   PO from FO into Cross Docking
   PO regular 1 line
   50% BM & ED products
