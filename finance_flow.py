@@ -892,8 +892,6 @@ class FinanceMassGen(FinanceFlowBase):
                     return
                     
     def _create_operational_advance_line(self, reg_br):
-        print reg_br.name + ' ' + reg_br.period_id.name
-        
         # random operational advance account
         domain = [
             ('type', '!=', 'view'),
