@@ -133,18 +133,16 @@ class FinanceFlowBase(object):
             raise FinanceFlowException("%s period not found" % (dt, ))
         return period_ids[0]
         
-    def get_random_date_for_month(self, month):
+    def get_random_date_for_month(self, month, year):
         """
         get a random date in the given month
         :param month: month number
         :type month: int
         :rtype date str for orm
         """
-        month_str = "%02d" % (month, )
         rday = randint(1, 30)
         day = 28 if rday > 28 and month == 2 else rday
-        day_str = "%02d" % (day, )
-        return strftime('%Y-' + month_str + '-' + day_str)
+        return "%04d-%02d-%02d" % (year, month, day, )
         
     def get_random_date_for_period(self, period_br):
         """
@@ -152,7 +150,8 @@ class FinanceFlowBase(object):
         :param period_br: browsed period
         :rtype date str for orm
         """
-        return self.get_random_date_for_month(period_br.date_start.month)
+        return self.get_random_date_for_month(period_br.date_start.month,
+            period_br.date_start.year)
         
     def create_journal(self, name, code, journal_type,
         analytic_journal_id=False, account_code=False, currency_name=False,
@@ -391,7 +390,7 @@ class FinanceFlowBase(object):
         :param with_ad: True if AD should be generated
         :type with_ad: boolean
         """
-        entry_date = self.get_random_date_for_month(month)
+        entry_date = self.get_random_date_for_month(month, 2014)
 
         # purchase journal
         journal_id = self.get_purchase_journal()
@@ -564,6 +563,8 @@ class FinanceFlowBase(object):
             vals['employee_id'] = third_employee_id
         if third_journal_id:
             vals['transfer_journal_id'] = third_journal_id
+        if register_br.journal_id.type == 'cheque':
+            vals['cheque_number'] = "cheque #%s" % (document_date, )
 
         # created and AD link
         regl_id = self.proxy.regl.create(vals)
@@ -794,6 +795,7 @@ class FinanceSetup(FinanceFlowBase):
 
         start_date = "%d-01-01" % (start_year, )
         start_period_id = self.get_period(start_date)
+        any_created = False
 
         for ccy_br in self.proxy.ccy.browse(ccy_ids):
             ccy_code = ccy_br.name
@@ -812,6 +814,7 @@ class FinanceSetup(FinanceFlowBase):
                 ]
                 aj_ids = self.proxy.journal.search(domain)
                 if not aj_ids:
+                    any_created = True
                     reg_id, journal_id = self.create_register(name, code, t,
                         account_codes_map[t], ccy_code,
                         bank_journal_id=bank_journal_id)
@@ -858,19 +861,29 @@ class FinanceSetup(FinanceFlowBase):
                             # ...and open them
                             self.open_register(reg_ids)
                     i += 1
-                    
-        self.proxy.log('registers created', 'yellow')
-                    
-
-    def run(self):
-        start_year = self.get_cfg_int('db_start_fy')
         
-        # open next FY if needed  (in db we have already 'db_start_fy')
+        if any_created:            
+            self.proxy.log('registers created', 'yellow')
+                    
+    def run(self):
+        # active all analytical child accounts since FY14 start
+        # (bypass recursion check)
+        aaa_ids = self.proxy.ana_acc.search([('parent_id', '!=', False)])
+        for aaa_br in self.proxy.ana_acc.browse(aaa_ids):
+            self.proxy.ana_acc.write(aaa_br.id, {
+                'parent_id': aaa_br.parent_id.id,
+                'date_start': '2014-01-01',
+            })
+        
+        start_year = self.get_cfg_int('fy_start')
+        year_count = self.get_cfg_int('fy_count')
+        
+        # open next FY if needed  (in db we have already 'fy_start')
         self.open_current_fy()
         
         # open registers for active currencies (from 2014)
-        self.open_fy_registers(start_year, 2, self.proxy.ccy.search([]))
-
+        self.open_fy_registers(start_year, year_count, self.proxy.ccy.search([]))
+        
 class FinanceMassGen(FinanceFlowBase):
     """
     Mass data generation of finance data
@@ -883,10 +896,6 @@ class FinanceMassGen(FinanceFlowBase):
             color_code='yellow')
         if command == 'finance_je':
             self.direct_entries()
-        elif command == 'finance_reg':
-            self.register_lines()
-        elif command == 'finance_op_adv':
-            self.operational_advances()
         
     def direct_entries(self):
         je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
@@ -901,22 +910,65 @@ class FinanceMassGen(FinanceFlowBase):
                     ji_min_count, ji_max_count)
                 self.create_journal_entry(m, items_count, True)
                 index += 1
-                
-    def register_lines(self):
-        line_count = 1 if TEST_MODE \
-            else self.get_cfg_int('reg_lines_per_reg_count')
+            
+
+class FinanceFlow(FinanceFlowBase):
+    """
+    Flow to apply when supply has generated an invoice by reception
+    """
+    def __init__(self, proxy):
+        super(FinanceFlow, self).__init__(proxy)
         
-        reg_ids = self.proxy.reg.search([])
-        for reg_br in self.proxy.reg.browse(reg_ids):
-            index = 0
-            while index < line_count:
-                self._create_random_expense_register_line(reg_br)
+    def run(self):
+        fy_start = self.get_cfg_int('fy_start')
+        if TEST_MODE:
+            fy_count = 1
+            reg_expenses_max = 1
+            reg_not_expenses_max = 1
+            reg_pending_mayement_max = 1
+            reg_operational_advance_max = 1
+        else:
+            fy_count = self.get_cfg_int('fy_count')
+            reg_expenses_max = self.get_cfg_int('reg_expenses_max')
+            reg_not_expenses_max = self.get_cfg_int('reg_not_expenses_max')
+            reg_pending_mayement_max = self.get_cfg_int('reg_pending_mayement_max')
+            reg_operational_advance_max = self.get_cfg_int('reg_operational_advance_max')
+        
+        i = 0
+        while i < fy_count:
+            for m in xrange(1, 13):
+                dt = "%04d-%02d-01" % (fy_start + i, m, )
+                period_id = self.get_period(dt)
+                
+                self.proxy.log("finance flow of %s" % (dt, )
+                
+                # period's register
+                reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
+                for reg_br in self.proxy.reg.browse(reg_ids):
+                    # expense line with AD
+                    for e in xrange(0, reg_expenses_max):
+                        self._create_random_expense_register_line(reg_br)
+                    
+                    # not expense line not AD
+                    for e in xrange(0, reg_not_expenses_max):
+                        self._create_random_not_expense_register_line(reg_br)
+                    
+                    # pending payement (invoice import)
+                    # TODO
+                    """for e in xrange(0, reg_pending_mayement_max):
+                        # recherche des invoices (max count reg_pending_mayement_max)
+                        self.register_import_invoice(invoice_id)"""
+                    
+                    # operational advance (only for cash register)
+                    if reg_br.journal_id.type == 'cash':
+                        for e in xrange(0, reg_operational_advance_max):
+                            self._create_operational_advance_line(reg_br)
                 if TEST_MODE:
                     return
-                
+                    
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
-            'reg_lines_expenses_account_count')
+            'expenses_account_max')
             
         # random expense account
         account_ids = self.get_account_from_account_type('expense', 
@@ -944,21 +996,31 @@ class FinanceMassGen(FinanceFlowBase):
             third_partner_id=partner_id, third_employee_id=emp_id,
             third_journal_id=False, do_hard_post=True)
             
-    def operational_advances(self):
-        line_count = 1 if TEST_MODE \
-            else self.get_cfg_int('op_advance_reg_lines_count')
+    def _create_random_not_expense_register_line(self, reg_br):
+        # random payable account
+        account_ids = self.get_account_from_account_type('payables', 
+            is_analytic_addicted=False)
+            
+        # random date in register month
+        entry_date = self.get_random_date_for_period(reg_br.period_id)
         
-        journal_ids = self.proxy.journal.search([('type', '=', 'cash')])
-        if not journal_ids:
-            raise FinanceFlowException('no cash journal')
-        reg_ids = self.proxy.reg.search([('journal_id', '=', journal_ids[0])])
-        for reg_br in self.proxy.reg.browse(reg_ids):
-            index = 0
-            while index < line_count:
-                self._create_operational_advance_line(reg_br)
-                if TEST_MODE:
-                    return
-                    
+        # random third party: partner or emp or no
+        partner_id = False
+        emp_id = False
+        tp_mode = choice(['p', 'e', '-', ])
+        if tp_mode == 'p':
+            partner_id = self.get_partner('external')
+        elif tp_mode == 'e':
+            emp_id = self.get_employee()
+        
+        self.create_register_line(reg_br.id,
+            choice(account_ids),  # random expense account
+            self.get_random_amount(),  # random amount
+            generate_distribution=False,
+            date=entry_date, document_date=entry_date,
+            third_partner_id=partner_id, third_employee_id=emp_id,
+            third_journal_id=False, do_hard_post=True)
+            
     def _create_operational_advance_line(self, reg_br):
         # random operational advance account
         domain = [
@@ -1021,17 +1083,6 @@ class FinanceMassGen(FinanceFlowBase):
                 # wizard.total_amount <=> total of wizard lines amount
                 self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id], fake_context)
 
-
-class FinanceFlow(FinanceFlowBase):
-    """
-    Flow to apply when supply has generated an invoice by reception
-    """
-    def __init__(self, proxy):
-        super(FinanceFlow, self).__init__(proxy)
-
-    def proceed_invoice(self, invoice_id):
-        self.register_import_invoice(invoice_id)
-        
         
 def finance_internal_test(proxy):
-    FinanceFlow(proxy).proceed_invoice(1)  # test invoice
+    pass

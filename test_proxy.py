@@ -248,10 +248,12 @@ if __name__ == '__main__':
     proxy = TestProxy()
 
     FinanceSetup(proxy).run()
-    if command in ('finance_je', 'finance_reg', 'finance_op_adv', ):
+    if command in ('finance_je', ):
         FinanceMassGen(proxy).run(command)
     elif command == 'finance_test':
         finance_internal_test(proxy)
+        
+    FinanceFlow(proxy).run()
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""
