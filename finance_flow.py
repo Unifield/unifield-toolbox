@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from random import randrange, choice, randint
 from time import strftime
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 
 from chrono import TestChrono
 
@@ -696,8 +697,52 @@ class FinanceFlowBase(object):
 class FinanceSetup(FinanceFlowBase):
     def __init__(self, proxy):
         super(FinanceSetup, self).__init__(proxy)
+        
+    def current_fy_create_with_periods(self):
+        """
+        create periods (and special ones) for current fy
+        :return fy id
+        """
+        start_date = date(date.today().year, 1, 1)
+        end_date = date(date.today().year, 12, 31)
+        
+        fiscalyear_id = self.proxy.fy.create({
+            'name': 'FY %d' % (start_date.year),
+            'code': 'FY%d' % (start_date.year),
+            'date_start': start_date.strftime('%Y-%m-%d'),
+            'date_stop': end_date.strftime('%Y-%m-%d'),
+        })
 
-    def open_fy(self):
+        ds = start_date
+        while ds < end_date:
+            de = ds + relativedelta(months=1, days=-1)
+            if de > end_date:
+                de = end_date
+
+            self.proxy.per.create({
+                'name': ds.strftime('%b %Y'),
+                'code': ds.strftime('%b %Y'),
+                'date_start': ds.strftime('%Y-%m-%d'),
+                'date_stop': de.strftime('%Y-%m-%d'),
+                'fiscalyear_id': fiscalyear_id,
+                'number': int(ds.strftime('%m')),
+            })
+            ds = ds + relativedelta(months=1)
+
+        for period_nb in (13, 14, 15):
+            self.proxy.per.create({
+                'name': 'Period %d' % (period_nb),
+                'code': 'Period %d' % (period_nb),
+                'date_start': '%d-12-01' % (start_date.year),
+                'date_stop': '%d-12-31' % (start_date.year),
+                'fiscalyear_id': fiscalyear_id,
+                'special': True,
+                'number': period_nb,
+            })
+            
+        return fiscalyear_id
+
+    def open_current_fy(self):
         """
         open current FY
         """
@@ -710,16 +755,21 @@ class FinanceSetup(FinanceFlowBase):
         ]
         fy_ids = self.proxy.fy.search(domain)
         if not fy_ids:
+            """
             id = self.proxy.per_cr.create({'fiscalyear': 'current'})
             self.proxy.per_cr.account_period_create_periods([id])
             fy_ids = self.proxy.fy.search(domain)
             if not fy_ids:
                 raise FinanceFlowException("Current FY creation failed")
+            """
+            fy_id = self.current_fy_create_with_periods()
             self.proxy.log('Current FY created', 'yellow')
+        else:
+            fy_id = fy_ids[0]
 
         # check periods (by period id)
         domain = [
-            ('fiscalyear_id', '=', fy_ids[0]),
+            ('fiscalyear_id', '=', fy_id),
             ('special', '!=', True),  # skip 13-15 periods
             ('state', '=', 'created'),  # draft
         ]
@@ -730,7 +780,7 @@ class FinanceSetup(FinanceFlowBase):
             ids_opened = ",".join(map(lambda x: str(x), period_ids))
             self.proxy.log("Periods opened: %s" % (ids_opened, ), 'yellow')
         
-    def open_fy_registers(self, ccy_ids):
+    def open_fy_registers(self, start_year, year_count, ccy_ids):
         """
         create/open (cash, bank, cheque) for each period of FY
         :param ccy_code: currency
@@ -742,10 +792,13 @@ class FinanceSetup(FinanceFlowBase):
             'cheque': '10210',
         }
 
+        start_date = "%d-01-01" % (start_year, )
+        start_period_id = self.get_period(start_date)
+
         for ccy_br in self.proxy.ccy.browse(ccy_ids):
             ccy_code = ccy_br.name
 
-            # base (januar) registers (create and open if needed)
+            # base registers (create and open if needed)
             bank_journal_id = False
             reg_ids = []
             for t in types:
@@ -762,46 +815,61 @@ class FinanceSetup(FinanceFlowBase):
                     reg_id, journal_id = self.create_register(name, code, t,
                         account_codes_map[t], ccy_code,
                         bank_journal_id=bank_journal_id)
+                    # force the period of the register
+                    # by default in current period
+                    self.proxy.reg.write([reg_id],
+                        {'period_id': start_period_id})
                     if t == 'bank':
                         bank_journal_id = journal_id
                     if reg_id and journal_id:
                         reg_ids.append(reg_id)
-                        self.proxy.log("register %s created" % (code, ))
+                        self.proxy.log("base register %s created" % (code, ))
 
-            # open januar registers and create/open others
-
+            # open start registers and create/open others
             if reg_ids:
-                # open them (januar) registers...
+                self.proxy.log('other fy registers creation')
+                
+                # open start registers...
                 self.open_register(reg_ids)
 
                 # ...then create new others registers (register creation wizard)
-                for m in xrange(2, 13):
-                    month_str = "%02d" % (m, )
-                    curr_date = strftime('%Y-' + month_str + '-01')
-                    period_id = self.get_period(curr_date)
-                    instance_id = self.proxy.login.company_id.instance_id.id
-                    fake_context = {'fake': 1}
-                    vals = {
-                        'period_id': period_id,
-                        'instance_id': instance_id,
-                    }
-                    wrc_id = self.proxy.reg_cr.create(vals, fake_context)
-                    self.proxy.reg_cr.button_confirm_period([wrc_id], fake_context)
-                    self.proxy.reg_cr.button_create_registers([wrc_id], fake_context)
+                i = 0
+                while i < year_count:
+                    year = start_year + i
+                    start_month = 2 if i == 0 else 1
+                    for m in xrange(start_month, 13):
+                        curr_date = "%04d-%02d-01" % (year, m, )
+                        period_id = self.get_period(curr_date)
+                        instance_id = self.proxy.login.company_id.instance_id.id
+                        fake_context = {'fake': 1}
+                        vals = {
+                            'period_id': period_id,
+                            'instance_id': instance_id,
+                        }
+                        wrc_id = self.proxy.reg_cr.create(vals, fake_context)
+                        self.proxy.reg_cr.button_confirm_period([wrc_id], fake_context)
+                        self.proxy.reg_cr.button_create_registers([wrc_id], fake_context)
 
-                    reg_ids = self.proxy.reg.search(
-                        [('period_id', '=', period_id)])
-                    if reg_ids:
-                        # ...and open them
-                        self.open_register(reg_ids)
+                        reg_ids = self.proxy.reg.search(
+                            [('period_id', '=', period_id)])
+                        if reg_ids:
+                            # post change date
+                            self.proxy.reg.write(reg_ids, {'date': curr_date})
+                            # ...and open them
+                            self.open_register(reg_ids)
+                    i += 1
+                    
+        self.proxy.log('registers created', 'yellow')
+                    
 
     def run(self):
-        # open current FY if needed
-        self.open_fy()
+        start_year = self.get_cfg_int('db_start_fy')
         
-        # open registers for active currencies
-        self.open_fy_registers(self.proxy.ccy.search([]))
+        # open next FY if needed  (in db we have already 'db_start_fy')
+        self.open_current_fy()
         
+        # open registers for active currencies (from 2014)
+        self.open_fy_registers(start_year, 2, self.proxy.ccy.search([]))
 
 class FinanceMassGen(FinanceFlowBase):
     """
