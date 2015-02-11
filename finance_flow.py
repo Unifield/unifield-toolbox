@@ -12,14 +12,13 @@ TEST_MODES = (
     'fake',  # go down in flow, no entry generated
 )
 #TEST_MODE = False
-TEST_MODE = 'fake'
+TEST_MODE = 'unit'
 
 MASK = {
     'register': "%s %s",
     'register_line': "reg l %s",
-    'je': "JE %s",
-    'ji': "JI %s",
-    'ji_counterpart': "JI %s counterpart",
+    'je': "JE %d",
+    'ji': "JI %d",
     'ad': "AD",
     'cheque_number': "cheque %d",
 }
@@ -413,13 +412,13 @@ class FinanceFlowBase(object):
             self.proxy.get(analytic_obj).create(vals)
         return distrib_id
 
-    def create_journal_entry(self, month, items_count, with_ad):
+    def create_journal_entry(self, year, month, items_count, with_ad):
         """
         create a JE (with items_count JI in it (expense and counterpart lines)
         :param with_ad: True if AD should be generated
         :type with_ad: boolean
         """
-        entry_date = self.get_random_date_for_month(month, 2014)
+        entry_date = self.get_random_date_for_month(month, year)
 
         # purchase journal
         journal_id = self.get_purchase_journal()
@@ -431,7 +430,7 @@ class FinanceFlowBase(object):
         partner_id = self.get_partner('external')
 
         # create JE
-        name = MASK['je'] % (entry_date, )
+        name = MASK['je'] % (self.get_counter('je'), )
         entry_name = name
         vals = {
             'journal_id': journal_id,
@@ -452,7 +451,7 @@ class FinanceFlowBase(object):
         items_count = items_count / 2  # counter part included
         index = 0
         while index < items_count:
-            name = MASK['ji'] % (entry_date, )
+            name = MASK['ji'] % (self.get_counter('ji'), )
             random_amount = self.get_random_amount()
             
             if with_ad:
@@ -495,7 +494,6 @@ class FinanceFlowBase(object):
                 raise FinanceFlowException(tpl % (vals, ))
 
             # create JI counterpart(no ad)
-            name = MASK['ji_counterpart'] % (entry_date, )
             domain = [
                 ('is_analytic_addicted', '!=', True),
                 ('type', '=', 'receivable'),
@@ -505,7 +503,7 @@ class FinanceFlowBase(object):
             vals.update({
                 'account_id': random_counterpart_account_id,
                 'amount_currency': -1 * random_amount,
-                'name': name,
+                'name': name + ' cp',
                 'analytic_distribution_id': False,
             })
             aml_id = self.proxy.aml.create(vals)
@@ -950,7 +948,8 @@ class FinanceMassGen(FinanceFlowBase):
         year_index = 0
         while year_index < fy_count:
             for m in xrange(1, 13):
-                dt = "%04d-%02d-01" % (fy_start + year_index, m, )
+                year_in_progress = fy_start + year_index
+                dt = "%04d-%02d-01" % (year_in_progress, m, )
                 self.proxy.log("%d JE for %s" % (je_per_month, dt, ))
                 if TEST_MODE and TEST_MODE == 'fake':
                     continue
@@ -959,7 +958,8 @@ class FinanceMassGen(FinanceFlowBase):
                     # random count of ji for each je of the period
                     ji_count = 2 if TEST_MODE else randrange(ji_min_count,
                         ji_max_count)
-                    self.create_journal_entry(m, items_count, True)
+                    self.create_journal_entry(year_in_progress, m, ji_count,
+                        True)
                     if TEST_MODE and TEST_MODE == 'unit':
                         return
             year_index += 1
