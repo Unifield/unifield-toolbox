@@ -579,7 +579,7 @@ class FinanceFlowBase(object):
             self.proxy.regl.button_hard_posting([regl_id], {})
         return regl_id, distrib_id
 
-    def register_import_invoice(self, invoice_id):        
+    def register_import_invoice(self, invoice_id):
         ai_br = self.proxy.inv.browse(invoice_id)
 
         # check if adhoc state: 'draft' or 'open'
@@ -593,14 +593,13 @@ class FinanceFlowBase(object):
         posting_date = self.proxy.date2orm(ai_br.date_invoice)
         if ai_br.state == 'draft':
             # - open it
-            # - bypass wizard.invoice_date check by setting missing values
-            vals = {}
-            if not ai_br.document_date:
-                vals['document_date'] = posting_date
+            # - force doc date to posting date (as by default to current date)
+            vals = {
+                'document_date': posting_date,
+            }
             if not ai_br.check_total:
                 vals['check_total'] = ai_br.amount_total
-            if vals:
-                self.proxy.inv.write([invoice_id], vals)
+            self.proxy.inv.write([invoice_id], vals)
             self.proxy.exec_workflow('account.invoice', 'invoice_open',
                 invoice_id)
 
@@ -658,17 +657,21 @@ class FinanceFlowBase(object):
             self.proxy.inv_imp.write([wii_id],
                 {'line_ids': [(6, 0, [aml_ids[0]])]}, context)
             self.proxy.inv_imp.single_import([wii_id], context)
+            
+            # post update wizard lines (dates in register period)
+            wii_br = self.proxy.inv_imp.browse(wii_id)
+            if wii_br and wii_br.invoice_lines_ids:
+                line = self.proxy.get_iter_item(wii_br.invoice_lines_ids, 0)
+                if line:
+                    vals = {
+                        'date': posting_date,
+                        'document_date': posting_date,
+                    }
+                    if rtype == 'cheque':
+                        vals['cheque_number'] = "CHK %s" % (ai_br.name or '', )
+                    self.proxy.inv_imp_line.write([line.id], vals, context)
 
             # confirm
-            if rtype == 'cheque':
-                # provide cheque number before confirm
-                wii_br = self.proxy.inv_imp.browse(wii_id)
-                if wii_br and wii_br.invoice_lines_ids:
-                    line = self.proxy.get_iter_item(wii_br.invoice_lines_ids, 0)
-                    if line:
-                        cheque_number = "CHK %s" % (ai_br.name or '', )
-                        self.proxy.inv_imp_line.write([line.id],
-                            {'cheque_number': cheque_number}, context)
             self.proxy.inv_imp.action_confirm([wii_id], context)
             self.proxy.log("import invoice '%s' in '%s' '%s' register" % (
                 ai_br.name or '', rtype, posting_date, ))
@@ -678,19 +681,19 @@ class FinanceFlowBase(object):
             # FIXME seem enough to identify unique imported confirmed line
             # FIXME but check if better can be done
             # identify imported confirmed line by:
-            # statement/current date/ref<=>invoice origin/expense amount(< 0)
+            # statement/date/ref<=>invoice origin/expense amount(< 0)
             domain = [
                 ('statement_id', '=', reg_id),
-                ('date', '=', self.proxy.current_date2orm()),
+                ('date', '=', posting_date),
                 ('ref', '=', ai_br.origin),
                 ('amount', '=', ai_br.amount_total * -1),
             ]
             reg_line_ids = self.proxy.regl.search(domain)
             if reg_line_ids:
-                #self.proxy.regl.button_temp_posting([reg_line_ids[0]], context)
                 self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
-            tpl = "import invoice '%s' in '%s' '%s' register hard post"
-            self.proxy.log(tpl % (ai_br.name or '', rtype, posting_date, ))
+            tpl = "import invoice '%s' in '%s' '%s' '%s' register hard post"
+            self.proxy.log(tpl % (ai_br.name or '', rtype, posting_date,
+                reg_br.currency.code, ))
 
         return True
 
@@ -939,8 +942,23 @@ class FinanceFlow(FinanceFlowBase):
             for m in xrange(1, 13):
                 dt = "%04d-%02d-01" % (fy_start + i, m, )
                 period_id = self.get_period(dt)
+                period_br = self.proxy.per.browse(period_id)
                 
-                self.proxy.log("finance flow of %s" % (dt, )
+                self.proxy.log("finance flow of %s" % (dt, ))
+                
+                # period invoices ids what can be importer in pending payement
+                domain = [
+                    ('state', '=', 'draft'),
+                    ('date_invoice', '>=', 
+                        self.proxy.date2orm(period_br.date_start)),
+                    ('date_invoice', '<=',
+                        self.proxy.date2orm(period_br.date_stop)),
+                ]
+                invoices_ids = self.proxy.inv.search(domain)
+                # invoices max count (3 reg types, 2 ccys)
+                inv_max = 1 if TEST_MODE else reg_pending_mayement_max * 3 * 2
+                if len(invoices_ids) > inv_max:
+                    invoices_ids = invoices_ids[:inv_max]
                 
                 # period's register
                 reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
@@ -954,12 +972,16 @@ class FinanceFlow(FinanceFlowBase):
                         self._create_random_not_expense_register_line(reg_br)
                     
                     # pending payement (invoice import)
-                    # TODO
-                    """for e in xrange(0, reg_pending_mayement_max):
-                        # recherche des invoices (max count reg_pending_mayement_max)
-                        self.register_import_invoice(invoice_id)"""
+                    tmp_invoices_ids = list(invoices_ids)
+                    i = 0
+                    for inv_id in tmp_invoices_ids:
+                        self.register_import_invoice(inv_id)
+                        invoices_ids.remove(inv_id)  # remove imported invoice
+                        if i >= reg_pending_mayement_max:
+                            break
+                        i += 1
                     
-                    # operational advance (only for cash register)
+                    # operational advance (only for CASH register)
                     if reg_br.journal_id.type == 'cash':
                         for e in xrange(0, reg_operational_advance_max):
                             self._create_operational_advance_line(reg_br)
