@@ -6,7 +6,22 @@ from dateutil.relativedelta import relativedelta
 
 from chrono import TestChrono
 
-TEST_MODE = True
+TEST_MODES = (
+    'unit',  # one entry in first period
+    'period',  # one entry per period in all fy(s)
+)
+#TEST_MODE = False
+TEST_MODE = 'unit'
+
+MASK = {
+    'register': "%s %s",
+    'register_line': "reg l %s",
+    'je': "JE %s",
+    'ji': "JI %s",
+    'ji_counterpart': "JI %s counterpart",
+    'ad': "AD",
+    'cheque_number': "cheque %d",
+}
 
 
 class FinanceFlowException(Exception):
@@ -17,6 +32,7 @@ class FinanceFlowBase(object):
     def __init__(self, proxy):
         self.proxy = proxy
         self.cache_clear()
+        self._counters = {}
         
     def get_cfg(self, key, default=None):
         return self.proxy.config.get('finance', key, default)
@@ -26,6 +42,18 @@ class FinanceFlowBase(object):
         if not res and default is not None:
             res = default
         return res
+        
+    def get_counter(self, name):
+        """
+        return last counter value from name
+        :param name: param name
+        :type name: str
+        :return counter
+        :rtype int/long
+        """
+        last = self._counters.get(name, 1)
+        self._counters[name] = last + 1
+        return last
         
     def cache_clear(self):
         """
@@ -365,7 +393,7 @@ class FinanceFlowBase(object):
         destination_id = choice(destination_ids)
             
         # create ad
-        name = 'auto AD'
+        name = MASK['ad']
         distrib_id = self.proxy.ad.create({'name': name})
         data = [
             ('cost.center.distribution.line', cost_center_id, False),
@@ -402,7 +430,7 @@ class FinanceFlowBase(object):
         partner_id = self.get_partner('external')
 
         # create JE
-        name = 'auto JE %s' % (entry_date, )
+        name = MASK['je'] % (entry_date, )
         entry_name = name
         vals = {
             'journal_id': journal_id,
@@ -423,7 +451,7 @@ class FinanceFlowBase(object):
         items_count = items_count / 2  # counter part included
         index = 0
         while index < items_count:
-            name = "auto JI %s" % (entry_date, )
+            name = MASK['ji'] % (entry_date, )
             random_amount = self.get_random_amount()
             
             if with_ad:
@@ -466,7 +494,7 @@ class FinanceFlowBase(object):
                 raise FinanceFlowException(tpl % (vals, ))
 
             # create JI counterpart(no ad)
-            name = "auto JI %s counterpart" % (entry_date, )
+            name = MASK['ji_counterpart'] % (entry_date, )
             domain = [
                 ('is_analytic_addicted', '!=', True),
                 ('type', '=', 'receivable'),
@@ -555,7 +583,7 @@ class FinanceFlowBase(object):
             'document_date': document_date,
             'date': date,
             'amount': amount,
-            'name': "auto %s" % (date, ),
+            'name': MASK['register_line'] % (date, ),
         }
         if third_partner_id:
             vals['partner_id'] = third_partner_id
@@ -564,7 +592,8 @@ class FinanceFlowBase(object):
         if third_journal_id:
             vals['transfer_journal_id'] = third_journal_id
         if register_br.journal_id.type == 'cheque':
-            vals['cheque_number'] = "cheque #%s" % (document_date, )
+            vals['cheque_number'] = MASK['cheque_number'] % (
+                self.get_counter('cheque_number'), )
 
         # created and AD link
         regl_id = self.proxy.regl.create(vals)
@@ -668,13 +697,12 @@ class FinanceFlowBase(object):
                         'document_date': posting_date,
                     }
                     if rtype == 'cheque':
-                        vals['cheque_number'] = "CHK %s" % (ai_br.name or '', )
+                        vals['cheque_number'] = MASK['cheque_number'] % (
+                            self.get_counter('cheque_number'), )
                     self.proxy.inv_imp_line.write([line.id], vals, context)
 
             # confirm
             self.proxy.inv_imp.action_confirm([wii_id], context)
-            self.proxy.log("import invoice '%s' in '%s' '%s' register" % (
-                ai_br.name or '', rtype, posting_date, ))
 
             # simulate imported invoice register line hard post
             ai_br = self.proxy.inv.browse(invoice_id)
@@ -691,9 +719,6 @@ class FinanceFlowBase(object):
             reg_line_ids = self.proxy.regl.search(domain)
             if reg_line_ids:
                 self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
-            tpl = "import invoice '%s' in '%s' '%s' '%s' register hard post"
-            self.proxy.log(tpl % (ai_br.name or '', rtype, posting_date,
-                reg_br.currency.code, ))
 
         return True
 
@@ -809,7 +834,7 @@ class FinanceSetup(FinanceFlowBase):
             for t in types:
                 code = "%s %s" % (t, ccy_code, )
                 code = code.upper()
-                name = "auto %s %s" % (t, ccy_code, )
+                name = MASK['register'] % (t, ccy_code, )
                 domain = [
                     ('type', '=', t),
                     ('currency', '=', ccy_br.id),
@@ -923,6 +948,7 @@ class FinanceFlow(FinanceFlowBase):
         super(FinanceFlow, self).__init__(proxy)
         
     def run(self):
+        
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = 1
@@ -956,7 +982,7 @@ class FinanceFlow(FinanceFlowBase):
                 ]
                 invoices_ids = self.proxy.inv.search(domain)
                 # invoices max count (3 reg types, 2 ccys)
-                inv_max = 1 if TEST_MODE else reg_pending_mayement_max * 3 * 2
+                inv_max = reg_pending_mayement_max * 3 * 2
                 if len(invoices_ids) > inv_max:
                     invoices_ids = invoices_ids[:inv_max]
                 
@@ -985,7 +1011,7 @@ class FinanceFlow(FinanceFlowBase):
                     if reg_br.journal_id.type == 'cash':
                         for e in xrange(0, reg_operational_advance_max):
                             self._create_operational_advance_line(reg_br)
-                if TEST_MODE:
+                if TEST_MODE and TEST_MODE == 'unit':
                     return
                     
     def _create_random_expense_register_line(self, reg_br):
