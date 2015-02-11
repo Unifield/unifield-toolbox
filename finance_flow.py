@@ -930,7 +930,7 @@ class FinanceMassGen(FinanceFlowBase):
     def run(self, command):
         self.proxy.log("finance mass generation %s" % (command, ),
             color_code='yellow')
-        if command == 'finance_je':
+        if command == 'fin_je':
             self.direct_entries()
         
     def direct_entries(self):

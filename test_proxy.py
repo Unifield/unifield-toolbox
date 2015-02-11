@@ -245,11 +245,17 @@ class TestProxy(object):
 
     def hook_invoice(self, invoice_id):
         return
-
+        
 
 if __name__ == '__main__':
-    COMMANDS = ('finance_je', )
+    # set commands here
+    # base commands
+    BASE_COMMANDS = ['fin_setup', ]
+    # finance mass generation specific commands
+    FIN_MASS_GEN_BASE_COMMANDS = ['fin_je', ]
     
+    # check command
+    COMMANDS = BASE_COMMANDS + FIN_MASS_GEN_BASE_COMMANDS
     args = sys.argv[1:]  # skip this script
     command = args and args[0] or False
     if command and command not in COMMANDS:
@@ -259,15 +265,20 @@ if __name__ == '__main__':
     
     proxy = TestProxy()
 
+    # finance setup 
     FinanceSetup(proxy).run()
-    if command and command in ('finance_je', ):
-        # specific mass generation for others volume/perf tests
+    if command and command == 'fin_setup':
+        exit()  # finance setup only
+        
+    # finance mass generation specifi command
+    if command and command in FIN_MASS_GEN_BASE_COMMANDS:
+        # specific mass generation command for others volume/perf tests
         FinanceMassGen(proxy).run(command)
-    else:
-        # regular flow
-        FinanceFlow(proxy).run()
+        exit()  # finance mass generation only
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""
+    
+    FinanceFlow(proxy).run()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4
