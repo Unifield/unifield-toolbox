@@ -161,6 +161,13 @@ class FinanceFlowBase(object):
             raise FinanceFlowException("%s period not found" % (dt, ))
         return period_ids[0]
         
+    def get_date_for_month(self, month, year, day=1):
+        """
+        get date in the given month
+        :rtype date str for orm
+        """
+        return "%04d-%02d-%02d" % (year, month, day, )
+        
     def get_random_date_for_month(self, month, year):
         """
         get a random date in the given month
@@ -170,7 +177,7 @@ class FinanceFlowBase(object):
         """
         rday = randint(1, 30)
         day = 28 if rday > 28 and month == 2 else rday
-        return "%04d-%02d-%02d" % (year, month, day, )
+        return self.get_date_for_month(month, year, day=day)
         
     def get_random_date_for_period(self, period_br):
         """
@@ -727,13 +734,13 @@ class FinanceSetup(FinanceFlowBase):
     def __init__(self, proxy):
         super(FinanceSetup, self).__init__(proxy)
         
-    def current_fy_create_with_periods(self):
+    def _fy_create_with_periods(self, year):
         """
-        create periods (and special ones) for current fy
+        create fy and periods (and special ones) for given fy by year
         :return fy id
         """
-        start_date = date(date.today().year, 1, 1)
-        end_date = date(date.today().year, 12, 31)
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
         
         fiscalyear_id = self.proxy.fy.create({
             'name': 'FY %d' % (start_date.year),
@@ -771,45 +778,36 @@ class FinanceSetup(FinanceFlowBase):
             
         return fiscalyear_id
 
-    def open_current_fy(self):
+    def check_fy(self, year):
         """
         open current FY
         """
-        curr_date = self.proxy.current_date2orm()
-
         # search for current FY
         domain = [
-            ('date_start', '<=', curr_date),
-            ('date_stop', '>=', curr_date),
+            ('date_start', '=', self.get_date_for_month(1, year, day=1)),
+            ('date_stop', '=', self.get_date_for_month(12, year, day=31)),
         ]
         fy_ids = self.proxy.fy.search(domain)
         if not fy_ids:
-            """
-            id = self.proxy.per_cr.create({'fiscalyear': 'current'})
-            self.proxy.per_cr.account_period_create_periods([id])
-            fy_ids = self.proxy.fy.search(domain)
-            if not fy_ids:
-                raise FinanceFlowException("Current FY creation failed")
-            """
-            fy_id = self.current_fy_create_with_periods()
-            self.proxy.log('Current FY created', 'yellow')
+            fy_id = self._fy_create_with_periods(year)
+            self.proxy.log("FY %d created" % (year, ), 'yellow')
         else:
             fy_id = fy_ids[0]
 
-        # check periods (by period id)
+        # open periods (sorted by date)
         domain = [
             ('fiscalyear_id', '=', fy_id),
             ('special', '!=', True),  # skip 13-15 periods
             ('state', '=', 'created'),  # draft
         ]
-        period_ids = self.proxy.per.search(domain, 0, None, 'period_id')
+        period_ids = self.proxy.per.search(domain, 0, None, 'date_start')
         if period_ids:
-            # periods to open (by chronological order)
+            # periods to open
             self.proxy.per.action_open_period(period_ids)
             ids_opened = ",".join(map(lambda x: str(x), period_ids))
             self.proxy.log("Periods opened: %s" % (ids_opened, ), 'yellow')
         
-    def open_fy_registers(self, start_year, year_count, ccy_ids):
+    def open_registers(self, start_year, year_count, ccy_ids):
         """
         create/open (cash, bank, cheque) for each period of FY
         :param ccy_code: currency
@@ -886,8 +884,9 @@ class FinanceSetup(FinanceFlowBase):
                         reg_ids = self.proxy.reg.search(
                             [('period_id', '=', period_id)])
                         if reg_ids:
-                            # post change date
-                            self.proxy.reg.write(reg_ids, {'date': curr_date})
+                            # post change date...
+                            for rid in reg_ids:
+                                self.proxy.reg.write(rid, {'date': curr_date})
                             # ...and open them
                             self.open_register(reg_ids)
                     i += 1
@@ -908,16 +907,22 @@ class FinanceSetup(FinanceFlowBase):
                 'date_start': '2014-01-01',
             })
         
+        # check FYs
+        # - create fy with its periods if missing
+        # - open draft periods
         start_year = self.get_cfg_int('fy_start')
         year_count = self.get_cfg_int('fy_count')
-        
-        # open next FY if needed  (in db we have already 'fy_start')
-        self.proxy.log("finance setup - check current FY")
-        self.open_current_fy()
+        year_index = 0
+        while year_index < year_count:
+            year = start_year + year_index
+            self.proxy.log("finance setup - check FY %d" % (year, ))
+            self.check_fy(year)
+            
+            year_index += 1
         
         # open registers for active currencies (from 2014)
         self.proxy.log("finance setup - check registers")
-        self.open_fy_registers(start_year, year_count, self.proxy.ccy.search(
+        self.open_registers(start_year, year_count, self.proxy.ccy.search(
             []))
         
 class FinanceMassGen(FinanceFlowBase):
