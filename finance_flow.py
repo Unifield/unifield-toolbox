@@ -551,7 +551,7 @@ class FinanceFlowBase(object):
             # check account code
             code_ids = self.proxy.acc.search(
                 ['|', ('name', 'ilike', code), ('code', 'ilike', code)])
-            if len(code_ids) != 1:
+            if not code_ids or len(code_ids) != 1:
                 tpl = "error searching for this account code: %s. need %s codes"
                 raise FinanceFlowException(tpl % (code,
                     len(code_ids) > 1 and 'less' or 'more', ))
@@ -954,13 +954,13 @@ class FinanceFlow(FinanceFlowBase):
             fy_count = 1
             reg_expenses_max = 1
             reg_not_expenses_max = 1
-            reg_pending_mayement_max = 1
+            reg_pending_payement_max = 1
             reg_operational_advance_max = 1
         else:
             fy_count = self.get_cfg_int('fy_count')
             reg_expenses_max = self.get_cfg_int('reg_expenses_max')
             reg_not_expenses_max = self.get_cfg_int('reg_not_expenses_max')
-            reg_pending_mayement_max = self.get_cfg_int('reg_pending_mayement_max')
+            reg_pending_payement_max = self.get_cfg_int('reg_pending_payement_max')
             reg_operational_advance_max = self.get_cfg_int('reg_operational_advance_max')
         
         i = 0
@@ -971,20 +971,6 @@ class FinanceFlow(FinanceFlowBase):
                 period_br = self.proxy.per.browse(period_id)
                 
                 self.proxy.log("finance flow of %s" % (dt, ))
-                
-                # period invoices ids what can be importer in pending payement
-                domain = [
-                    ('state', '=', 'draft'),
-                    ('date_invoice', '>=', 
-                        self.proxy.date2orm(period_br.date_start)),
-                    ('date_invoice', '<=',
-                        self.proxy.date2orm(period_br.date_stop)),
-                ]
-                invoices_ids = self.proxy.inv.search(domain)
-                # invoices max count (3 reg types, 2 ccys)
-                inv_max = reg_pending_mayement_max * 3 * 2
-                if len(invoices_ids) > inv_max:
-                    invoices_ids = invoices_ids[:inv_max]
                 
                 # period's register
                 reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
@@ -998,15 +984,21 @@ class FinanceFlow(FinanceFlowBase):
                         self._create_random_not_expense_register_line(reg_br)
                     
                     # pending payement (invoice import)
-                    tmp_invoices_ids = list(invoices_ids)
-                    i = 0
-                    for inv_id in tmp_invoices_ids:
+                    domain = [  # get invoices ids of register period/ccy
+                        ('state', '=', 'draft'),
+                        ('currency_id', '=', reg_br.currency.id),
+                        ('date_invoice', '>=', 
+                            self.proxy.date2orm(period_br.date_start)),
+                        ('date_invoice', '<=',
+                            self.proxy.date2orm(period_br.date_stop)),
+                    ]
+                    invoice_ids = self.proxy.inv.search(domain)
+                    if invoice_ids and \
+                        len(invoice_ids) > reg_pending_payement_max:
+                        invoice_ids = invoice_ids[:reg_pending_payement_max]
+                    for inv_id in invoice_ids:
                         self.register_import_invoice(inv_id)
-                        invoices_ids.remove(inv_id)  # remove imported invoice
-                        if i >= reg_pending_mayement_max:
-                            break
-                        i += 1
-                    
+
                     # operational advance (only for CASH register)
                     if reg_br.journal_id.type == 'cash':
                         for e in xrange(0, reg_operational_advance_max):
@@ -1021,7 +1013,7 @@ class FinanceFlow(FinanceFlowBase):
         # random expense account
         account_ids = self.get_account_from_account_type('expense', 
             is_analytic_addicted=True)
-        if len(account_ids) > expense_account_count:
+        if account_ids and len(account_ids) > expense_account_count:
             account_ids = account_ids[:expense_account_count]
             
         # random date in register month
