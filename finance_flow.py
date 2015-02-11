@@ -12,7 +12,7 @@ TEST_MODES = (
     'fake',  # go down in flow, no entry generated
 )
 #TEST_MODE = False
-TEST_MODE = 'unit'
+TEST_MODE = 'period'
 
 MASK = {
     'register': "%s %s",
@@ -937,7 +937,7 @@ class FinanceMassGen(FinanceFlowBase):
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
-                if TEST_MODE == 'fake' else 1
+                if TEST_MODE != 'unit' else 1
         else:
             fy_count = self.get_cfg_int('fy_count')
         
@@ -977,7 +977,7 @@ class FinanceFlow(FinanceFlowBase):
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
-                if TEST_MODE == 'fake' else 1
+                if TEST_MODE != 'unit' else 1
             reg_expenses_max = 1
             reg_not_expenses_max = 1
             reg_pending_payement_max = 1
