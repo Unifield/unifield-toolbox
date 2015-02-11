@@ -8,7 +8,6 @@ from oerplib import OERP
 from finance_flow import FinanceSetup
 from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
-from finance_flow import finance_internal_test
 
 import logging
 import time
@@ -255,12 +254,12 @@ if __name__ == '__main__':
     proxy = TestProxy()
 
     FinanceSetup(proxy).run()
-    if command in ('finance_je', ):
+    if command and command in ('finance_je', ):
+        # specific mass generation for others volume/perf tests
         FinanceMassGen(proxy).run(command)
-    elif command == 'finance_test':
-        finance_internal_test(proxy)
-        
-    FinanceFlow(proxy).run()
+    else:
+        # regular flow
+        FinanceFlow(proxy).run()
 
     """supply_test = SupplyFlow(proxy)
     supply_test.run_complete_flow()"""

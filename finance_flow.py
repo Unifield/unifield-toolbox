@@ -7,11 +7,12 @@ from dateutil.relativedelta import relativedelta
 from chrono import TestChrono
 
 TEST_MODES = (
-    'unit',  # one entry in first period
-    'period',  # one entry per period in all fy(s)
+    'unit',  # one entry for each register/ccy in first period
+    'period',  # one entry for each register/ccy in all periods
+    'fake',  # go down in flow, no entry generated
 )
 #TEST_MODE = False
-TEST_MODE = 'unit'
+TEST_MODE = 'fake'
 
 MASK = {
     'register': "%s %s",
@@ -529,7 +530,8 @@ class FinanceFlowBase(object):
         :param code_or_id: account code to search or account_id
         :type code_or_id: str/int/long
         :param amount: > 0 amount IN, < 0 amount OUT
-        :param generate_distribution: (optional) if set to True generate a compatible AD and attach it to the register line
+        :param generate_distribution: (optional) if set to True generate a 
+            compatible AD and attach it to the register line
         :param datetime date: posting date
         :param datetime document_date: document date
         :param third_partner_id: partner id
@@ -878,8 +880,10 @@ class FinanceSetup(FinanceFlowBase):
                             'instance_id': instance_id,
                         }
                         wrc_id = self.proxy.reg_cr.create(vals, fake_context)
-                        self.proxy.reg_cr.button_confirm_period([wrc_id], fake_context)
-                        self.proxy.reg_cr.button_create_registers([wrc_id], fake_context)
+                        self.proxy.reg_cr.button_confirm_period([wrc_id],
+                            fake_context)
+                        self.proxy.reg_cr.button_create_registers([wrc_id],
+                            fake_context)
 
                         reg_ids = self.proxy.reg.search(
                             [('period_id', '=', period_id)])
@@ -894,8 +898,11 @@ class FinanceSetup(FinanceFlowBase):
             self.proxy.log('registers created', 'yellow')
                     
     def run(self):
+        self.proxy.log("finance setup")
+        
         # active all analytical child accounts since FY14 start
         # (bypass recursion check)
+        self.proxy.log("finance setup - analytical accounts: active date_start")
         aaa_ids = self.proxy.ana_acc.search([('parent_id', '!=', False)])
         for aaa_br in self.proxy.ana_acc.browse(aaa_ids):
             self.proxy.ana_acc.write(aaa_br.id, {
@@ -907,10 +914,13 @@ class FinanceSetup(FinanceFlowBase):
         year_count = self.get_cfg_int('fy_count')
         
         # open next FY if needed  (in db we have already 'fy_start')
+        self.proxy.log("finance setup - check current FY")
         self.open_current_fy()
         
         # open registers for active currencies (from 2014)
-        self.open_fy_registers(start_year, year_count, self.proxy.ccy.search([]))
+        self.proxy.log("finance setup - check registers")
+        self.open_fy_registers(start_year, year_count, self.proxy.ccy.search(
+            []))
         
 class FinanceMassGen(FinanceFlowBase):
     """
@@ -951,7 +961,8 @@ class FinanceFlow(FinanceFlowBase):
         
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
-            fy_count = 1
+            fy_count = self.get_cfg_int('fy_count') \
+                if TEST_MODE == 'fake' else 1
             reg_expenses_max = 1
             reg_not_expenses_max = 1
             reg_pending_payement_max = 1
@@ -960,17 +971,22 @@ class FinanceFlow(FinanceFlowBase):
             fy_count = self.get_cfg_int('fy_count')
             reg_expenses_max = self.get_cfg_int('reg_expenses_max')
             reg_not_expenses_max = self.get_cfg_int('reg_not_expenses_max')
-            reg_pending_payement_max = self.get_cfg_int('reg_pending_payement_max')
-            reg_operational_advance_max = self.get_cfg_int('reg_operational_advance_max')
+            reg_pending_payement_max = self.get_cfg_int(
+                'reg_pending_payement_max')
+            reg_operational_advance_max = self.get_cfg_int(
+                'reg_operational_advance_max')
         
-        i = 0
-        while i < fy_count:
+        year_index = 0
+        while year_index < fy_count:
             for m in xrange(1, 13):
-                dt = "%04d-%02d-01" % (fy_start + i, m, )
+                dt = "%04d-%02d-01" % (fy_start + year_index, m, )
                 period_id = self.get_period(dt)
                 period_br = self.proxy.per.browse(period_id)
                 
                 self.proxy.log("finance flow of %s" % (dt, ))
+                
+                if TEST_MODE == 'fake':
+                    continue
                 
                 # period's register
                 reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
@@ -1005,6 +1021,7 @@ class FinanceFlow(FinanceFlowBase):
                             self._create_operational_advance_line(reg_br)
                 if TEST_MODE and TEST_MODE == 'unit':
                     return
+            year_index += 1
                     
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
@@ -1117,12 +1134,13 @@ class FinanceFlow(FinanceFlowBase):
                     'analytic_distribution_id': ad_id,
                 }
                 self.proxy.reg_adv_return.write([wiz_ar_id], vals)
-                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id], fake_context)
+                self.proxy.reg_adv_return.compute_total_amount([wiz_ar_id],
+                    fake_context)
                 # note checked delta in action_confirm_cash_return
-                # wizard.initial_amount + wizard.additional_amount -  wizard.total_amount > 10**-3
+                # wizard.initial_amount + wizard.additional_amount
+                # - wizard.total_amount > 10**-3
                 # wizard.total_amount <=> total of wizard lines amount
-                self.proxy.reg_adv_return.action_confirm_cash_return([wiz_ar_id], fake_context)
+                self.proxy.reg_adv_return.action_confirm_cash_return(
+                    [wiz_ar_id], fake_context)
 
-        
-def finance_internal_test(proxy):
-    pass
+# EOF
