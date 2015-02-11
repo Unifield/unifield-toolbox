@@ -898,7 +898,7 @@ class FinanceSetup(FinanceFlowBase):
             self.proxy.log('registers created', 'yellow')
                     
     def run(self):
-        self.proxy.log("finance setup")
+        self.proxy.log("finance setup", 'yellow')
         
         # active all analytical child accounts since FY14 start
         # (bypass recursion check)
@@ -936,18 +936,33 @@ class FinanceMassGen(FinanceFlowBase):
             self.direct_entries()
         
     def direct_entries(self):
+        fy_start = self.get_cfg_int('fy_start')
+        if TEST_MODE:
+            fy_count = self.get_cfg_int('fy_count') \
+                if TEST_MODE == 'fake' else 1
+        else:
+            fy_count = self.get_cfg_int('fy_count')
+        
         je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
         ji_min_count = self.get_cfg_int('ji_min_count')
         ji_max_count = self.get_cfg_int('ji_max_count')
         
-        months = [1] if TEST_MODE else [ m for m in xrange(1, 13) ]
-        for m in months:
-            index = 0
-            while index < je_per_month:
-                items_count = 2 if TEST_MODE else randrange(
-                    ji_min_count, ji_max_count)
-                self.create_journal_entry(m, items_count, True)
-                index += 1
+        year_index = 0
+        while year_index < fy_count:
+            for m in xrange(1, 13):
+                dt = "%04d-%02d-01" % (fy_start + year_index, m, )
+                self.proxy.log("%d JE for %s" % (je_per_month, dt, ))
+                if TEST_MODE and TEST_MODE == 'fake':
+                    continue
+                
+                for je_index in xrange(0, je_per_month):
+                    # random count of ji for each je of the period
+                    ji_count = 2 if TEST_MODE else randrange(ji_min_count,
+                        ji_max_count)
+                    self.create_journal_entry(m, items_count, True)
+                    if TEST_MODE and TEST_MODE == 'unit':
+                        return
+            year_index += 1
             
 
 class FinanceFlow(FinanceFlowBase):

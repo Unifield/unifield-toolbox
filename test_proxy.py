@@ -248,8 +248,14 @@ class TestProxy(object):
 
 
 if __name__ == '__main__':
+    COMMANDS = ('finance_je', )
+    
     args = sys.argv[1:]  # skip this script
     command = args and args[0] or False
+    if command and command not in COMMANDS:
+        print color_str("invalid command %s" % (command, ), 'red')
+        print "available commands: %s" % (', '.join(COMMANDS), )
+        exit()
     
     proxy = TestProxy()
 
