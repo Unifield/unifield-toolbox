@@ -13,8 +13,7 @@ TEST_MODES = (
     'period',  # one entry for each register/ccy in all periods
     'fake',  # go down in flow, no entry generated
 )
-#TEST_MODE = False
-TEST_MODE = 'unit'
+TEST_MODE = False
 
 MASK = {
     'register': "%s %s",
