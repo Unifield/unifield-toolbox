@@ -14,7 +14,7 @@ TEST_MODES = (
     'fake',  # go down in flow, no entry generated
 )
 #TEST_MODE = False
-TEST_MODE = 'period'
+TEST_MODE = 'unit'
 
 MASK = {
     'register': "%s %s",
@@ -95,6 +95,8 @@ class FinanceFlowBase(object):
         :type year: int
         :type month: int
         """
+        # '-' is used to delimit entry_type/year/month: replace it by '_'
+        entry_type = entry_type.replace('-', '_')  
         name = "%s-%04d-%02d" % (entry_type, year, month, )
         self._chrono_last = TestChrono(name)
         self._chrono_last.start()
@@ -130,6 +132,10 @@ class FinanceFlowBase(object):
         """
         res = []
         total = {}
+        total_all = {
+            'count': 0,
+            'elapsed': 0,
+        }
         
         def compute_period(et, month, year, name):
             average = self._chrono_data[name]['elapsed'] / \
@@ -141,6 +147,7 @@ class FinanceFlowBase(object):
                     self._chrono_data[name]['count'],
             ])
             
+            # total / entry type
             total.setdefault(et, {
                 'count': 0,
                 'elapsed': 0,
@@ -149,6 +156,13 @@ class FinanceFlowBase(object):
             total[et].update({
                 'count': total[et]['count'] + self._chrono_data[name]['count'],
                 'elapsed': total[et]['elapsed'] + \
+                    self._chrono_data[name]['elapsed'],
+            })
+            
+            # total / all (no average)
+            total_all.update({
+                'count': total_all['count'] + self._chrono_data[name]['count'],
+                'elapsed': total_all['elapsed'] + \
                     self._chrono_data[name]['elapsed'],
             })
             
@@ -179,6 +193,11 @@ class FinanceFlowBase(object):
                         total[et]['elapsed'],
                         total[et]['average'],
                     ])
+                csv_writer.writerow([
+                    'TOTAL',
+                    total_all['count'],
+                    total_all['elapsed'],
+                ])
             csv_file.close()
         
         # compute results for wanted entry types
@@ -1120,7 +1139,8 @@ class FinanceFlow(FinanceFlowBase):
         year_index = 0
         while year_index < fy_count:
             for m in xrange(1, 13):
-                dt = "%04d-%02d-01" % (fy_start + year_index, m, )
+                year = fy_start + year_index
+                dt = "%04d-%02d-01" % (year, m, )
                 period_id = self.get_period(dt)
                 period_br = self.proxy.per.browse(period_id)
                 
@@ -1134,11 +1154,15 @@ class FinanceFlow(FinanceFlowBase):
                 for reg_br in self.proxy.reg.browse(reg_ids):
                     # expense line with AD
                     for e in xrange(0, reg_expenses_max):
+                        self.chrono_start('regline_expense', year, m)
                         self._create_random_expense_register_line(reg_br)
+                        self.chrono_stop()
                     
                     # not expense line not AD
                     for e in xrange(0, reg_not_expenses_max):
+                        self.chrono_start('regline_not_expense', year, m)
                         self._create_random_not_expense_register_line(reg_br)
+                        self.chrono_stop()
                     
                     # pending payement (invoice import)
                     domain = [  # get invoices ids of register period/ccy
@@ -1154,17 +1178,30 @@ class FinanceFlow(FinanceFlowBase):
                         len(invoice_ids) > reg_pending_payement_max:
                         invoice_ids = invoice_ids[:reg_pending_payement_max]
                     for inv_id in invoice_ids:
+                        self.chrono_start('regline_pending_payement', year, m)
                         self.register_import_invoice(inv_id)
+                        self.chrono_stop()
 
                     # operational advance (only for CASH register)
                     if reg_br.journal_id.type == 'cash':
                         for e in xrange(0, reg_operational_advance_max):
+                            self.chrono_start('regline_op_advance', year, m)
                             self._create_operational_advance_line(reg_br)
+                            self.chrono_stop()
                 if TEST_MODE and TEST_MODE == 'unit':
-                    return
+                    break  # 1st period only
+            if TEST_MODE and TEST_MODE == 'unit':
+                break  # 1st FY only
             year_index += 1
-            
-        self.chrono_report('finance_flow', ())
+           
+        # report
+        report_entry_types = (
+            'regline_expense',
+            'regline_not_expense',
+            'regline_pending_payement',
+            'regline_op_advance',
+        )
+        self.chrono_report('finance_flow', report_entry_types)
                     
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
