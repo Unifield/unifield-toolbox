@@ -276,8 +276,8 @@ if __name__ == '__main__':
         FinanceMassGen(proxy).run(command)
         exit()  # finance mass generation only
 
-    """supply_test = SupplyFlow(proxy)
-    supply_test.run_complete_flow()"""
+    supply_test = SupplyFlow(proxy)
+    supply_test.run_complete_flow()
     
     FinanceFlow(proxy).run()
 
