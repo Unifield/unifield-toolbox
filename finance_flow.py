@@ -3,6 +3,8 @@ from random import randrange, choice, randint
 from time import strftime
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
+import os
+import csv
 
 from chrono import TestChrono
 
@@ -26,13 +28,14 @@ MASK = {
 
 class FinanceFlowException(Exception):
     pass
-
-
+    
+    
 class FinanceFlowBase(object):
     def __init__(self, proxy):
         self.proxy = proxy
         self.cache_clear()
         self._counters = {}
+        self._chrono_data = {}
         
     def get_cfg(self, key, default=None):
         return self.proxy.config.get('finance', key, default)
@@ -84,6 +87,122 @@ class FinanceFlowBase(object):
         get a random amount
         """
         return randint(min, max)
+        
+    def chrono_start(self, entry_type, year, month):
+        """
+        start a chrono for a given 'entry type' for the given period
+        :param entry_type: name for the type of entry measured
+        :type year: int
+        :type month: int
+        """
+        name = "%s-%04d-%02d" % (entry_type, year, month, )
+        self._chrono_last = TestChrono(name)
+        self._chrono_last.start()
+    
+    def chrono_stop(self):
+        """
+        measure last started chrono
+        """
+        if self._chrono_last:
+            chrono = self._chrono_last
+            chrono.stop()
+            
+            self._chrono_data.setdefault(chrono.name, {
+                'count': 0,
+                'elapsed': 0.,
+            })
+            self._chrono_data[chrono.name].update({
+                'count':
+                    self._chrono_data[chrono.name]['count'] + 1,
+                'elapsed':
+                    self._chrono_data[chrono.name]['elapsed'] + \
+                        chrono.process_time,
+            })
+            
+            self._chrono_last = False
+            
+    def chrono_report(self, csv_name, entry_types):
+        """
+        proceed csv report of elapsed time measures
+        :param csv_name: csv name without csv suffix
+        :param entry_types: chrono entry types to report
+        :type entry_types: list
+        """
+        res = []
+        total = {}
+        
+        def compute_period(et, month, year, name):
+            average = self._chrono_data[name]['elapsed'] / \
+                self._chrono_data[name]['count']
+            res.append([
+                "%04d-%02d" % (year, month, ),
+                self._chrono_data[name]['count'],
+                self._chrono_data[name]['elapsed'] / \
+                    self._chrono_data[name]['count'],
+            ])
+            
+            total.setdefault(et, {
+                'count': 0,
+                'elapsed': 0,
+                'average': 0,
+            })
+            total[et].update({
+                'count': total[et]['count'] + self._chrono_data[name]['count'],
+                'elapsed': total[et]['elapsed'] + \
+                    self._chrono_data[name]['elapsed'],
+            })
+            
+        def compute_total_average():
+            for et in total:
+                total[et]['average'] = total[et]['elapsed'] / \
+                    total[et]['count']
+                    
+        def render():
+            report_path = '%s/%s.csv' % (
+                os.path.dirname(os.path.abspath(__file__)), csv_name, )
+            with open(report_path, 'wb') as csv_file:
+                csv_writer = csv.writer(csv_file, delimiter=',',
+                    quoting=csv.QUOTE_MINIMAL)
+                    
+                # results
+                for r in res:
+                    csv_writer.writerow(r)
+                
+                # totals
+                for x in range(0, 3):
+                    csv_writer.writerow([])
+                csv_writer.writerow(['TOTALS', 'count', 'elapsed', 'average', ])
+                for et in sorted(total.keys()):
+                    csv_writer.writerow([
+                        et,
+                        total[et]['count'],
+                        total[et]['elapsed'],
+                        total[et]['average'],
+                    ])
+            csv_file.close()
+        
+        # compute results for wanted entry types
+        reported_et = []
+        for et in entry_types:
+            for name in sorted(self._chrono_data.keys()):
+                name_prefix = et + '-'
+                if name.startswith(et):
+                    parts = name.split('-')
+                    if parts and len(parts) == 3:
+                        et, year, month = parts
+                        if et in entry_types:
+                            if reported_et and not et in reported_et:
+                                # lines separator between entry types
+                                for x in range(0, 3):
+                                    res.append([])
+                            if not et in reported_et:
+                                res.append([et, 'count', 'average', ])
+                                reported_et.append(et)
+                            year = int(year)
+                            month = int(month)
+                            compute_period(et, month, year, name)
+        compute_total_average()
+        render()
 
     def get_partner(self, partner_type):
         """
@@ -937,6 +1056,7 @@ class FinanceMassGen(FinanceFlowBase):
             color_code='yellow')
         if command == 'fin_je':
             self.direct_entries()
+            self.chrono_report('finance_direct_entries', ('ji', ))
         
     def direct_entries(self):
         fy_start = self.get_cfg_int('fy_start')
@@ -953,8 +1073,8 @@ class FinanceMassGen(FinanceFlowBase):
         year_index = 0
         while year_index < fy_count:
             for m in xrange(1, 13):
-                year_in_progress = fy_start + year_index
-                dt = "%04d-%02d-01" % (year_in_progress, m, )
+                year = fy_start + year_index
+                dt = "%04d-%02d-01" % (year, m, )
                 self.proxy.log("%d JE for %s" % (je_per_month, dt, ))
                 if TEST_MODE and TEST_MODE == 'fake':
                     continue
@@ -963,8 +1083,10 @@ class FinanceMassGen(FinanceFlowBase):
                     # random count of ji for each je of the period
                     ji_count = 2 if TEST_MODE else randrange(ji_min_count,
                         ji_max_count)
-                    self.create_journal_entry(year_in_progress, m, ji_count,
+                    self.chrono_start('ji', year, m)
+                    self.create_journal_entry(year, m, ji_count,
                         True)
+                    self.chrono_stop()
                     if TEST_MODE and TEST_MODE == 'unit':
                         return
             year_index += 1
@@ -978,7 +1100,6 @@ class FinanceFlow(FinanceFlowBase):
         super(FinanceFlow, self).__init__(proxy)
         
     def run(self):
-        
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
@@ -1042,6 +1163,8 @@ class FinanceFlow(FinanceFlowBase):
                 if TEST_MODE and TEST_MODE == 'unit':
                     return
             year_index += 1
+            
+        self.chrono_report('finance_flow', ())
                     
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
