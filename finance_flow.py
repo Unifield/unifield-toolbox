@@ -8,20 +8,21 @@ import csv
 
 from chrono import TestChrono
 
+
 TEST_MODES = (
     'unit',  # one entry for each register/ccy in first period
     'period',  # one entry for each register/ccy in all periods
-    'fake',  # go down in flow, no entry generated
+    'fake',  # process virtually flow iterations, no entry generated
 )
 TEST_MODE = False
 
 MASK = {
     'register': "%s %s",
     'register_line': "reg l %s",
-    'je': "JE %d",
-    'ji': "JI %d",
-    'ad': "AD",
-    'cheque_number': "cheque %d",
+    'je': "JE %s",
+    'ji': "JI %s",
+    'ad': "AD %s",
+    'cheque_number': "cheque %s",
 }
 
 
@@ -44,18 +45,6 @@ class FinanceFlowBase(object):
         if not res and default is not None:
             res = default
         return res
-        
-    def get_counter(self, name):
-        """
-        return last counter value from name
-        :param name: param name
-        :type name: str
-        :return counter
-        :rtype int/long
-        """
-        last = self._counters.get(name, 1)
-        self._counters[name] = last + 1
-        return last
         
     def cache_clear(self):
         """
@@ -537,7 +526,7 @@ class FinanceFlowBase(object):
         destination_id = choice(destination_ids)
             
         # create ad
-        name = MASK['ad']
+        name = MASK['ad'] % (self.proxy.get_uuid(), )
         distrib_id = self.proxy.ad.create({'name': name})
         data = [
             ('cost.center.distribution.line', cost_center_id, False),
@@ -574,7 +563,7 @@ class FinanceFlowBase(object):
         partner_id = self.get_partner('external')
 
         # create JE
-        name = MASK['je'] % (self.get_counter('je'), )
+        name = MASK['je'] % (self.proxy.get_uuid(), )
         entry_name = name
         vals = {
             'journal_id': journal_id,
@@ -595,7 +584,7 @@ class FinanceFlowBase(object):
         items_count = items_count / 2  # counter part included
         index = 0
         while index < items_count:
-            name = MASK['ji'] % (self.get_counter('ji'), )
+            name = MASK['ji'] % (self.proxy.get_uuid(), )
             random_amount = self.get_random_amount()
             
             if with_ad:
@@ -737,7 +726,7 @@ class FinanceFlowBase(object):
             vals['transfer_journal_id'] = third_journal_id
         if register_br.journal_id.type == 'cheque':
             vals['cheque_number'] = MASK['cheque_number'] % (
-                self.get_counter('cheque_number'), )
+                self.proxy.get_uuid(), )
 
         # created and AD link
         regl_id = self.proxy.regl.create(vals)
@@ -842,7 +831,7 @@ class FinanceFlowBase(object):
                     }
                     if rtype == 'cheque':
                         vals['cheque_number'] = MASK['cheque_number'] % (
-                            self.get_counter('cheque_number'), )
+                            self.proxy.get_uuid(), )
                     self.proxy.inv_imp_line.write([line.id], vals, context)
 
             # confirm
@@ -1074,7 +1063,6 @@ class FinanceMassGen(FinanceFlowBase):
             color_code='yellow')
         if command == 'fin_je':
             self.direct_entries()
-            self.chrono_report('finance_direct_entries', ('ji', ))
         
     def direct_entries(self):
         fy_start = self.get_cfg_int('fy_start')
@@ -1107,6 +1095,9 @@ class FinanceMassGen(FinanceFlowBase):
                     self.chrono_stop()
                     if TEST_MODE and TEST_MODE == 'unit':
                         return
+                        
+                # update report at each period process (in case of crash)
+                self.chrono_report('finance_direct_entries', ('ji', ))
             year_index += 1
             
 
@@ -1118,6 +1109,13 @@ class FinanceFlow(FinanceFlowBase):
         super(FinanceFlow, self).__init__(proxy)
         
     def run(self):
+        report_entry_types = (
+            'regline_expense',
+            'regline_not_expense',
+            'regline_pending_payement',
+            'regline_op_advance',
+        )
+        
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
@@ -1187,20 +1185,15 @@ class FinanceFlow(FinanceFlowBase):
                             self.chrono_start('regline_op_advance', year, m)
                             self._create_operational_advance_line(reg_br)
                             self.chrono_stop()
+                            
+                # update report at each period process (in case of crash)
+                self.chrono_report('finance_flow', report_entry_types)
+                
                 if TEST_MODE and TEST_MODE == 'unit':
                     break  # 1st period only
             if TEST_MODE and TEST_MODE == 'unit':
                 break  # 1st FY only
             year_index += 1
-           
-        # report
-        report_entry_types = (
-            'regline_expense',
-            'regline_not_expense',
-            'regline_pending_payement',
-            'regline_op_advance',
-        )
-        self.chrono_report('finance_flow', report_entry_types)
                     
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(

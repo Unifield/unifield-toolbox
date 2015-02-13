@@ -13,6 +13,7 @@ import logging
 import time
 import os
 import sys
+from uuid import uuid4
 
 MODELS = {
     'ir_data': 'ir.model.data',
@@ -146,6 +147,14 @@ class TestProxy(object):
             ('batch_management', '=', False),
             ('perishable', '=', False),
         ])
+           
+    def get_uuid(self):
+        """
+        get UUID (universal unique id)
+        :return uuid
+        :rtype: str
+        """
+        return str(uuid4())
         
     def get(self, model):
         """
