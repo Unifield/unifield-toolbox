@@ -14,15 +14,15 @@ TEST_MODES = (
     'period',  # one entry for each register/ccy in all periods
     'fake',  # process virtually flow iterations, no entry generated
 )
-TEST_MODE = 'period'
+TEST_MODE = False
 
 MASK = {
     'register': "%s %s",
     'register_line': "reg l %s",
-    'je': "JE %d",
-    'ji': "JI %d",
-    'ad': "AD",
-    'cheque_number': "cheque %d",
+    'je': "JE %s",
+    'ji': "JI %s",
+    'ad': "AD %s",
+    'cheque_number': "cheque %s",
 }
 
 
@@ -45,18 +45,6 @@ class FinanceFlowBase(object):
         if not res and default is not None:
             res = default
         return res
-        
-    def get_counter(self, name):
-        """
-        return last counter value from name
-        :param name: param name
-        :type name: str
-        :return counter
-        :rtype int/long
-        """
-        last = self._counters.get(name, 1)
-        self._counters[name] = last + 1
-        return last
         
     def cache_clear(self):
         """
@@ -538,7 +526,7 @@ class FinanceFlowBase(object):
         destination_id = choice(destination_ids)
             
         # create ad
-        name = MASK['ad']
+        name = MASK['ad'] % (self.proxy.get_uuid(), )
         distrib_id = self.proxy.ad.create({'name': name})
         data = [
             ('cost.center.distribution.line', cost_center_id, False),
@@ -575,7 +563,7 @@ class FinanceFlowBase(object):
         partner_id = self.get_partner('external')
 
         # create JE
-        name = MASK['je'] % (self.get_counter('je'), )
+        name = MASK['je'] % (self.proxy.get_uuid(), )
         entry_name = name
         vals = {
             'journal_id': journal_id,
@@ -596,7 +584,7 @@ class FinanceFlowBase(object):
         items_count = items_count / 2  # counter part included
         index = 0
         while index < items_count:
-            name = MASK['ji'] % (self.get_counter('ji'), )
+            name = MASK['ji'] % (self.proxy.get_uuid(), )
             random_amount = self.get_random_amount()
             
             if with_ad:
@@ -738,7 +726,7 @@ class FinanceFlowBase(object):
             vals['transfer_journal_id'] = third_journal_id
         if register_br.journal_id.type == 'cheque':
             vals['cheque_number'] = MASK['cheque_number'] % (
-                self.get_counter('cheque_number'), )
+                self.proxy.get_uuid(), )
 
         # created and AD link
         regl_id = self.proxy.regl.create(vals)
@@ -843,7 +831,7 @@ class FinanceFlowBase(object):
                     }
                     if rtype == 'cheque':
                         vals['cheque_number'] = MASK['cheque_number'] % (
-                            self.get_counter('cheque_number'), )
+                            self.proxy.get_uuid(), )
                     self.proxy.inv_imp_line.write([line.id], vals, context)
 
             # confirm
