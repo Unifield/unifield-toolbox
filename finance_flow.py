@@ -8,12 +8,13 @@ import csv
 
 from chrono import TestChrono
 
+
 TEST_MODES = (
     'unit',  # one entry for each register/ccy in first period
     'period',  # one entry for each register/ccy in all periods
-    'fake',  # go down in flow, no entry generated
+    'fake',  # process virtually flow iterations, no entry generated
 )
-TEST_MODE = False
+TEST_MODE = 'period'
 
 MASK = {
     'register': "%s %s",
@@ -1074,7 +1075,6 @@ class FinanceMassGen(FinanceFlowBase):
             color_code='yellow')
         if command == 'fin_je':
             self.direct_entries()
-            self.chrono_report('finance_direct_entries', ('ji', ))
         
     def direct_entries(self):
         fy_start = self.get_cfg_int('fy_start')
@@ -1107,6 +1107,9 @@ class FinanceMassGen(FinanceFlowBase):
                     self.chrono_stop()
                     if TEST_MODE and TEST_MODE == 'unit':
                         return
+                        
+                # update report at each period process (in case of crash)
+                self.chrono_report('finance_direct_entries', ('ji', ))
             year_index += 1
             
 
@@ -1118,6 +1121,13 @@ class FinanceFlow(FinanceFlowBase):
         super(FinanceFlow, self).__init__(proxy)
         
     def run(self):
+        report_entry_types = (
+            'regline_expense',
+            'regline_not_expense',
+            'regline_pending_payement',
+            'regline_op_advance',
+        )
+        
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
@@ -1187,20 +1197,15 @@ class FinanceFlow(FinanceFlowBase):
                             self.chrono_start('regline_op_advance', year, m)
                             self._create_operational_advance_line(reg_br)
                             self.chrono_stop()
+                            
+                # update report at each period process (in case of crash)
+                self.chrono_report('finance_flow', report_entry_types)
+                
                 if TEST_MODE and TEST_MODE == 'unit':
                     break  # 1st period only
             if TEST_MODE and TEST_MODE == 'unit':
                 break  # 1st FY only
             year_index += 1
-           
-        # report
-        report_entry_types = (
-            'regline_expense',
-            'regline_not_expense',
-            'regline_pending_payement',
-            'regline_op_advance',
-        )
-        self.chrono_report('finance_flow', report_entry_types)
                     
     def _create_random_expense_register_line(self, reg_br):
         expense_account_count = self.get_cfg_int(
