@@ -30,7 +30,7 @@ class TestChrono(object):
         self.start_time = time.time()
 
     def stop(self):
-        self.process_time = time.time() - self.start_time
+        self.process_time += time.time() - self.start_time
         self.date_stop = time.strftime('%Y-%m%d %H:%M:%S')
 
     def measure(self, f, *args, **kwargs):
