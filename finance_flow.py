@@ -14,7 +14,7 @@ TEST_MODES = (
     'period',  # one entry for each register/ccy in all periods
     'fake',  # process virtually flow iterations, no entry generated
 )
-TEST_MODE = False
+TEST_MODE = 'unit'
 
 MASK = {
     'register': "%s %s",
@@ -847,10 +847,10 @@ class FinanceFlowBase(object):
                 ('statement_id', '=', reg_id),
                 ('date', '=', posting_date),
                 ('ref', '=', ai_br.origin),
-                ('amount', '=', ai_br.amount_total * -1),
+                ('amount', '=', ai_br.amount_total),
             ]
             reg_line_ids = self.proxy.regl.search(domain)
-            if reg_line_ids:
+            if reg_line_ids:       
                 self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
 
         return True
@@ -1163,7 +1163,7 @@ class FinanceFlow(FinanceFlowBase):
                     
                     # pending payement (invoice import)
                     domain = [  # get invoices ids of register period/ccy
-                        ('state', '=', 'draft'),
+                        ('state', 'in', ('draft', 'open')),
                         ('currency_id', '=', reg_br.currency.id),
                         ('date_invoice', '>=', 
                             self.proxy.date2orm(period_br.date_start)),
