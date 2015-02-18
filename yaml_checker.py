@@ -6,7 +6,7 @@ import yaml
 import os
 import time
 
-from test_proxy import TestProxy
+#from test_proxy import TestProxy
 from supply_flow import POFromScratchTestCase
 from supply_flow import POFromFOTestCase
 from supply_flow import POFromInternalIRTestCase
@@ -20,6 +20,7 @@ from supply_flow import FOFromStockOnOrderTestCase
 from supply_flow import InitialInventoryTestCase
 from supply_flow import PhysicalInventoryTestCase
 from supply_flow import ConsumptionReportTestCase
+from supply_flow import SupplyTestChrono
 
 
 class YamlSupplyTestCase(object):
@@ -223,12 +224,10 @@ class YamlSupplyTestCase(object):
             'use_cu': self.use_cu,
         }
 
-    def run(self, month=None):
+    def run(self, proxy, month=None):
         """
         Run the case
         """
-        proxy = TestProxy()
-
         tc = None
         if self.model == 'purchase.order':
             tc = POFromScratchTestCase(proxy, self)
@@ -266,20 +265,9 @@ class YamlSupplyTestCase(object):
         if tc is not None:
             tc.run(month)
 
-if __name__ == '__main__':
+def start_supply_cases(proxy):
     YamlSupplyTestCase.get_cases_from_file('supply_cases.yml')
     months = [
-#        '2013-02',
-#        '2013-03',
-#        '2013-04',
-#        '2013-05',
-#        '2013-06',
-#        '2013-07',
-#        '2013-08',
-#        '2013-09',
-#        '2013-10',
-#        '2013-11',
-#        '2013-12',
         '2014-01',
         '2014-02',
         '2014-03',
@@ -293,6 +281,17 @@ if __name__ == '__main__':
         '2014-11',
         '2014-12',
         '2015-01',
+        '2015-02',
+        '2015-03',
+        '2015-04',
+        '2015-05',
+        '2015-06',
+        '2015-07',
+        '2015-08',
+        '2015-09',
+    '2015-10',
+        '2015-11',
+        '2015-12',
     ]
     for month in months:
         print '###############################################################'
@@ -303,8 +302,64 @@ if __name__ == '__main__':
         for tc in YamlSupplyTestCase.cases:
             print '# Test case: %s' % tc.name
             print '# Start time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
-            tc.run(month)
+            tc.run(proxy, month)
             print '# End time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
             print '#'
             print '######################################'
             print '#'
+
+    report_path = '%s/supply_case.csv' % (
+        os.path.dirname(os.path.abspath(__file__)), csv_name, )
+    with open(report_path, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',',
+            quoting=csv.QUOTE_MINIMAL)
+
+        for cc in SupplyTestChrono.cases.iter_values():
+            csv_writer.writerow([
+                'Name',
+                'Date',
+                'FO Validation',
+                'FO Confirmation',
+                'PO Creation',
+                'PO Validation',
+                'PO Confirmation',
+                'IN Processing',
+                'OUT Convert',
+                'OUT Processing',
+                'PICK Processing',
+                'PACK Processing',
+                'SHIP Processing',
+            ])
+            for chrono in SupplyTestChrono.cases[cc]:
+                csv_writer.writerow([
+                    cc.name,
+                    chrono.date,
+                    chrono.valid_fo.process_time,
+                    chrono.confirm_fo.process_time,
+                    chrono.po_creation.process_time,
+                    chrono.valid_po.process_time,
+                    chrono.confirm_po.process_time,
+                    chrono.process_in.process_time,
+                    chrono.convert_out.process_time,
+                    chrono.process_out.process_time,
+                    chrono.process_pick.process_time,
+                    chrono.process_pack.process_time,
+                    chrono.process_ship.process_time,
+                ])
+
+            csv_writer.writerow([
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+                '###',
+            ])  
+
+        csv_file.close()

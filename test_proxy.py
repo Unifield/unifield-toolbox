@@ -9,6 +9,8 @@ from finance_flow import FinanceSetup
 from finance_flow import FinanceMassGen
 from finance_flow import FinanceFlow
 
+from yaml_checker import start_supply_cases
+
 import logging
 import time
 import os
@@ -285,9 +287,8 @@ if __name__ == '__main__':
         FinanceMassGen(proxy).run(command)
         exit()  # finance mass generation only
 
-    """supply_test = SupplyFlow(proxy)
-    supply_test.run_complete_flow()"""
+    start_supply_cases(proxy)
     
-    FinanceFlow(proxy).run()
+#    FinanceFlow(proxy).run()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4

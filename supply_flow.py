@@ -7,6 +7,36 @@ from chrono import TestChrono
 from random_list import RandomList
 
 
+class SupplyTestChrono(object):
+
+    cases = {}
+
+    def __init__(self, test_case):
+        self.tc = test_case
+        self.date = time.strftime('%Y-%m-%d %H:%M:%S')
+        # Chronos
+        self.valid_fo = TestChrono('fo_validation_time')
+        self.confirm_fo = TestChrono('fo_confirmation_time')
+        self.po_creation = TestChrono('po_creation_time')
+        self.valid_po = TestChrono('po_validation_time')
+        self.confirm_po = TestChrono('po_confirmation_time')
+        self.process_in = TestChrono('in_processing_time')
+        self.convert_out = TestChrono('out_convert_time')
+        self.process_out = TestChrono('out_processing_time')
+        self.process_pick = TestChrono('pick_processing_time')
+        self.process_pack = TestChrono('pack_processing_time')
+        self.process_ship = TestChrono('ship_processing_time')
+
+        self.tc_number = 0
+        if SupplyTestChrono.cases.get(self.tc.name, None):
+            self.tc_number = len(SupplyTestChrono.cases[self.tc.name])
+
+        SupplyTestChrono.cases.setdefault(self.tc.name, [])
+        SupplyTestChrono.cases[self.tc.name].append(self)
+
+        super(SupplyTestChrono, self).__init__()
+
+
 class SupplyTestCase(object):
 
     def __init__(self, proxy, test_case):
@@ -16,15 +46,10 @@ class SupplyTestCase(object):
         self.products = self.get_products()
         self.suppliers = self.get_suppliers()
         self.customers = self.get_customers()
+
         # Chronos
-        self.fo_validation_chrono = TestChrono('fo_validation_time')
-        self.fo_confirmation_chrono = TestChrono('fo_confirmation_time')
-        self.po_creation_chrono = TestChrono('po_creation_time')
-        self.po_validation_chrono = TestChrono('po_validation_time')
-        self.po_confirmation_chrono = TestChrono('po_confirmation_time')
-        self.in_processing_chrono = TestChrono('in_processing_time')
-        self.out_convert_chrono = TestChrono('out_convert_time')
-        self.out_processing_chrono = TestChrono('out_processing_time')
+        self.chronos = SupplyTestChrono(self.tc)
+
         super(SupplyTestCase, self).__init__()
 
     def get_products(self):
@@ -416,10 +441,12 @@ class SupplyTestCase(object):
             'analytic_distribution_id': distrib_id,
         })
 
+        self.chronos.valid_po.start()
         self.proxy.exec_workflow(
             'purchase.order',
             'purchase_confirm',
             po_id)
+        self.chronos.valid_po.stop()
 
         return True
 
@@ -435,7 +462,9 @@ class SupplyTestCase(object):
         if po_not_confirmed:
             raise "The state of the generated PO is not 'confirmed'"
 
+        self.chronos.confirm_po.start()
         self.proxy.po.confirm_button([po_id])
+        self.chronos.confirm_po.stop()
 
         return True
 
@@ -453,6 +482,7 @@ class SupplyTestCase(object):
         if not in_ids:
             return True
 
+        self.chronos.process_in.start()
         for incoming in in_ids:
             in_proc_id = self.proxy.pick.action_process([incoming])['res_id']
             in_move_ids = self.proxy.in_proc_move.search([
@@ -507,6 +537,7 @@ class SupplyTestCase(object):
             self.received_in(po_id, True, False)
         elif backordered:
             self.received_in(po_id, False, False)
+        self.chronos.process_in.stop()
 
         return True
 
@@ -740,6 +771,7 @@ class FOTestCase(SupplyTestCase):
         if not pt_ids or not pps[0]:
             return True
         for pt_id in pt_ids:
+            self.chronos.process_pick.start()
             if self.proxy.pick.read(pt_id, ['state'])['state'] == 'draft':
                 self.proxy.pick.action_assign([pt_id])
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
@@ -749,8 +781,10 @@ class FOTestCase(SupplyTestCase):
             vpt_id = self.proxy.pick.validate_picking([pt_id]).get('res_id')
             self.proxy.vpt_proc.copy_all([vpt_id])
             ppl_id = self.proxy.vpt_proc.do_validate_picking([vpt_id]).get('res_id')
+            self.chronos.process_pick.stop()
             ship_id = None
             if ppl_id and pps[1]:
+                self.chronos.process_pack.start()
                 ppl_proc_id = self.proxy.pick.ppl([ppl_id]).get('res_id')
                 self.proxy.ppl_proc.do_ppl_step1([ppl_proc_id])
                 ppl_family_ids = self.proxy.ppl_family.search([
@@ -758,10 +792,13 @@ class FOTestCase(SupplyTestCase):
                 ])
                 self.proxy.ppl_family.write(ppl_family_ids, {'weight': 10})
                 ship_id = self.proxy.ppl_proc.do_ppl_step2([ppl_proc_id]).get('res_id')
+                self.chronos.process_pack.stop()
             if ship_id and pps[2]:
+                self.chronos.process_ship.start()
                 ship_proc_id = self.proxy.ship.create_shipment([ship_id]).get('res_id')
                 ship2_id = self.proxy.ship_proc.do_create_shipment([ship_proc_id]).get('res_id')
                 self.proxy.ship.validate([ship2_id])
+                self.chronos.process_ship.stop()
 
         return True
 
@@ -842,11 +879,13 @@ class FOTestCase(SupplyTestCase):
         """
         Validate the given FO
         """
+        self.chronos.valid_fo.start()
         self.proxy.exec_workflow(
                 'sale.order',
                 'order_validated',
                 order_id,
             )
+        self.chronos.valid_fo.stop()
 
     def confirm_fo(self, fo_id, line_ids):
         """
@@ -857,6 +896,7 @@ class FOTestCase(SupplyTestCase):
         po_lines = []
 
         self.source_lines(line_ids)
+        self.chronos.confirm_fo.start()
         self.proxy.sol.confirmLine(line_ids)
 
         order_rd = self.proxy.so.read(fo_id, ['state', 'procurement_request'])
@@ -864,6 +904,7 @@ class FOTestCase(SupplyTestCase):
         while order_state != 'done':
             time.sleep(0.5)
             order_state = self.proxy.so.read(fo_id, ['state'])['state']
+        self.chronos.confirm_fo.stop()
 
         new_order_ids = self.proxy.so.search([
             ('original_so_id_sale_order', '=', fo_id)
@@ -884,6 +925,7 @@ class FOTestCase(SupplyTestCase):
                 self.proxy.sol.read(line_ids, ['procurement_id']) \
                 if x['procurement_id']]
 
+        self.chronos.po_creation.start()
         if not self.tc.with_tender:
             while not_sourced:
                 not_sourced = self.proxy.proc.search([
@@ -896,6 +938,7 @@ class FOTestCase(SupplyTestCase):
                     ('id', 'in', proc_ids),
                     ('state', '!=', 'tender'),
                 ])
+        self.chronos.po_creation.stop()
 
         for line in self.proxy.sol.browse(line_ids):
             if line.procurement_id:
@@ -929,10 +972,12 @@ class IRTestCase(SupplyTestCase):
             ('subtype', '=', 'standard'),
         ])
         if out_ids:
+            self.chronos.process_out.start()
             for out_id in out_ids:
                 out_proc_id = self.proxy.pick.action_process(out_id)['res_id']
                 self.proxy.out_proc.copy_all(out_proc_id)
                 self.proxy.out_proc.do_partial([out_proc_id])
+            self.chronos.process_out.stop()
 
 
     def get_ir_values(self, month=False):
@@ -985,11 +1030,13 @@ class IRTestCase(SupplyTestCase):
         """
         Validate the given IR
         """
+        self.chronos.valid_fo.start()
         self.proxy.exec_workflow(
             'sale.order',
             'procurement_validate',
             order_id,
         )
+        self.chronos.valid_fo.stop()
 
     def confirm_ir(self, ir_id, line_ids):
         """
@@ -999,6 +1046,7 @@ class IRTestCase(SupplyTestCase):
         po_lines = []
 
         self.source_lines(line_ids)
+        self.chronos.confirm_fo.start()
         self.proxy.sol.confirmLine(line_ids)
 
         order_rd = self.proxy.so.read(ir_id, ['state', 'procurement_request'])
@@ -1006,11 +1054,13 @@ class IRTestCase(SupplyTestCase):
         while order_state not in ('progress', 'done'):
             time.sleep(0.5)
             order_state = self.proxy.so.read(ir_id, ['state'])['state']
+        self.chronos.confirm_fo.stop()
 
         line_ids = self.proxy.sol.search([
             ('order_id', '=', ir_id),
         ])
 
+        self.chronos.po_creation.start()
         self.proxy.proc.run_scheduler()
         not_sourced = True
         proc_ids = [x['procurement_id'][0] for x in \
@@ -1028,6 +1078,7 @@ class IRTestCase(SupplyTestCase):
                     ('id', 'in', proc_ids),
                     ('state', '!=', 'tender'),
                 ])
+        self.chronos.po_creation.stop()
 
         for line in self.proxy.sol.browse(line_ids):
             if line.procurement_id:
