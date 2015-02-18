@@ -13,8 +13,9 @@ TEST_MODES = (
     'unit',  # one entry for each register/ccy in first period
     'period',  # one entry for each register/ccy in all periods
     'fake',  # process virtually flow iterations, no entry generated
+    'full_1st_period',  # full process of the first period (Jan of first FY)
 )
-TEST_MODE = 'unit'
+TEST_MODE = 'full_1st_period'
 
 MASK = {
     'register': "%s %s",
@@ -545,7 +546,8 @@ class FinanceFlowBase(object):
             self.proxy.get(analytic_obj).create(vals)
         return distrib_id
 
-    def create_journal_entry(self, year, month, items_count, with_ad):
+    def create_journal_entry(self, booking_ccy_id, year, month, items_count,
+        with_ad):
         """
         create a JE (with items_count JI in it (expense and counterpart lines)
         :param with_ad: True if AD should be generated
@@ -574,6 +576,7 @@ class FinanceFlowBase(object):
             'status': 'manu',
             'name': name,
             'manual_name': name,
+            'manual_currency_id': booking_ccy_id,
         }
         move_id = self.proxy.am.create(vals)
         if not move_id:
@@ -615,6 +618,7 @@ class FinanceFlowBase(object):
                 'document_date': entry_date,
                 'account_id': random_account_id,
                 'name': name,
+                'currency_id': booking_ccy_id,
                 'amount_currency': random_amount,
             }
             if with_ad:
@@ -1065,6 +1069,10 @@ class FinanceMassGen(FinanceFlowBase):
             self.direct_entries()
         
     def direct_entries(self):
+        ccy_ids = self.proxy.ccy.search([])
+        if not ccy_ids:
+            return
+        
         fy_start = self.get_cfg_int('fy_start')
         if TEST_MODE:
             fy_count = self.get_cfg_int('fy_count') \
@@ -1072,7 +1080,8 @@ class FinanceMassGen(FinanceFlowBase):
         else:
             fy_count = self.get_cfg_int('fy_count')
         
-        je_per_month = 1 if TEST_MODE else self.get_cfg_int('je_per_month')
+        je_per_month = 1 if TEST_MODE and TEST_MODE != 'full_1st_period' \
+            else self.get_cfg_int('je_per_month')
         ji_min_count = self.get_cfg_int('ji_min_count')
         ji_max_count = self.get_cfg_int('ji_max_count')
         
@@ -1085,19 +1094,23 @@ class FinanceMassGen(FinanceFlowBase):
                 if TEST_MODE and TEST_MODE == 'fake':
                     continue
                 
-                for je_index in xrange(0, je_per_month):
-                    # random count of ji for each je of the period
-                    ji_count = 2 if TEST_MODE else randrange(ji_min_count,
-                        ji_max_count)
-                    self.chrono_start('ji', year, m)
-                    self.create_journal_entry(year, m, ji_count,
-                        True)
-                    self.chrono_stop()
-                    if TEST_MODE and TEST_MODE == 'unit':
-                        return
+                for ccy_id in ccy_ids:
+                    for je_index in xrange(0, je_per_month):
+                        # random count of ji for each je of the period
+                        ji_count = 2 if TEST_MODE and \
+                            TEST_MODE != 'full_1st_period' \
+                            else randrange(ji_min_count, ji_max_count)
+                        self.chrono_start('ji', year, m)
+                        self.create_journal_entry(ccy_id, year, m, ji_count,
+                            True)
+                        self.chrono_stop()
+                        if TEST_MODE and TEST_MODE == 'unit':
+                            return
                         
                 # update report at each period process (in case of crash)
                 self.chrono_report('finance_direct_entries', ('ji', ))
+                if TEST_MODE == 'full_1st_period':
+                    return
             year_index += 1
             
 
@@ -1117,7 +1130,7 @@ class FinanceFlow(FinanceFlowBase):
         )
         
         fy_start = self.get_cfg_int('fy_start')
-        if TEST_MODE:
+        if TEST_MODE and TEST_MODE != 'full_1st_period':
             fy_count = self.get_cfg_int('fy_count') \
                 if TEST_MODE != 'unit' else 1
             reg_expenses_max = 1
@@ -1189,9 +1202,9 @@ class FinanceFlow(FinanceFlowBase):
                 # update report at each period process (in case of crash)
                 self.chrono_report('finance_flow', report_entry_types)
                 
-                if TEST_MODE and TEST_MODE == 'unit':
+                if TEST_MODE and TEST_MODE in ('unit', 'full_1st_period'):
                     break  # 1st period only
-            if TEST_MODE and TEST_MODE == 'unit':
+            if TEST_MODE and TEST_MODE in ('unit', 'full_1st_period'):
                 break  # 1st FY only
             year_index += 1
                     
