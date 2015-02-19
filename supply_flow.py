@@ -414,7 +414,14 @@ class SupplyTestCase(object):
                 prod_lot_id,
                 fol.product_uom.id,
                 '%s-01' % month,).get('value', {}))
-            values['product_qty'] += fol.product_uom_qty
+            inv_line_ids = self.proxy.inventory_line.search([
+                ('product_id', '=', fol.product_id.id),
+                ('location_id', '=', loc_id),
+            ])
+            line_qty = values['product_qty']
+            for inv_line in self.proxy.inventory_line.read(inv_line_ids, ['product_qty']):
+                line_qty += inv_line['product_qty']
+            values['product_qty'] = line_qty
             self.proxy.inventory_line.create(values)
 
         self.proxy.inventory.action_confirm([inv_id])
@@ -757,7 +764,7 @@ class FOTestCase(SupplyTestCase):
             ('sale_id', 'in', fo_ids),
             ('type', '=', 'out'),
             ('subtype', '=', 'picking'),
-            ('state', '=', 'assigned'),
+            ('state', 'in', ('draft', 'assigned')),
         ])
         return pt_ids
 
@@ -768,12 +775,18 @@ class FOTestCase(SupplyTestCase):
         """
         pt_ids = self.get_pt_ids(fo_ids)
 
-        if not pt_ids or not pps[0]:
+        if not pt_ids or not pps or not pps[0]:
             return True
         for pt_id in pt_ids:
             self.chronos.process_pick.start()
             if self.proxy.pick.read(pt_id, ['state'])['state'] == 'draft':
                 self.proxy.pick.action_assign([pt_id])
+                move_not_assigned = self.proxy.move.search([
+                    ('picking_id', '=', pt_id),
+                    ('state', '=', 'confirmed'),
+                ])
+                print move_not_assigned
+                self.proxy.move.force_assign(move_not_assigned)
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
                 self.proxy.pt_proc.copy_all([cpt_id])
                 pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
@@ -1481,12 +1494,13 @@ class FOFromStockTestCase(FOTestCase):
                 fo_line_ids.append(
                     self.proxy.sol.create(fo_line_values)
                 )
+            self.create_inventory(fo_line_ids, month)
 
             self.validate_fo(fo_id)
             split_fo_ids, po_ids = self.confirm_fo(fo_id, fo_line_ids)
 
             tc_pps = self.pps.pop()
-            self.make_pps(new_fo_ids, tc_pps)
+            self.make_pps(split_fo_ids, tc_pps)
             
 
 class InternalIRFromStockTestCase(IRTestCase):
@@ -1537,6 +1551,7 @@ class InternalIRFromStockTestCase(IRTestCase):
                 ir_line_ids.append(
                     self.proxy.sol.create(ir_line_values)
                 )
+            self.create_inventory(ir_line_ids, month)
 
             self.validate_ir(ir_id)
             ir_id, po_ids = self.confirm_ir(ir_id, ir_line_ids)
@@ -1594,6 +1609,7 @@ class ExternalIRFromStockTestCase(IRTestCase):
                 ir_line_ids.append(
                     self.proxy.sol.create(ir_line_values)
                 )
+            self.create_inventory(ir_line_ids, month)
 
             self.validate_ir(ir_id)
             ir_id, po_ids = self.confirm_ir(ir_id, ir_line_ids)
@@ -1639,6 +1655,7 @@ class FOFromStockOnOrderTestCase(FOTestCase):
                 fo_line_ids.append(
                     self.proxy.sol.create(fo_line_values)
                 )
+            self.create_inventory(fo_line_ids, month)
 
             self.validate_fo(fo_id)
             split_fo_ids, po_ids = self.confirm_fo(fo_id, fo_line_ids)
