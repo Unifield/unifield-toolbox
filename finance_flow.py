@@ -745,7 +745,12 @@ class FinanceFlowBase(object):
             self.proxy.regl.button_hard_posting([regl_id], {})
         return regl_id, distrib_id
 
-    def register_import_invoice(self, invoice_id):
+    def register_import_invoice(self, invoice_id, reg_br=False):
+        """
+        :param invoice_id: invoice id
+        :param reg_br: browsed register or False to pick one randomly
+            of adhoc invoice currency
+        """
         ai_br = self.proxy.inv.browse(invoice_id)
 
         # check if adhoc state: 'draft' or 'open'
@@ -768,26 +773,32 @@ class FinanceFlowBase(object):
             self.proxy.inv.write([invoice_id], vals)
             self.proxy.exec_workflow('account.invoice', 'invoice_open',
                 invoice_id)
+                
+        period_id = self.get_period(posting_date)
 
         # invoice's register (from invoice posting date)
-        # randomly pick and browse one of 3 cash/bank/cheque register
-        # of the adhoc currency
-        period_id = self.get_period(posting_date)
-        rtype = choice([ 'cash', 'bank', 'cheque', ])
-        domain = [
-            ('period_id', '=', period_id),
-            ('journal_id.currency', '=', ai_br.currency_id.id),
-            ('journal_id.type', '=', rtype),  # see register_accounting
-                                             # account_bank_statement.py
-                                             # get_statement() (server action)
-        ]
-        reg_ids = self.proxy.reg.search(domain)
-        if not reg_ids:
-            tpl = "no '%s' register found for period '%s' and currency '%s'"
-            raise FinanceFlowException(tpl % (rtype, posting_date,
-                ai_br.currency_id.code))
-        reg_id = reg_ids[0]
-        reg_br = self.proxy.reg.browse(reg_id)
+        if reg_br:
+            reg_id = reg_br.id
+            rtype = reg_br.journal_id.type
+        else:
+            # register not passed:
+            # randomly pick and browse one of 3 cash/bank/cheque register
+            # of the adhoc currency
+            rtype = choice([ 'cash', 'bank', 'cheque', ])
+            domain = [
+                ('period_id', '=', period_id),
+                ('journal_id.currency', '=', ai_br.currency_id.id),
+                ('journal_id.type', '=', rtype),  # see register_accounting
+                                                 # account_bank_statement.py
+                                                 # get_statement() (server action)
+            ]
+            reg_ids = self.proxy.reg.search(domain)
+            if not reg_ids:
+                tpl = "no '%s' register found for period '%s' and currency '%s'"
+                raise FinanceFlowException(tpl % (rtype, posting_date,
+                    ai_br.currency_id.code))
+            reg_id = reg_ids[0]
+            reg_br = self.proxy.reg.browse(reg_id)
 
         # simulate register "pending payement" button (wizard.import.invoice)
         # + single import + ok
@@ -839,23 +850,11 @@ class FinanceFlowBase(object):
                     self.proxy.inv_imp_line.write([line.id], vals, context)
 
             # confirm
-            self.proxy.inv_imp.action_confirm([wii_id], context)
+            res = self.proxy.inv_imp.action_confirm([wii_id], context)
 
             # simulate imported invoice register line hard post
-            ai_br = self.proxy.inv.browse(invoice_id)
-            # FIXME seem enough to identify unique imported confirmed line
-            # FIXME but check if better can be done
-            # identify imported confirmed line by:
-            # statement/date/ref<=>invoice origin/expense amount(< 0)
-            domain = [
-                ('statement_id', '=', reg_id),
-                ('date', '=', posting_date),
-                ('ref', '=', ai_br.origin),
-                ('amount', '=', ai_br.amount_total),
-            ]
-            reg_line_ids = self.proxy.regl.search(domain)
-            if reg_line_ids:       
-                self.proxy.regl.button_hard_posting([reg_line_ids[0]], context)
+            if res and res.get('st_line_ids', False):       
+                self.proxy.regl.button_hard_posting(res['st_line_ids'], context)
 
         return True
 
@@ -1189,7 +1188,7 @@ class FinanceFlow(FinanceFlowBase):
                         invoice_ids = invoice_ids[:reg_pending_payement_max]
                     for inv_id in invoice_ids:
                         self.chrono_start('regline_pending_payement', year, m)
-                        self.register_import_invoice(inv_id)
+                        self.register_import_invoice(inv_id, reg_br=reg_br)
                         self.chrono_stop()
 
                     # operational advance (only for CASH register)
