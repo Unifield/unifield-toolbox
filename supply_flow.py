@@ -397,6 +397,25 @@ class SupplyTestCase(object):
                 if lot_ids:
                     expiry_date = self.proxy.lot.read(lot_ids[0], ['life_date'])['life_date']
                     prod_lot_id = lot_ids[0]
+                else:
+                    expiry_date = '20%s-%s-%s' % (
+                        random.randint(int(time.strftime('%y')), 99),
+                        random.randint(1, 12),
+                        random.randint(1, 28),
+                    )
+                    if fol.product_id.batch_management:
+                        prod_lot_id = self.proxy.lot.create({
+                            'product_id': fol.product_id.id,
+                            'name': '%s_%s_%s_%s' % (
+                                expiry_date,
+                                fol.product_id.id,
+                                'INI_INV',
+                                random.randint(1, 1000),
+                            ),
+                            'life_date': expiry_date,
+                        })
+
+
 
             values = {
                 'location_id': loc_id,
@@ -418,10 +437,12 @@ class SupplyTestCase(object):
                 ('product_id', '=', fol.product_id.id),
                 ('location_id', '=', loc_id),
             ])
-            line_qty = values['product_qty']
+            line_qty = values['product_qty'] + fol.product_uom_qty
             for inv_line in self.proxy.inventory_line.read(inv_line_ids, ['product_qty']):
                 line_qty += inv_line['product_qty']
             values['product_qty'] = line_qty
+            values['expiry_date'] = expiry_date
+            values['prod_lot_id'] = prod_lot_id
             self.proxy.inventory_line.create(values)
 
         self.proxy.inventory.action_confirm([inv_id])
@@ -778,24 +799,28 @@ class FOTestCase(SupplyTestCase):
         if not pt_ids or not pps or not pps[0]:
             return True
         for pt_id in pt_ids:
+            ppl_id = None
+            ship_id = None
             self.chronos.process_pick.start()
-            if self.proxy.pick.read(pt_id, ['state'])['state'] == 'draft':
+            pick_state = self.proxy.pick.read(pt_id, ['state'])['state']
+            if pick_state == 'draft':
                 self.proxy.pick.action_assign([pt_id])
                 move_not_assigned = self.proxy.move.search([
                     ('picking_id', '=', pt_id),
                     ('state', '=', 'confirmed'),
                 ])
-                print move_not_assigned
                 self.proxy.move.force_assign(move_not_assigned)
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
                 self.proxy.pt_proc.copy_all([cpt_id])
                 pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
 
-            vpt_id = self.proxy.pick.validate_picking([pt_id]).get('res_id')
-            self.proxy.vpt_proc.copy_all([vpt_id])
-            ppl_id = self.proxy.vpt_proc.do_validate_picking([vpt_id]).get('res_id')
+            pick_state = self.proxy.pick.read(pt_id, ['state'])['state']
+            if pick_state == 'assigned':
+                vpt_id = self.proxy.pick.validate_picking([pt_id]).get('res_id')
+                self.proxy.vpt_proc.copy_all([vpt_id])
+                ppl_id = self.proxy.vpt_proc.do_validate_picking([vpt_id]).get('res_id')
+
             self.chronos.process_pick.stop()
-            ship_id = None
             if ppl_id and pps[1]:
                 self.chronos.process_pack.start()
                 ppl_proc_id = self.proxy.pick.ppl([ppl_id]).get('res_id')
