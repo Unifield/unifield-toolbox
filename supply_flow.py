@@ -802,17 +802,13 @@ class FOTestCase(SupplyTestCase):
             ppl_id = None
             ship_id = None
             self.chronos.process_pick.start()
-            pick_state = self.proxy.pick.read(pt_id, ['state'])['state']
-            if pick_state == 'draft':
+            pick_state = self.proxy.pick.read(pt_id, ['state', 'line_state'])
+            if pick_state['state'] == 'draft' and pick_state['line_state'] != 'processed':
                 self.proxy.pick.action_assign([pt_id])
-                move_not_assigned = self.proxy.move.search([
-                    ('picking_id', '=', pt_id),
-                    ('state', '=', 'confirmed'),
-                ])
-                self.proxy.move.force_assign(move_not_assigned)
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
-                self.proxy.pt_proc.copy_all([cpt_id])
-                pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
+                if self.proxy.pt_proc.browse(cpt_id).move_ids:
+                    self.proxy.pt_proc.copy_all([cpt_id])
+                    pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
 
             pick_state = self.proxy.pick.read(pt_id, ['state'])['state']
             if pick_state == 'assigned':
