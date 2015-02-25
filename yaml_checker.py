@@ -4,6 +4,7 @@
 import random
 import yaml
 import os
+import csv
 import time
 
 #from test_proxy import TestProxy
@@ -267,7 +268,6 @@ class YamlSupplyTestCase(object):
 
 def start_supply_cases(proxy):
     YamlSupplyTestCase.get_cases_from_file('supply_cases.yml')
-    csv_name = 'supply_cases.csv'
     months = [
         '2014-01',
         '2014-02',
@@ -290,10 +290,10 @@ def start_supply_cases(proxy):
         '2015-07',
         '2015-08',
         '2015-09',
-    '2015-10',
+        '2015-10',
         '2015-11',
         '2015-12',
-    ]
+
     for month in months:
         print '###############################################################'
         print '#'
@@ -310,12 +310,12 @@ def start_supply_cases(proxy):
             print '#'
 
     report_path = '%s/supply_case.csv' % (
-        os.path.dirname(os.path.abspath(__file__)), csv_name, )
+        os.path.dirname(os.path.abspath(__file__)), )
     with open(report_path, 'wb') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=',',
             quoting=csv.QUOTE_MINIMAL)
 
-        for cc in SupplyTestChrono.cases.iter_values():
+        for cc, cc_cases in SupplyTestChrono.cases.iteritems():
             csv_writer.writerow([
                 'Name',
                 'Date',
@@ -331,9 +331,9 @@ def start_supply_cases(proxy):
                 'PACK Processing',
                 'SHIP Processing',
             ])
-            for chrono in SupplyTestChrono.cases[cc]:
+            for chrono in cc_cases:
                 csv_writer.writerow([
-                    cc.name,
+                    cc,
                     chrono.date,
                     chrono.valid_fo.process_time,
                     chrono.confirm_fo.process_time,
