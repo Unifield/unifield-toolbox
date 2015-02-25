@@ -1959,14 +1959,14 @@ class ConsumptionReportTestCase(SupplyTestCase):
             month = time.strftime('%Y-%m')
 
         p_year, p_month = month.split('-')
-        period = datetime(p_year, p_month, 5)
+        period = datetime(int(p_year), int(p_month), 5)
         while period > datetime.now():
             if int(p_month) == 1:
                 month = '%s-%s' % (p_year-1, 12)
             else:
                 month = '%s-%s' % (p_year, p_month-1)
             p_year, p_month = month.split('-')
-            period = datetime(p_year, p_month, 5)
+            period = datetime(int(p_year), int(p_month), 5)
 
         for i in range(self.tc.qty_per_month or 5):
             med_rac_id = self.proxy.rac.create({
