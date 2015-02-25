@@ -804,6 +804,15 @@ class FOTestCase(SupplyTestCase):
             self.chronos.process_pick.start()
             pick_state = self.proxy.pick.read(pt_id, ['state', 'line_state'])
             if pick_state['state'] == 'draft' and pick_state['line_state'] != 'processed':
+                not_av_move_ids = self.proxy.move.search([
+                    ('picking_id', '=', pt_id),
+                    ('state', '=', 'confirmed'),
+                ])
+                not_av_fo_line_ids = []
+                for move in self.proxy.move.browse(not_av_move_ids):
+                    if move.sale_line_id:
+                        not_av_fo_line_ids.append(move.sale_line_id.id)
+                self.create_inventory(not_av_fo_line_ids, month)
                 self.proxy.pick.action_assign([pt_id])
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
                 if self.proxy.pt_proc.browse(cpt_id).move_ids:
@@ -961,11 +970,21 @@ class FOTestCase(SupplyTestCase):
 
         self.chronos.po_creation.start()
         if not self.tc.with_tender:
+            stop = 0
             while not_sourced:
                 not_sourced = self.proxy.proc.search([
                     ('id', 'in', proc_ids),
                     ('state', 'not in', ('ready', 'running')),
                 ])
+                time.sleep(1)
+                stop += 1
+                if stop >= 900:
+                    fo_line_ids = self.proxy.sol.search([
+                        ('procurement_id', 'in', not_sourced),
+                    ])
+                    self.create_inventory(fo_line_ids, month)
+                    self.proxy.proc.run_scheduler()
+
         else:
             while not_sourced:
                 not_sourced = self.proxy.proc.search([
