@@ -267,6 +267,7 @@ class YamlSupplyTestCase(object):
 
 def start_supply_cases(proxy):
     YamlSupplyTestCase.get_cases_from_file('supply_cases.yml')
+    csv_name = 'supply_cases.csv'
     months = [
         '2014-01',
         '2014-02',
