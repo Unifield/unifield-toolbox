@@ -789,7 +789,7 @@ class FOTestCase(SupplyTestCase):
         ])
         return pt_ids
 
-    def make_pps(self, fo_ids, pps):
+    def make_pps(self, fo_ids, pps, month):
         """
         Picked, packed and shipped the picking tickets associated to the test
         case according to values in pps parameter.
@@ -1275,7 +1275,7 @@ class POFromFOTestCase(FOTestCase):
                     self.received_in(po_id, in_recept[1], in_recept[2])
 
                     tc_pps = self.pps.pop()
-                    self.make_pps(split_fo_ids, tc_pps)
+                    self.make_pps(split_fo_ids, tc_pps, month)
 
                 self.update_incoming_shipment(po_id)
 
@@ -1438,7 +1438,7 @@ class POFromFOTenderTestCase(FOTestCase, TenderTestCase):
                 self.update_incoming_shipment(po_id)
 
             tc_pps = self.pps.pop()
-            self.make_pps(new_fo_ids, tc_pps)
+            self.make_pps(new_fo_ids, tc_pps, month)
 
 
 class POFromIRTenderTestCase(IRTestCase, TenderTestCase):
@@ -1540,7 +1540,7 @@ class FOFromStockTestCase(FOTestCase):
             split_fo_ids, po_ids = self.confirm_fo(fo_id, fo_line_ids)
 
             tc_pps = self.pps.pop()
-            self.make_pps(split_fo_ids, tc_pps)
+            self.make_pps(split_fo_ids, tc_pps, month)
             
 
 class InternalIRFromStockTestCase(IRTestCase):
@@ -1708,7 +1708,7 @@ class FOFromStockOnOrderTestCase(FOTestCase):
                     self.received_in(po_id, in_recept[1], in_recept[2])
 
             tc_pps = self.pps.pop()
-            self.make_pps(split_fo_ids, tc_pps)
+            self.make_pps(split_fo_ids, tc_pps, month)
 
 
 class InitialInventoryTestCase(SupplyTestCase):
