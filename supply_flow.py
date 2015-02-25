@@ -1995,8 +1995,7 @@ class ConsumptionReportTestCase(SupplyTestCase):
                 ).get('value', {}))
                 l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
 
-                if l_values['consumed_qty'] != 0:
-                    self.proxy.racl.create(l_values)
+                self.proxy.racl.create(l_values)
 
             nb_med = 0
             for mp in self.proxy.prod.browse(med_product_ids):
@@ -2046,9 +2045,7 @@ class ConsumptionReportTestCase(SupplyTestCase):
 
                     l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
 
-                    if l_values['consumed_qty'] != 0:
-                        self.proxy.racl.create(l_values)
-
+                    self.proxy.racl.create(l_values)
                 nb_med += 1
 
             self.proxy.rac.process_moves([med_rac_id, log_rac_id])
