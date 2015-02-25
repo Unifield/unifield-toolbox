@@ -1962,9 +1962,9 @@ class ConsumptionReportTestCase(SupplyTestCase):
         period = datetime(int(p_year), int(p_month), 5)
         while period > datetime.now():
             if int(p_month) == 1:
-                month = '%s-%s' % (p_year-1, 12)
+                month = '%s-%s' % (int(p_year-1), 12)
             else:
-                month = '%s-%s' % (p_year, p_month-1)
+                month = '%s-%s' % (int(p_year), int(p_month-1))
             p_year, p_month = month.split('-')
             period = datetime(int(p_year), int(p_month), 5)
 
