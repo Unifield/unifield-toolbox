@@ -5,6 +5,7 @@ import time
 
 from chrono import TestChrono
 from random_list import RandomList
+from datetime import datetime
 
 
 class SupplyTestChrono(object):
@@ -1955,7 +1956,17 @@ class ConsumptionReportTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
 
         if month is None:
-            month = int(time.strftime('%m'))-1
+            month = time.strftime('%Y-%m')
+
+        p_year, p_month = month.split('-')
+        period = datetime(p_year, p_month, 5)
+        while period > datetime.now():
+            if int(p_month) == 1:
+                month = '%s-%s' % (p_year-1, 12)
+            else:
+                month = '%s-%s' = (p_year, p_month-1)
+            p_year, p_month = month.split('-')
+            period = datetime(p_year, p_month, 5)
 
         for i in range(self.tc.qty_per_month or 5):
             med_rac_id = self.proxy.rac.create({
