@@ -1961,14 +1961,14 @@ class ConsumptionReportTestCase(SupplyTestCase):
             med_rac_id = self.proxy.rac.create({
                 'cons_location_id': med_loc_id,
                 'activity_id': cust_id,
-                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
-                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+                'period_from': '%s-%s-01' % (time.strftime('%Y'), month[-2:]),
+                'period_to': '%s-%s-05' % (time.strftime('%Y'), month[-2:]),
             })
             log_rac_id = self.proxy.rac.create({
                 'cons_location_id': log_loc_id,
                 'activity_id': cust_id,
-                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
-                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+                'period_from': '%s-%s-01' % (time.strftime('%Y'), month[-2:]),
+                'period_to': '%s-%s-05' % (time.strftime('%Y'), month[-2:]),
             })
 
             log_product_ids = self.proxy.prod.search([
