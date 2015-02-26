@@ -381,6 +381,7 @@ class SupplyTestCase(object):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         for fol in self.proxy.sol.browse(fo_line_ids):
             expiry_date = False
@@ -938,6 +939,7 @@ class FOTestCase(SupplyTestCase):
         fo_date = self.proxy.so.read(fo_id, ['date_order'])['date_order']
         po_ids = set()
         po_lines = []
+        month = fo_date[:7]
 
         self.source_lines(line_ids)
         self.chronos.confirm_fo.start()
@@ -1730,6 +1732,7 @@ class InitialInventoryTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         x8bm = 3
         x6bm = int(self.tc.nb_lines * 0.10)
@@ -1737,6 +1740,7 @@ class InitialInventoryTestCase(SupplyTestCase):
         for i in range(self.tc.nb_lines):
             product_id = self.products.pop()
             prd_brw = self.proxy.prod.browse(product_id)
+            loc_id = location_id
 
             if prd_brw.nomen_manda_0.id == med_nomen_id:
                 loc_id = med_loc_id
@@ -1846,6 +1850,7 @@ class PhysicalInventoryTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         x8bm = 3
         x6bm = int(self.tc.nb_lines * 0.10)
@@ -1855,6 +1860,7 @@ class PhysicalInventoryTestCase(SupplyTestCase):
             change_qty += 1
             product_id = self.products.pop()
             prd_brw = self.proxy.prod.browse(product_id)
+            loc_id = location_id
 
             if self.tc.use_cu:
                 loc_id = cu_id
