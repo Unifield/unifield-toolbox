@@ -433,12 +433,12 @@ class SupplyTestCase(object):
                 loc_id,
                 fol.product_id.id,
                 prod_lot_id,
-                fol.product_uom.id,
-                '%s-01' % month,).get('value', {}))
-            line_qty = values['product_qty'] > 0 and values['product_qty'] + fol.product_uom_qty or fol.product_uom_qty
-            product_virtual_qty = self.proxy.prod.browse(fol.product_id.id, {'location': loc_id})
-            line_qty += abs(product_virtual_qty.virtual_available)
-            values['product_qty'] = line_qty
+                fol.product_uom.id).get('value', {}))
+            line_qty = abs(values['product_qty']) + fol.product_uom_qty
+            product_virtual_qty = self.proxy.prod.browse(fol.product_id.id, {'location': location_id, 'prodlot_id': prod_lot_id})
+            if product_virtual_qty.virtual_available < line_qty:
+                line_qty += abs(product_virtual_qty.virtual_available)
+            values['product_qty'] = line_qty + fol.product_uom_qty
             values['expiry_date'] = expiry_date
             values['prod_lot_id'] = prod_lot_id
             self.proxy.inventory_line.create(values)
