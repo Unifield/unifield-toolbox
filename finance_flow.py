@@ -15,7 +15,7 @@ TEST_MODES = (
     'fake',  # process virtually flow iterations, no entry generated
     'full_1st_period',  # full process of the first period (Jan of first FY)
 )
-TEST_MODE = 'full_1st_period'
+TEST_MODE = False
 
 MASK = {
     'register': "%s %s",
