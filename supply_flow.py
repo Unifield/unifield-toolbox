@@ -5,6 +5,7 @@ import time
 
 from chrono import TestChrono
 from random_list import RandomList
+from datetime import datetime
 
 
 class SupplyTestChrono(object):
@@ -380,6 +381,7 @@ class SupplyTestCase(object):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         for fol in self.proxy.sol.browse(fo_line_ids):
             expiry_date = False
@@ -397,6 +399,25 @@ class SupplyTestCase(object):
                 if lot_ids:
                     expiry_date = self.proxy.lot.read(lot_ids[0], ['life_date'])['life_date']
                     prod_lot_id = lot_ids[0]
+                else:
+                    expiry_date = '20%s-%s-%s' % (
+                        random.randint(int(time.strftime('%y')), 99),
+                        random.randint(1, 12),
+                        random.randint(1, 28),
+                    )
+                    if fol.product_id.batch_management:
+                        prod_lot_id = self.proxy.lot.create({
+                            'product_id': fol.product_id.id,
+                            'name': '%s_%s_%s_%s' % (
+                                expiry_date,
+                                fol.product_id.id,
+                                'INI_INV',
+                                random.randint(1, 1000),
+                            ),
+                            'life_date': expiry_date,
+                        })
+
+
 
             values = {
                 'location_id': loc_id,
@@ -412,9 +433,14 @@ class SupplyTestCase(object):
                 loc_id,
                 fol.product_id.id,
                 prod_lot_id,
-                fol.product_uom.id,
-                '%s-01' % month,).get('value', {}))
-            values['product_qty'] += fol.product_uom_qty
+                fol.product_uom.id).get('value', {}))
+            line_qty = abs(values['product_qty']) + fol.product_uom_qty
+            product_virtual_qty = self.proxy.prod.browse(fol.product_id.id, {'location': location_id, 'prodlot_id': prod_lot_id})
+            if product_virtual_qty.virtual_available < line_qty:
+                line_qty += abs(product_virtual_qty.virtual_available)
+            values['product_qty'] = line_qty + fol.product_uom_qty
+            values['expiry_date'] = expiry_date
+            values['prod_lot_id'] = prod_lot_id
             self.proxy.inventory_line.create(values)
 
         self.proxy.inventory.action_confirm([inv_id])
@@ -757,32 +783,47 @@ class FOTestCase(SupplyTestCase):
             ('sale_id', 'in', fo_ids),
             ('type', '=', 'out'),
             ('subtype', '=', 'picking'),
-            ('state', '=', 'assigned'),
+            ('state', 'in', ('draft', 'assigned')),
         ])
         return pt_ids
 
-    def make_pps(self, fo_ids, pps):
+    def make_pps(self, fo_ids, pps, month):
         """
         Picked, packed and shipped the picking tickets associated to the test
         case according to values in pps parameter.
         """
         pt_ids = self.get_pt_ids(fo_ids)
 
-        if not pt_ids or not pps[0]:
+        if not pt_ids or not pps or not pps[0]:
             return True
         for pt_id in pt_ids:
+            ppl_id = None
+            ship_id = None
             self.chronos.process_pick.start()
-            if self.proxy.pick.read(pt_id, ['state'])['state'] == 'draft':
+            pick_state = self.proxy.pick.read(pt_id, ['state', 'line_state'])
+            if pick_state['state'] == 'draft' and pick_state['line_state'] != 'processed':
+                not_av_move_ids = self.proxy.move.search([
+                    ('picking_id', '=', pt_id),
+                    ('state', '=', 'confirmed'),
+                ])
+                not_av_fo_line_ids = []
+                for move in self.proxy.move.browse(not_av_move_ids):
+                    if move.sale_line_id:
+                        not_av_fo_line_ids.append(move.sale_line_id.id)
+                self.create_inventory(not_av_fo_line_ids, month)
                 self.proxy.pick.action_assign([pt_id])
                 cpt_id = self.proxy.pick.create_picking([pt_id]).get('res_id')
-                self.proxy.pt_proc.copy_all([cpt_id])
-                pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
+                if self.proxy.pt_proc.browse(cpt_id).move_ids:
+                    self.proxy.pt_proc.copy_all([cpt_id])
+                    pt_id = self.proxy.pt_proc.do_create_picking([cpt_id]).get('res_id')
 
-            vpt_id = self.proxy.pick.validate_picking([pt_id]).get('res_id')
-            self.proxy.vpt_proc.copy_all([vpt_id])
-            ppl_id = self.proxy.vpt_proc.do_validate_picking([vpt_id]).get('res_id')
+            pick_state = self.proxy.pick.read(pt_id, ['state'])['state']
+            if pick_state == 'assigned':
+                vpt_id = self.proxy.pick.validate_picking([pt_id]).get('res_id')
+                self.proxy.vpt_proc.copy_all([vpt_id])
+                ppl_id = self.proxy.vpt_proc.do_validate_picking([vpt_id]).get('res_id')
+
             self.chronos.process_pick.stop()
-            ship_id = None
             if ppl_id and pps[1]:
                 self.chronos.process_pack.start()
                 ppl_proc_id = self.proxy.pick.ppl([ppl_id]).get('res_id')
@@ -894,6 +935,7 @@ class FOTestCase(SupplyTestCase):
         fo_date = self.proxy.so.read(fo_id, ['date_order'])['date_order']
         po_ids = set()
         po_lines = []
+        month = fo_date[:7]
 
         self.source_lines(line_ids)
         self.chronos.confirm_fo.start()
@@ -927,11 +969,21 @@ class FOTestCase(SupplyTestCase):
 
         self.chronos.po_creation.start()
         if not self.tc.with_tender:
+            stop = 0
             while not_sourced:
                 not_sourced = self.proxy.proc.search([
                     ('id', 'in', proc_ids),
                     ('state', 'not in', ('ready', 'running')),
                 ])
+                time.sleep(1)
+                stop += 1
+                if stop >= 900:
+                    fo_line_ids = self.proxy.sol.search([
+                        ('procurement_id', 'in', not_sourced),
+                    ])
+                    self.create_inventory(fo_line_ids, month)
+                    self.proxy.proc.run_scheduler()
+
         else:
             while not_sourced:
                 not_sourced = self.proxy.proc.search([
@@ -1222,7 +1274,7 @@ class POFromFOTestCase(FOTestCase):
                     self.received_in(po_id, in_recept[1], in_recept[2])
 
                     tc_pps = self.pps.pop()
-                    self.make_pps(split_fo_ids, tc_pps)
+                    self.make_pps(split_fo_ids, tc_pps, month)
 
                 self.update_incoming_shipment(po_id)
 
@@ -1385,7 +1437,7 @@ class POFromFOTenderTestCase(FOTestCase, TenderTestCase):
                 self.update_incoming_shipment(po_id)
 
             tc_pps = self.pps.pop()
-            self.make_pps(new_fo_ids, tc_pps)
+            self.make_pps(new_fo_ids, tc_pps, month)
 
 
 class POFromIRTenderTestCase(IRTestCase, TenderTestCase):
@@ -1481,12 +1533,13 @@ class FOFromStockTestCase(FOTestCase):
                 fo_line_ids.append(
                     self.proxy.sol.create(fo_line_values)
                 )
+            self.create_inventory(fo_line_ids, month)
 
             self.validate_fo(fo_id)
             split_fo_ids, po_ids = self.confirm_fo(fo_id, fo_line_ids)
 
             tc_pps = self.pps.pop()
-            self.make_pps(new_fo_ids, tc_pps)
+            self.make_pps(split_fo_ids, tc_pps, month)
             
 
 class InternalIRFromStockTestCase(IRTestCase):
@@ -1537,6 +1590,7 @@ class InternalIRFromStockTestCase(IRTestCase):
                 ir_line_ids.append(
                     self.proxy.sol.create(ir_line_values)
                 )
+            self.create_inventory(ir_line_ids, month)
 
             self.validate_ir(ir_id)
             ir_id, po_ids = self.confirm_ir(ir_id, ir_line_ids)
@@ -1594,6 +1648,7 @@ class ExternalIRFromStockTestCase(IRTestCase):
                 ir_line_ids.append(
                     self.proxy.sol.create(ir_line_values)
                 )
+            self.create_inventory(ir_line_ids, month)
 
             self.validate_ir(ir_id)
             ir_id, po_ids = self.confirm_ir(ir_id, ir_line_ids)
@@ -1639,6 +1694,7 @@ class FOFromStockOnOrderTestCase(FOTestCase):
                 fo_line_ids.append(
                     self.proxy.sol.create(fo_line_values)
                 )
+            self.create_inventory(fo_line_ids, month)
 
             self.validate_fo(fo_id)
             split_fo_ids, po_ids = self.confirm_fo(fo_id, fo_line_ids)
@@ -1651,7 +1707,7 @@ class FOFromStockOnOrderTestCase(FOTestCase):
                     self.received_in(po_id, in_recept[1], in_recept[2])
 
             tc_pps = self.pps.pop()
-            self.make_pps(split_fo_ids, tc_pps)
+            self.make_pps(split_fo_ids, tc_pps, month)
 
 
 class InitialInventoryTestCase(SupplyTestCase):
@@ -1672,6 +1728,7 @@ class InitialInventoryTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         x8bm = 3
         x6bm = int(self.tc.nb_lines * 0.10)
@@ -1679,6 +1736,7 @@ class InitialInventoryTestCase(SupplyTestCase):
         for i in range(self.tc.nb_lines):
             product_id = self.products.pop()
             prd_brw = self.proxy.prod.browse(product_id)
+            loc_id = location_id
 
             if prd_brw.nomen_manda_0.id == med_nomen_id:
                 loc_id = med_loc_id
@@ -1788,6 +1846,7 @@ class PhysicalInventoryTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
         log_rt_id = self.proxy.data.get_object_reference(
             'reason_types_moves', 'reason_type_loss')[1]
+        loc_id = location_id
 
         x8bm = 3
         x6bm = int(self.tc.nb_lines * 0.10)
@@ -1797,6 +1856,7 @@ class PhysicalInventoryTestCase(SupplyTestCase):
             change_qty += 1
             product_id = self.products.pop()
             prd_brw = self.proxy.prod.browse(product_id)
+            loc_id = location_id
 
             if self.tc.use_cu:
                 loc_id = cu_id
@@ -1898,20 +1958,30 @@ class ConsumptionReportTestCase(SupplyTestCase):
         log_nomen_id = nomen_obj.search([('name', '=', 'LOG')])[0]
 
         if month is None:
-            month = int(time.strftime('%m'))-1
+            month = time.strftime('%Y-%m')
+
+        p_year, p_month = month.split('-')
+        period = datetime(int(p_year), int(p_month), 5)
+        while period > datetime.now():
+            if int(p_month) == 1:
+                month = '%s-%s' % (int(p_year)-1, 12)
+            else:
+                month = '%s-%s' % (int(p_year), int(p_month)-1)
+            p_year, p_month = month.split('-')
+            period = datetime(int(p_year), int(p_month), 5)
 
         for i in range(self.tc.qty_per_month or 5):
             med_rac_id = self.proxy.rac.create({
                 'cons_location_id': med_loc_id,
                 'activity_id': cust_id,
-                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
-                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+                'period_from': '%s-01' % (month),
+                'period_to': '%s-05' % (month),
             })
             log_rac_id = self.proxy.rac.create({
                 'cons_location_id': log_loc_id,
                 'activity_id': cust_id,
-                'period_from': '%s-%s-01' % (time.strftime('%Y'), month),
-                'period_to': '%s-%s-05' % (time.strftime('%Y'), month),
+                'period_from': '%s-01' % (month),
+                'period_to': '%s-05' % (month),
             })
 
             log_product_ids = self.proxy.prod.search([
@@ -1938,7 +2008,8 @@ class ConsumptionReportTestCase(SupplyTestCase):
                 ).get('value', {}))
                 l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
 
-                self.proxy.racl.create(l_values)
+                if l_values['consumed_qty'] >= 0:
+                    self.proxy.racl.create(l_values)
 
             nb_med = 0
             for mp in self.proxy.prod.browse(med_product_ids):
@@ -1988,7 +2059,8 @@ class ConsumptionReportTestCase(SupplyTestCase):
 
                     l_values['consumed_qty'] = int(l_values.get('product_qty', 0) * 0.10)
 
-                    self.proxy.racl.create(l_values)
+                    if l_values['consumed_qty'] >= 0:
+                        self.proxy.racl.create(l_values)
                 nb_med += 1
 
             self.proxy.rac.process_moves([med_rac_id, log_rac_id])

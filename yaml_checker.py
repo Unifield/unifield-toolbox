@@ -4,6 +4,7 @@
 import random
 import yaml
 import os
+import csv
 import time
 
 #from test_proxy import TestProxy
@@ -289,10 +290,11 @@ def start_supply_cases(proxy):
         '2015-07',
         '2015-08',
         '2015-09',
-    '2015-10',
+        '2015-10',
         '2015-11',
         '2015-12',
     ]
+
     for month in months:
         print '###############################################################'
         print '#'
@@ -302,64 +304,81 @@ def start_supply_cases(proxy):
         for tc in YamlSupplyTestCase.cases:
             print '# Test case: %s' % tc.name
             print '# Start time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
-            tc.run(proxy, month)
+            try:
+                tc.run(proxy, month)
+            except (KeyboardInterrupt, SystemExit) as e:
+                error_msg = 'Script stopped during the test case "%s" of month %s' % (tc.name, month)
+                print '# An error has occured during the test case : %s' % error_msg
+                print '# No end time'
+                print '######################################'
+                break
+            except Exception as e:
+                print '# An error has occured during the test case : %s' % e 
+                print '# No end time'
+                print '######################################'
+                continue
             print '# End time: %s' % time.strftime('%Y-%m-%d %H:%M:%S')
             print '#'
             print '######################################'
             print '#'
 
-    report_path = '%s/supply_case.csv' % (
-        os.path.dirname(os.path.abspath(__file__)), csv_name, )
-    with open(report_path, 'wb') as csv_file:
-        csv_writer = csv.writer(csv_file, delimiter=',',
-            quoting=csv.QUOTE_MINIMAL)
+        try:
+            report_path = '%s/%s_supply_case.csv' % (
+                os.path.dirname(os.path.abspath(__file__)), month, )
+            with open(report_path, 'wb') as csv_file:
+                csv_writer = csv.writer(csv_file, delimiter=',',
+                    quoting=csv.QUOTE_MINIMAL)
 
-        for cc in SupplyTestChrono.cases.iter_values():
-            csv_writer.writerow([
-                'Name',
-                'Date',
-                'FO Validation',
-                'FO Confirmation',
-                'PO Creation',
-                'PO Validation',
-                'PO Confirmation',
-                'IN Processing',
-                'OUT Convert',
-                'OUT Processing',
-                'PICK Processing',
-                'PACK Processing',
-                'SHIP Processing',
-            ])
-            for chrono in SupplyTestChrono.cases[cc]:
-                csv_writer.writerow([
-                    cc.name,
-                    chrono.date,
-                    chrono.valid_fo.process_time,
-                    chrono.confirm_fo.process_time,
-                    chrono.po_creation.process_time,
-                    chrono.valid_po.process_time,
-                    chrono.confirm_po.process_time,
-                    chrono.process_in.process_time,
-                    chrono.convert_out.process_time,
-                    chrono.process_out.process_time,
-                    chrono.process_pick.process_time,
-                    chrono.process_pack.process_time,
-                    chrono.process_ship.process_time,
-                ])
+                for cc, cc_cases in SupplyTestChrono.cases.iteritems():
+                    csv_writer.writerow([
+                        'Name',
+                        'Date',
+                        'FO Validation',
+                        'FO Confirmation',
+                        'PO Creation',
+                        'PO Validation',
+                        'PO Confirmation',
+                        'IN Processing',
+                        'OUT Convert',
+                        'OUT Processing',
+                        'PICK Processing',
+                        'PACK Processing',
+                        'SHIP Processing',
+                    ])
+                    for chrono in cc_cases:
+                        csv_writer.writerow([
+                            cc,
+                            chrono.date,
+                            chrono.valid_fo.process_time,
+                            chrono.confirm_fo.process_time,
+                            chrono.po_creation.process_time,
+                            chrono.valid_po.process_time,
+                            chrono.confirm_po.process_time,
+                            chrono.process_in.process_time,
+                            chrono.convert_out.process_time,
+                            chrono.process_out.process_time,
+                            chrono.process_pick.process_time,
+                            chrono.process_pack.process_time,
+                            chrono.process_ship.process_time,
+                        ])
 
-            csv_writer.writerow([
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-                '###',
-            ])  
+                    csv_writer.writerow([
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                        '###',
+                    ])
 
-        csv_file.close()
+            csv_file.close()
+        except (KeyboardInterrupt, SystemExit):
+            print 'Error in the month %s' % month
+        except:
+            pass
