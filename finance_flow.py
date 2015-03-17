@@ -15,7 +15,7 @@ TEST_MODES = (
     'fake',  # process virtually flow iterations, no entry generated
     'full_1st_period',  # full process of the first period (Jan of first FY)
 )
-TEST_MODE = False
+TEST_MODE = 'full_1st_period'
 
 MASK = {
     'register': "%s %s",
@@ -1162,16 +1162,16 @@ class FinanceFlow(FinanceFlowBase):
                 reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
                 for reg_br in self.proxy.reg.browse(reg_ids):
                     # expense line with AD
-                    for e in xrange(0, reg_expenses_max):
+                    """for e in xrange(0, reg_expenses_max):
                         self.chrono_start('regline_expense', year, m)
                         self._create_random_expense_register_line(reg_br)
-                        self.chrono_stop()
+                        self.chrono_stop()"""
                     
                     # not expense line not AD
-                    for e in xrange(0, reg_not_expenses_max):
+                    """for e in xrange(0, reg_not_expenses_max):
                         self.chrono_start('regline_not_expense', year, m)
                         self._create_random_not_expense_register_line(reg_br)
-                        self.chrono_stop()
+                        self.chrono_stop()"""
                     
                     # pending payement (invoice import)
                     domain = [  # get invoices ids of register period/ccy
