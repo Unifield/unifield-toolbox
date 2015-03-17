@@ -287,8 +287,8 @@ if __name__ == '__main__':
         FinanceMassGen(proxy).run(command)
         exit()  # finance mass generation only
 
-    start_supply_cases(proxy)
+    #start_supply_cases(proxy)
     
-    #FinanceFlow(proxy).run()
+    FinanceFlow(proxy).run()
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4
