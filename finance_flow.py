@@ -757,7 +757,7 @@ class FinanceFlowBase(object):
         if not ai_br.state in ('draft', 'open', ):
             tpl = "register_import_invoice invoice %d '%s' not 'draft' or" \
                 " 'open'"
-            self.log(tpl % (invoice_id, ai_br.name or ''), 'yellow')
+            self.proxy.log(tpl % (invoice_id, ai_br.name or ''), 'yellow')
             return False
 
         # check if opened (else do it: as it was finance side validated)
@@ -767,6 +767,10 @@ class FinanceFlowBase(object):
             # - force doc date to posting date (as by default to current date)
             vals = {
                 'document_date': posting_date,
+                # FIXME: when invoice is open with origin > 64 impact 
+                # on reference or /number/move_name/name (varchar(64))
+                # => check this regarding invoice_open workflow signal
+                'origin': ai_br.origin and ai_br.origin[:64],
             }
             if not ai_br.check_total:
                 vals['check_total'] = ai_br.amount_total
@@ -1162,16 +1166,16 @@ class FinanceFlow(FinanceFlowBase):
                 reg_ids = self.proxy.reg.search([('period_id', '=', period_id)])
                 for reg_br in self.proxy.reg.browse(reg_ids):
                     # expense line with AD
-                    """for e in xrange(0, reg_expenses_max):
+                    for e in xrange(0, reg_expenses_max):
                         self.chrono_start('regline_expense', year, m)
                         self._create_random_expense_register_line(reg_br)
-                        self.chrono_stop()"""
+                        self.chrono_stop()
                     
                     # not expense line not AD
-                    """for e in xrange(0, reg_not_expenses_max):
+                    for e in xrange(0, reg_not_expenses_max):
                         self.chrono_start('regline_not_expense', year, m)
                         self._create_random_not_expense_register_line(reg_br)
-                        self.chrono_stop()"""
+                        self.chrono_stop()
                     
                     # pending payement (invoice import)
                     domain = [  # get invoices ids of register period/ccy
@@ -1188,7 +1192,7 @@ class FinanceFlow(FinanceFlowBase):
                         invoice_ids = invoice_ids[:reg_pending_payement_max]
                     for inv_id in invoice_ids:
                         self.chrono_start('regline_pending_payement', year, m)
-                        self.register_import_invoice(inv_id, reg_br=reg_br)
+                        #self.register_import_invoice(inv_id, reg_br=reg_br)
                         self.chrono_stop()
 
                     # operational advance (only for CASH register)
