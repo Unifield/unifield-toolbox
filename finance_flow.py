@@ -767,10 +767,6 @@ class FinanceFlowBase(object):
             # - force doc date to posting date (as by default to current date)
             vals = {
                 'document_date': posting_date,
-                # FIXME: when invoice is open with origin > 64 impact 
-                # on reference or /number/move_name/name (varchar(64))
-                # => check this regarding invoice_open workflow signal
-                'origin': ai_br.origin and ai_br.origin[:64],
             }
             if not ai_br.check_total:
                 vals['check_total'] = ai_br.amount_total
@@ -1192,7 +1188,7 @@ class FinanceFlow(FinanceFlowBase):
                         invoice_ids = invoice_ids[:reg_pending_payement_max]
                     for inv_id in invoice_ids:
                         self.chrono_start('regline_pending_payement', year, m)
-                        #self.register_import_invoice(inv_id, reg_br=reg_br)
+                        self.register_import_invoice(inv_id, reg_br=reg_br)
                         self.chrono_stop()
 
                     # operational advance (only for CASH register)
