@@ -757,7 +757,7 @@ class FinanceFlowBase(object):
         if not ai_br.state in ('draft', 'open', ):
             tpl = "register_import_invoice invoice %d '%s' not 'draft' or" \
                 " 'open'"
-            self.log(tpl % (invoice_id, ai_br.name or ''), 'yellow')
+            self.proxy.log(tpl % (invoice_id, ai_br.name or ''), 'yellow')
             return False
 
         # check if opened (else do it: as it was finance side validated)
