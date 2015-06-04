@@ -41,13 +41,20 @@ LANG=C diff --exclude='.bzr' -r $1 $2 | diffstat -p0 -l > $TMP
 MISSING=0
 SRC=${1%%/}/unifield-server/bin/
 DEST=${2%%/}/unifield-server/bin/
+
+WEBSRC=${1%%/}/unifield-web/
+WEBDST=${2%%/}/unifield-web/
+
 PATCH_DIR=`readlink -f $3`
+WEB_PATCH=${PATCH_DIR}/web/
+
 while read ff; do
     if [[ "${ff}" == ${SRC}* ]]; then
         # if the diff is in from_tree => file remove
         # copy the file, and empty it
         # TODO: missing dir
         let MISSING=${MISSING}+1
+        echo "Missing: ${ff##$SRC}"
         cd $SRC
         cp --parents ${ff##$SRC} ${PATCH_DIR}
         cd - >> /dev/null
@@ -56,9 +63,14 @@ while read ff; do
         cd $DEST
         cp -a --parents ${ff##$DEST} ${PATCH_DIR}
         cd - >> /dev/null
+    elif [[ "${ff}" == ${WEBDST}* ]]; then
+        mkdir -p ${WEB_PATCH}
+        cd ${WEBDST}
+        cp -a --parents ${ff##$WEBDST} ${WEB_PATCH}
+        cd - >> /dev/null
     else
         echo "Mayday, the script has a bug"
-        echo "$ff ${DEST} ${SRC}"
+        echo "$ff ${DEST} ${SRC} $WEBSRC $WEBDST"
         exit 1
     fi
 done < $TMP
