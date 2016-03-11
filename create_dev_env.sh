@@ -5,8 +5,10 @@ if [ "$#" -ne 1 ]; then
     exit 1;
 fi
 
-TICKET_NAME=$1
 UNIFIELDDIR=/home/qt/Development/Unifield
+HARDWARE_ID="7abd3182d399f7bdda199550d8babede"
+
+TICKET_NAME=$1
 
 TICKET_DIR=$UNIFIELDDIR/branches/$TICKET_NAME
 
@@ -48,7 +50,7 @@ for i in HQ1 HQ1C1 HQ1C1P1 SYNC_SERVER; do
 done
 
 echo "Update SYNC_SERVER hardware_id"
-psql -d $TICKET_NAME'_SYNC_SERVER' -c "UPDATE sync_server_entity SET hardware_id = '7abd3182d399f7bdda199550d8babede';"
+psql -d $TICKET_NAME'_SYNC_SERVER' -c "UPDATE sync_server_entity SET hardware_id = '$HARDWARE_ID'"
 
 unset PGHOST
 unset PGUSER
