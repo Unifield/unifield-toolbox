@@ -420,7 +420,7 @@ if __name__ == "__main__":
     web_parser.add_argument("--web-pass", "-w", metavar="pwd", default="", help="web backup password")
 
     sync_parser = parser.add_argument_group('Restore Sync Server Light')
-    sync_parser.add_argument("--keep-master", "-m", action="store_true", help="restore sync server dump with master data")
+    sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
 
     o = parser.parse_args()
 
@@ -512,7 +512,12 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     sync_db = o.sync_db
     prefix = o.prefix or getpass.getuser()
     if o.sync or o.sync_only:
-        dump_name = o.keep_master and 'SYNC_SERVER_LIGHT_WITH_MASTER' or 'SYNC_SERVER_LIGHT_NO_MASTER'
+        master_kind = {
+            'with_master': 'SYNC_SERVER_LIGHT_WITH_MASTER',
+            'no_master': 'SYNC_SERVER_LIGHT_NO_MASTER',
+            'no_update': 'SYNC_SERVER_LIGHT_NO_UPDATE',
+        }
+        dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
         sync_db = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop)[0]
 
