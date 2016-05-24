@@ -132,6 +132,65 @@ class Directory(dbmatch):
         shutil.copyfileobj(src, file_desc)
         src.close()
 
+class RBIndex(dbmatch):
+    include_dbs = []
+    dbs = []
+    info = ''
+
+    def __init__(self, rb_name, include_dbs = ''):
+        if rb_name == 'se':
+            rb_name = 'se_dump.dsp.uf3.unifield.org'
+        split_name = rb_name.split('.')
+        if len(split_name) == 1:
+            rb_name = '%s.uf5.unifield.org' % rb_name
+            split_name = rb_name.split('.')
+
+        if not split_name[0].endswith('_dump'):
+            split_name[0] = "%s_dump" % split_name[0]
+            rb_name = '.'.join(split_name)
+        if not rb_name.startswith('http'):
+            rb_name = 'http://%s' % rb_name
+
+        self.rb_name = rb_name
+        self.include_dbs = include_dbs.split(',')
+        cnx = httplib2.Http()
+        resp, content = cnx.request(rb_name, "GET")
+        pattern = re.compile('href="([0-9]{12})/"')
+        match = pattern.search(content)
+        empty_date = '000000000000'
+        max_date = empty_date
+        if match:
+            version = match.group(1)
+            if version > max_date:
+                max_date = version
+        self.info = '%s %s' % (rb_name, max_date)
+        if max_date != empty_date:
+            url = os.path.join(rb_name, max_date)
+            resp, content = cnx.request(url, "GET")
+            pattern = re.compile('="(\w+)\.dump"')
+            for dump in pattern.findall(content):
+                if self.match(dump):
+                    full_dump = '%s/%s.dump' % (max_date, dump)
+                    if 'SYNC' in dump:
+                        self.dbs.insert(0, full_dump)
+                    else:
+                        self.dbs.append(full_dump)
+
+    def get_dbs(self):
+        return self.dbs
+
+    def get_db_name(self, db):
+        return db.split('/')[-1]
+
+    def write_dump(self, db, file_desc):
+        f = urllib.urlopen('%s/%s' % (self.rb_name, db))
+        while True:
+            data = f.read(10*1024)
+            if data == '':
+                break
+            file_desc.write(data)
+        f.close()
+
 class ApacheIndexes(object):
     host = 'sync-prod_dump.uf5.unifield.org'
     proto = 'http'
@@ -317,6 +376,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             continue
 
         new_db_name = "%s_%s" % (prefix_db, re.sub('-[0-9]{6}-UF.*.dump$', '', dump_name))
+        new_db_name = re.sub('.dump$', '', new_db_name)
         orig_db_name = new_db_name
         ok = False
         i = 1
@@ -393,6 +453,7 @@ if __name__ == "__main__":
     group.add_argument('-j', '--issue', action='store', help='restore from Jira Issue Key')
     group.add_argument('-d', '--from-dir', action='store', help='restore dump from directory')
     group.add_argument('-f', '--uf-web', metavar='HOST[:PORT]', nargs='?', default=' ', help="UniField Web host:port default: ct1")
+    group.add_argument('--rb', metavar='HOST[:PORT]', help="From mkdb rb_dump exports")
     group.add_argument('--sync-only', action='store_true', help='restore *only* light sync')
 
     parser.add_argument("--include", "-i", metavar="DB1,DB2", default='', help="comma separated list of dbs to restore (postfix db_name with + for exact match)")
@@ -452,6 +513,8 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
             if os.path.abspath(o.from_dir) == os.path.abspath(o.directory):
                 raise SystemExit("Input and Output dir can't be the same")
             transport = Directory(o.from_dir, o.include)
+        elif o.rb:
+            transport = RBIndex(o.rb, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
             transport = Web(web_host, o.web_pass, o.include)
