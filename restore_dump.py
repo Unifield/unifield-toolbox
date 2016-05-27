@@ -375,7 +375,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             sys.stderr.write("Warning:%s dump %s is empty !\n" % (dump_name, file_name))
             continue
 
-        new_db_name = "%s_%s" % (prefix_db, re.sub('-[0-9]{6}-UF.*.dump$', '', dump_name))
+        new_db_name = "%s_%s" % (prefix_db, re.sub('-[0-9]{6}-UF.*.dump$', '', dump_name).replace(' ','_'))
         new_db_name = re.sub('.dump$', '', new_db_name)
         orig_db_name = new_db_name
         ok = False
