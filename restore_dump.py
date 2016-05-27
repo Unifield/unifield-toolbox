@@ -375,7 +375,10 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             sys.stderr.write("Warning:%s dump %s is empty !\n" % (dump_name, file_name))
             continue
 
-        new_db_name = "%s_%s" % (prefix_db, re.sub('-[0-9]{6}-UF.*.dump$', '', dump_name).replace(' ','_'))
+        new_db_name = dump_name
+        if prefix_db:
+            new_db_name = '%s_%s' % (prefix_db, new_db_name)
+        new_db_name = re.sub('-[0-9]{6}-UF.*.dump$', '', new_db_name).replace(' ','_')
         new_db_name = re.sub('.dump$', '', new_db_name)
         orig_db_name = new_db_name
         ok = False
@@ -462,7 +465,7 @@ if __name__ == "__main__":
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
 
     parser.add_argument('-l', '--list', action='store_true', help='list dumps and exit')
-    parser.add_argument('--prefix', metavar="DB PREFIX")
+    parser.add_argument('--prefix', nargs='?', default=getpass.getuser(), metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
     parser.add_argument('--sync-port', help='sync netrpc port, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-db', help='sync server db, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-run', action="store_true", help='try to start sync')
@@ -484,7 +487,6 @@ if __name__ == "__main__":
     sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
 
     o = parser.parse_args()
-
     if o.examples:
         sys.stdout.write(examples % {'prog': sys.argv[0]})
         sys.exit(1)
@@ -573,7 +575,7 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
         if not o.trust_me_i_know_what_i_m_doing and len(dbs_name) > 5:
             raise SystemExit("If you really need to restore more than 5 dbs from a Web Instance add the option --trust-me-i-know-what-i-m-doing to the script")
     sync_db = o.sync_db
-    prefix = o.prefix or getpass.getuser()
+    prefix = o.prefix
     if o.sync or o.sync_only:
         master_kind = {
             'with_master': 'SYNC_SERVER_LIGHT_WITH_MASTER',
