@@ -167,7 +167,7 @@ class RBIndex(dbmatch):
         if max_date != empty_date:
             url = os.path.join(rb_name, max_date)
             resp, content = cnx.request(url, "GET")
-            pattern = re.compile('="(\w+)\.dump"')
+            pattern = re.compile('="([^"]+)\.dump"')
             for dump in pattern.findall(content):
                 if self.match(dump):
                     full_dump = '%s/%s.dump' % (max_date, dump)
