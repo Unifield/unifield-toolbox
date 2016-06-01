@@ -495,6 +495,7 @@ if __name__ == "__main__":
     if o.sql == 'True':
         sql_queries="""update res_users set password='admin';
 update res_users set login='admin' where id=1;
+update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
 update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Update stock mission');
 update sync_client_version set patch=NULL;
