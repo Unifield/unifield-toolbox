@@ -378,7 +378,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
         new_db_name = dump_name
         if prefix_db:
             new_db_name = '%s_%s' % (prefix_db, new_db_name)
-        new_db_name = re.sub('-[0-9]{6}-UF.*.dump$', '', new_db_name).replace(' ','_')
+        new_db_name = re.sub('-[0-9]{6}(-(A|B|BP))?-UF.*.dump$', '', new_db_name).replace(' ','_')
         new_db_name = re.sub('.dump$', '', new_db_name)
         orig_db_name = new_db_name
         ok = False

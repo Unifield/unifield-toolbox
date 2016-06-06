@@ -17,7 +17,7 @@ for i in wm addons server web; do
     cd -
 done
 
-for br in unifield-data sync_module_prod; do
+for br in sync_module_prod; do
     echo "################# $br #################"
     bzr  branch lp:~unifield-team/unifield-wm/${br}
     cd ${br}
