@@ -1,0 +1,4 @@
+[Restore]
+sync_port: @@NETRPCPORT@@
+apache_user: @@USER_DUMP_SYNC@@
+apache_password: @@PASS_DUMP_SYNC@@

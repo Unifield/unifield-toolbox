@@ -1,0 +1,21 @@
+#! /bin/bash
+
+EMAIL=""
+
+if [ -z "$EMAIL" ]; then
+read -p  "Email empty continue (Y/n): " cont
+if [ "$cont" == "n" ]; then
+    echo "Exit"
+    exit 1
+fi
+
+fi
+cd sync_env_script
+python ./mkdb.py
+cp /home/@@USERERP@@/unifield.config @@UNIFIELDTEST@@
+cd @@UNIFIELDTEST@@
+python test_runner.py
+
+if [ "$EMAIL" ]; then
+    mail -a 'Content-Type: text/html' -s "Tests @@USERERP@@" $EMAIL < output.html
+fi
