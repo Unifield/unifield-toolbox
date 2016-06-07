@@ -1,5 +1,5 @@
-jira_url = 'http://jira.unifield.org/'
-jira_user = ''
+jira_url='http://jira.unifield.org/'
+jira_user=''
 rb_server_url='uf5.unifield.org'
 web_db_pass=''
 template_dir='/home/template'
