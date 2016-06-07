@@ -5,7 +5,7 @@ import getpass
 import subprocess
 from tempfile import NamedTemporaryFile
 from lib import jira_lib
-
+import os
 from configobj import ConfigObj
 
 config_file = os.path.realpath(os.path.expanduser('~/RBconfig'))

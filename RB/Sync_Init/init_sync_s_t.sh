@@ -30,6 +30,7 @@ BRANCH_DEFAULT_SYNC="" #lp:unifield-wm/sync${SYNCSERIE}"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 REV="$1"
 
+source ~/RBconfig
 
 [ -z "$REV" ] && echo "Please specify revision: dsp-utp141 for example" && exit 1
 BRANCHES="branches/$REV"
@@ -103,7 +104,6 @@ NETRPCPORT=${userid}1
 WEBPORT=${userid}2
 XMLRPCPORT=${userid}3
 
-URL="http://5.196.80.167:$WEBPORT"
 ADDONS=""
 ADDONSDIR="'unifield-server', 'unifield-web'"
 UNIFIELDTEST="/home/${USERERP}/unifield-server/bin/addons/unifield_tests/"
@@ -116,6 +116,14 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@ADMINDBPASS@@#${ADMINDBPASS}#g" \
     -e "s#@@URL@@#${URL}#g" \
     -e "s#@@ADDONS@@#${ADDONS}#g" \
+    -e "s#@@RB_SERVER_URL@@#${rb_server_url}#g" \
+    -e "s#@@USER_DUMP_SYNC@@#${user_dump_sync}#g" \
+    -e "s#@@PASS_DUMP_SYNC@@#${pass_dump_sync}#g" \
+    -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
+    -e "s#@@WEB_ADMIN_PASS@@#${web_admin_pass}#g" \
+    -e "s#@@WEB_LOGIN_USER@@#${web_login_user}#g" \
+    -e "s#@@WEB_LOGIN_PASS@@#${web_login_pass}#g" \
+    -e "s#@@NUM_PROJECT@@#${num_project}#g" \
     -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
     -e "s#@@ADDONSDIR@@#${ADDONSDIR}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
@@ -145,7 +153,7 @@ bzr_type=branch
 #bzr_type=checkout --lightweight
 init_user() {
     su - postgres -c -- "createuser -S -R -d ${USERERP}"
-    cp -a  ~template/.bzr ~template/tmp /home/${USERERP}/
+    cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
