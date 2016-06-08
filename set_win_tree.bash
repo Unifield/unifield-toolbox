@@ -61,20 +61,20 @@ echo bzr branch $TAG lp:unifield-server${BZRBRANCH} unifield-server
 bzr branch $TAG lp:unifield-server${BZRBRANCH} unifield-server
 cd unifield-server/bin/addons
 
-echo "== addons =="
-echo bzr branch $TAG lp:unifield-addons${BZRBRANCH} unifield-addons
-bzr branch $TAG lp:unifield-addons${BZRBRANCH} unifield-addons
-mv unifield-addons/* .
-rm -fr unifield-addons
+#echo "== addons =="
+#echo bzr branch $TAG lp:unifield-addons${BZRBRANCH} unifield-addons
+#bzr branch $TAG lp:unifield-addons${BZRBRANCH} unifield-addons
+#mv unifield-addons/* .
+#rm -fr unifield-addons
 
-echo "== wm =="
-echo bzr branch $TAG lp:unifield-wm${BZRBRANCH} unifield-wm
-bzr branch $TAG lp:unifield-wm${BZRBRANCH} unifield-wm
-mv unifield-wm/* .
-rm -fr unifield-wm
+#echo "== wm =="
+#echo bzr branch $TAG lp:unifield-wm${BZRBRANCH} unifield-wm
+#bzr branch $TAG lp:unifield-wm${BZRBRANCH} unifield-wm
+#mv unifield-wm/* .
+#rm -fr unifield-wm
 
-echo "== sync_module =="
-echo bzr branch $TAG lp:unifield-wm/sync${SYNCBZRBRANCH} sync_module_prod
-bzr branch $TAG lp:unifield-wm/sync${SYNCBZRBRANCH} sync_module_prod
-mv sync_module_prod/* .
-rm -fr sync_module_prod
+#echo "== sync_module =="
+#echo bzr branch $TAG lp:unifield-wm/sync${SYNCBZRBRANCH} sync_module_prod
+#bzr branch $TAG lp:unifield-wm/sync${SYNCBZRBRANCH} sync_module_prod
+#mv sync_module_prod/* .
+#rm -fr sync_module_prod
