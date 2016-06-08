@@ -441,6 +441,7 @@ if __name__ == "__main__":
     defaults = {
         'j_host': 'http://jira.unifield.org',
         'sync_port': '8070',
+        'prefix': getpass.getuser(),
     }
     rcfile = '~/.restore_dumprc'
     cfile = os.path.realpath(os.path.expanduser(rcfile))
@@ -465,7 +466,7 @@ if __name__ == "__main__":
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
 
     parser.add_argument('-l', '--list', action='store_true', help='list dumps and exit')
-    parser.add_argument('--prefix', nargs='?', default=getpass.getuser(), metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
+    parser.add_argument('--prefix', nargs='?', metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
     parser.add_argument('--sync-port', help='sync netrpc port, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-db', help='sync server db, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-run', action="store_true", help='try to start sync')
