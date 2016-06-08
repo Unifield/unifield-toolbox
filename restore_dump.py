@@ -75,6 +75,28 @@ class dbmatch(object):
             elif x in name:
                 return True
 
+class PG_param(object):
+    user = False
+    password = False
+    host = False
+    port = False
+
+    @classmethod
+    def set(self, user=False, password=False, host=False, port=False):
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+
+    @classmethod
+    def get_dsn(self, dbname):
+        ret = {'dbname': dbname}
+        for x in ['user', 'password', 'host', 'port']:
+            if getattr(self, x):
+                ret[x] = getattr(self, x)
+        return ' '.join(['%s=%s' % (x, ret[x]) for x in ret])
+
+
 class MyHTMLParser(HTMLParser, dbmatch):
     dbs = []
     version = False
@@ -386,7 +408,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
         # check if db exists
         while not ok:
             try:
-                db_conn = psycopg2.connect('dbname=%s' % new_db_name)
+                db_conn = psycopg2.connect(PG_param.get_dsn(new_db_name))
                 if drop:
                     db_conn.close()
                     call(['dropdb', new_db_name])
@@ -409,7 +431,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
         query_for_server = None
         if sql_queries:
             sys.stdout.write("execute sql queries\n")
-            db_conn = psycopg2.connect('dbname=%s'%new_db_name)
+            db_conn = psycopg2.connect(PG_param.get_dsn(new_db_name))
             cr = db_conn.cursor()
             if is_server_db:
                 if not sync_db:
@@ -470,6 +492,10 @@ if __name__ == "__main__":
     parser.add_argument('--sync-port', help='sync netrpc port, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-db', help='sync server db, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-run', action="store_true", help='try to start sync')
+    parser.add_argument('--db-port', action="store", help='PSQL port')
+    parser.add_argument('--db-user', action="store", help='PSQL user')
+    parser.add_argument('--db-password', action="store", help='PSQL Password')
+    parser.add_argument('--db-host', action="store", help='PSQL Host')
 
     parser.add_argument('--trust-me-i-know-what-i-m-doing', action="store_true", help=argparse.SUPPRESS),
     sync_light = parser.add_argument_group('Restore Sync Light')
@@ -508,6 +534,15 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
         sql_queries = f.read()
         f.close()
 
+    if o.db_port:
+        os.environ['PGPORT'] = o.db_port
+    if o.db_user:
+        os.environ['PGUSER'] = o.db_user
+    if o.db_password:
+        os.environ['PGPASSWORD'] = o.db_password
+    if o.db_host:
+        os.environ['PGHOST'] = o.db_host
+    PG_param.set(o.db_user, o.db_password, o.db_host, o.db_port)
     transport = False
     if not o.sync_only:
         if o.issue:
