@@ -35,6 +35,11 @@ if [ -f ${TMP} ]; then
     exit 1
 fi
 
+TO_EXCLUDE="unifield-server/tools"
+for exclude in ${TO_EXCLUDE}; do
+    rm -fr ${1}/${exclude} ${2}/${exclude}
+done
+
 # important: set the lang to C or diffstat failed
 LANG=C diff --exclude='.bzr' -r $1 $2 | diffstat -p0 -l > $TMP
 
@@ -81,6 +86,12 @@ cp $DEST/release.py $PATCH_DIR
 if [ -e "$PATCH_DIR/unifield-version.txt" ]; then
     echo "unifield-version.txt deleted from patch"
     rm -f $PATCH_DIR/unifield-version.txt
+fi
+
+if [ -e "$PATCH_DIR/web/doc/openerp-web-win.cfg" ]; then
+    # Win config file is in conf dir
+    mkdir $PATCH_DIR/web/conf
+    cp $PATCH_DIR/web/doc/openerp-web-win.cfg $PATCH_DIR/web/conf/openerp-web.cfg
 fi
 
 if [ -n "$TAGNAME" ]; then
