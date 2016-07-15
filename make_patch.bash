@@ -66,6 +66,10 @@ while read ff; do
         echo >  $PATCH_DIR/${ff##$SRC}
     elif [[ "${ff}" == ${DEST}* ]]; then
         cd $DEST
+        if [[ "${ff##$DEST}" == "openerp-server.py" ]]; then
+            echo "************** WARNING openerp-server.py modified ****************"
+            echo "******* openerp-server.exe must be included in the patch file *****"
+        fi
         cp -a --parents ${ff##$DEST} ${PATCH_DIR}
         cd - >> /dev/null
     elif [[ "${ff}" == ${WEBDST}* ]]; then
