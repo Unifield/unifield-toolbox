@@ -52,7 +52,7 @@ WEBDST=${2%%/}/unifield-web/
 
 PATCH_DIR=`readlink -f $3`
 WEB_PATCH=${PATCH_DIR}/web/
-
+WARN=""
 while read ff; do
     if [[ "${ff}" == ${SRC}* ]]; then
         # if the diff is in from_tree => file remove
@@ -67,8 +67,9 @@ while read ff; do
     elif [[ "${ff}" == ${DEST}* ]]; then
         cd $DEST
         if [[ "${ff##$DEST}" == "openerp-server.py" ]]; then
-            echo "************** WARNING openerp-server.py modified ****************"
-            echo "******* openerp-server.exe must be included in the patch file *****"
+            WARN="""===== WARNING openerp-server.py modified =====
+===== openerp-server.exe must be included in the patch file ====="""
+            echo "$WARN"
         fi
         cp -a --parents ${ff##$DEST} ${PATCH_DIR}
         cd - >> /dev/null
@@ -112,3 +113,4 @@ else
     echo "Do not forget do edit release.py"
 fi
 echo "Do not forget to commit unifield-version.txt"
+echo "$WARN"
