@@ -23,8 +23,6 @@ c = csv.writer(file_w, delimiter=';', quoting=csv.QUOTE_ALL)
 c.writerow(['Method', 'Model', 'Field', 'Time (in s.)'])
 model_id = {}
 
-o.get('sale.report').read([1, 2, 3, 4, 5, 6, 7], ['invoiced'], {})
-
 def log_error(string, exception=False):
     if exception:
         string += "\n"
