@@ -345,7 +345,7 @@ def get_harware_id():
     mac.sort()
     return hashlib.md5(''.join(mac)).hexdigest()
 
-def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False):
+def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admin'):
     if not has_oerplib:
         return False
     if not isinstance(dbs_name, (list, tuple)):
@@ -359,10 +359,10 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False):
             try:
                 netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=sync_port, database=db)
                 sys.stdout.write("%s: Connect to sync\n" % (db, ))
-                netrpc.login('admin', 'admin')
+                netrpc.login('admin', uf_pass)
                 conn_manager = netrpc.get('sync.client.sync_server_connection')
                 conn_ids = conn_manager.search([])
-                conn_manager.write(conn_ids, {'password': 'admin'})
+                conn_manager.write(conn_ids, {'password': uf_pass})
                 conn_manager.connect()
                 if o.sync_run:
                     netrpc.get('sync.client.entity').sync_manual_threaded()
@@ -464,6 +464,7 @@ if __name__ == "__main__":
         'j_host': 'http://jira.unifield.org',
         'sync_port': '8070',
         'prefix': getpass.getuser(),
+        'uf_password': 'admin',
     }
     rcfile = '~/.restore_dumprc'
     cfile = os.path.realpath(os.path.expanduser(rcfile))
@@ -483,6 +484,7 @@ if __name__ == "__main__":
     group.add_argument('--sync-only', action='store_true', help='restore *only* light sync')
 
     parser.add_argument("--include", "-i", metavar="DB1,DB2", default='', help="comma separated list of dbs to restore (postfix db_name with + for exact match)")
+    parser.add_argument("--uf-password", action='store', help="UniField admin password")
     parser.add_argument("--drop", action='store_true', help="drop db if exists")
     parser.add_argument('-o', '--directory', action='store', default='', help='save dumps to directory')
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
@@ -520,7 +522,7 @@ if __name__ == "__main__":
 
     sql_queries = ''
     if o.sql == 'True':
-        sql_queries="""update res_users set password='admin';
+        sql_queries="""update res_users set password='"""+o.uf_password+"""';
 update res_users set login='admin' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
@@ -626,4 +628,4 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     if not o.sync_only:
         dbs = restore_dump(transport, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, sync_db=sync_db, sync_port=o.sync_port, drop=o.drop)
         if o.sync_port:
-            connect_and_sync(dbs, o.sync_port, o.sync_run, sync_db)
+            connect_and_sync(dbs, o.sync_port, o.sync_run, sync_db, o.uf_password)
