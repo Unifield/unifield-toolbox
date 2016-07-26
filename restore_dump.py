@@ -359,7 +359,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
             try:
                 netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=sync_port, database=db)
                 sys.stdout.write("%s: Connect to sync\n" % (db, ))
-                netrpc.login('admin', uf_pass)
+                netrpc.login(uf_pass, uf_pass)
                 conn_manager = netrpc.get('sync.client.sync_server_connection')
                 conn_ids = conn_manager.search([])
                 conn_manager.write(conn_ids, {'password': uf_pass})
@@ -484,7 +484,7 @@ if __name__ == "__main__":
     group.add_argument('--sync-only', action='store_true', help='restore *only* light sync')
 
     parser.add_argument("--include", "-i", metavar="DB1,DB2", default='', help="comma separated list of dbs to restore (postfix db_name with + for exact match)")
-    parser.add_argument("--uf-password", action='store', help="UniField admin password")
+    parser.add_argument("--uf-password", action='store', help="UniField admin login & password")
     parser.add_argument("--drop", action='store_true', help="drop db if exists")
     parser.add_argument('-o', '--directory', action='store', default='', help='save dumps to directory')
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
@@ -523,12 +523,12 @@ if __name__ == "__main__":
     sql_queries = ''
     if o.sql == 'True':
         sql_queries="""update res_users set password='"""+o.uf_password+"""';
-update res_users set login='admin' where id=1;
+update res_users set login='"""+o.uf_password+"""' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
 update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Update stock mission');
 update sync_client_version set patch=NULL;
-UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='admin', port=%(netrpc_port)s, protocol='netrpc';
+UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(netrpc_port)s, protocol='netrpc';
 -- SERVER
 UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     elif not o.list and o.sql:
