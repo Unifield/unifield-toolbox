@@ -292,13 +292,14 @@ class Web(object):
         resp, content = cnx.request(self.backup_url, 'POST', body=urllib.urlencode({'dbname': db, 'password': self.password}), headers=self.headers)
         file_desc.write(content)
 
-#class ZipAttachment(jira.resources.Attachment):
-#
-#    def __init__(self, options, session, name):
-#        jira.resources.Resource.__init__(self, 'attachmentzip/unzip/{0}/{1}[{2}]', options, session)
-#        self.filename = name
-#        self._url = '{server}/rest/{rest_path}/{rest_api_version}/'.format(**options)
-#        self._load(self.self)
+class JiraZipAttachment():
+    def __init__(self, options, name, j_obj):
+        self.path = j_obj._get_url('attachmentzip/unzip/%s/%s[%s]/' % tuple(options), base='{server}/secure/{path}')
+        self.j_obj = j_obj
+        self.filename = name
+
+    def get(self):
+        return self.j_obj._session.get(self.path).content
 
 class JIRA(dbmatch):
     host = 'http://jira.unifield.org'
@@ -311,12 +312,12 @@ class JIRA(dbmatch):
         self.include_dbs = include_dbs.split(',')
         self.attach = []
         for att in self.issue.fields.attachment:
-            #if att.filename.endswith('zip'):
-            #    zip_content = j_obj._get_json('attachment/%(id)s/expand/raw' % {'id': att.id})
-            #    if zip_content and zip_content.get('entries'):
-            #        for entry in zip_content['entries']:
-            #            if entry['name'].endswith('.dump') and self.match(entry['name']):
-            #                self.attach.append(ZipAttachment([self.issue.id, att.id, entry['entryIndex']], att._session, entry['name']))
+            if att.filename.endswith('zip'):
+                zip_content = j_obj._get_json('attachment/%(id)s/expand/raw' % {'id': att.id})
+                if zip_content and zip_content.get('entries'):
+                    for entry in zip_content['entries']:
+                        if entry['name'].endswith('.dump') and self.match(entry['name']):
+                            self.attach.append(JiraZipAttachment([self.issue.id, att.id, entry['entryIndex']], entry['name'], j_obj))
             if att.filename.endswith('.dump') and self.match(att.filename):
                 self.attach.append(att)
 
