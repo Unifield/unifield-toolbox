@@ -114,6 +114,7 @@ config_file() {
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
 
+    cp ./File/runtests.sh /home/${USERERP}/
     chmod +x /home/${USERERP}/build_and_test.sh
     chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh
     update-rc.d ${USERERP}-web defaults
@@ -158,7 +159,8 @@ restart_servers
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
-URL: http://$USERERP.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
+URL: http://$USERERP/${rb_server_url}
+Testfield: http://$USERERP_testfield/${rb_server_url}""" > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt
 
