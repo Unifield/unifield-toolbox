@@ -119,8 +119,9 @@ config_file() {
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
 
     cp ./File/runtests.sh /home/${USERERP}/
+    cp ./File/perf.wsgi /home/${USERERP}/
     chmod +x /home/${USERERP}/build_and_test.sh
-    chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh
+    chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/perf.wsgi
     update-rc.d ${USERERP}-web defaults
     update-rc.d ${USERERP}-server defaults
     chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server

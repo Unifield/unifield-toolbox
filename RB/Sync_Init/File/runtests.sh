@@ -15,6 +15,7 @@ fi
 
 if [[ ! -d testfield ]]; then
     git clone https://github.com/hectord/testfield.git
+    cp -f ~/perf.wsgi testfield/website
 fi
 
 /etc/init.d/${USER}-server stop
