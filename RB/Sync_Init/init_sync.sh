@@ -90,6 +90,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@URL@@#${URL}#g" \
     -e "s#@@ADDONS@@#${ADDONS}#g" \
     -e "s#@@RB_SERVER_URL@@#${rb_server_url}#g" \
+    -e "s#@@CLOUD_BENCH_KEY@@#${CLOUD_BENCH_KEY}#g" \
     -e "s#@@USER_DUMP_SYNC@@#${user_dump_sync}#g" \
     -e "s#@@PASS_DUMP_SYNC@@#${pass_dump_sync}#g" \
     -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
@@ -112,6 +113,7 @@ config_file() {
     create_file ./File/bash_profile /home/${USERERP}/.bash_profile
     create_file ./File/apache.conf /etc/apache2/sites-enabled/${USERERP}
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
+    create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
 
     cp ./File/runtests.sh /home/${USERERP}/

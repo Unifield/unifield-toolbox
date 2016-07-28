@@ -9,4 +9,4 @@ web_admin_pass=''
 web_login_user=''
 web_login_pass=''
 num_project=1
-
+CLOUD_BENCH_KEY=''
