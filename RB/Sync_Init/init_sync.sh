@@ -76,6 +76,7 @@ userid=`id -u ${USERERP}`
 NETRPCPORT=${userid}1
 WEBPORT=${userid}2
 XMLRPCPORT=${userid}3
+PGPORT=${userid}4
 
 ADDONS=""
 ADDONSDIR="'unifield-server', 'unifield-web'"
@@ -86,6 +87,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@DBNAME@@#${DBNAME}#g" \
     -e "s#@@XMLRPCPORT@@#${XMLRPCPORT}#g" \
     -e "s#@@NETRPCPORT@@#${NETRPCPORT}#g" \
+    -e "s#@@PGPORT@@#${PGPORT}#g" \
     -e "s#@@ADMINDBPASS@@#${ADMINDBPASS}#g" \
     -e "s#@@URL@@#${URL}#g" \
     -e "s#@@ADDONS@@#${ADDONS}#g" \
