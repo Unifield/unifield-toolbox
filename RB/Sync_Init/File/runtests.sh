@@ -4,6 +4,23 @@ set -o errexit
 #set -o nounset
 set -o pipefail
 
+end_of_script() {
+      send_mail 'FAILED'
+}
+
+send_mail() {
+    if [[ -z "${MAILTO}" ]]; then
+        IFS='_'
+        arrIN=(`whoami`)
+        IFS='-'
+        arrM=($arrIN)
+        MAILTO=$arrM
+        unset IFS
+    fi
+    mail -s "Testfield `whoami` $VERB ${1}" $MAILTO < ~/RB_info.txt
+}
+
+trap end_of_script EXIT
 
 if [[ $# -lt 1 || ( "$1" != benchmark && "$1" != "test" ) ]];
 then
@@ -44,13 +61,23 @@ ONLY_SETUP=
 if [[ ${3} == --only-setup ]]
 then
     ONLY_SETUP=yes
-    SERVERBRANCH=${4:-lp:unifield-server}
-    WEBBRANCH=${5:-lp:unifield-web}
+    SERVERBRANCH=${4}
+    WEBBRANCH=${5}
 else
     ONLY_SETUP=no
-    SERVERBRANCH=${3:-lp:unifield-server}
-    WEBBRANCH=${4:-lp:unifield-web}
+    SERVERBRANCH=${3}
+    WEBBRANCH=${4}
     LETTUCE_PARAMS="${*:5}"
+fi
+
+if [[ -n "${SERVERBRANCH}" ]]; then
+    rm -fr ${SERVERDIR}
+    bzr branch ${SERVERBRANCH} ${SERVERDIR}
+fi
+
+if [[ -n "${WEBBRANCH}" ]]; then
+    rm -fr ${WEBDIR}
+    bzr branch ${WEBBRANCH} ${WEBDIR}
 fi
 
 export PGPASSWORD=$DBPASSWORD
@@ -153,7 +180,7 @@ run_unifield()
             export COUNT=$count
 
             # run the benchmark
-            for nb in `seq 1 4`;
+            for nb in `seq 1 3`;
             do
                 ./runtests_local.sh -t testperf $LETTUCE_PARAMS || true
             done
@@ -175,6 +202,10 @@ run_unifield()
     #tmux new-window -t $SESSION_NAME -n web send-keys C-r
     #tmux new-window -t $SESSION_NAME -n server send-keys C-r
     tmux kill-session -t $SESSION_NAME
+
+    if [[ -f ${MYTMPDIR}/etc/web.pid ]]; then
+        kill -9 `cat ${MYTMPDIR}/etc/web.pid`
+    fi
 }
 
 launch_database()
@@ -193,11 +224,11 @@ launch_database()
 
         echo "port = $DBPORT" >> $DATADIR/postgresql.conf
         echo "unix_socket_directory = '$RUNDIR'" >> $DATADIR/postgresql.conf
-        echo "shared_buffers = 1GB" >> $DATADIR/postgresql.conf
+        #echo "shared_buffers = 1GB" >> $DATADIR/postgresql.conf
         echo 'checkpoint_segments = 10' >> $DATADIR/postgresql.conf
         echo 'checkpoint_completion_target = 0.9' >> $DATADIR/postgresql.conf
-        echo 'work_mem = 50MB' >> $DATADIR/postgresql.conf
-        echo 'maintenance_work_mem = 512MB' >> $DATADIR/postgresql.conf
+        #echo 'work_mem = 50MB' >> $DATADIR/postgresql.conf
+        #echo 'maintenance_work_mem = 512MB' >> $DATADIR/postgresql.conf
         echo 'random_page_cost = 2.0' >> $DATADIR/postgresql.conf
 
         LAUNCH_DB="faketime \"${FORCED_DATE} `date +%H:%M:%S`\" $DBPATH/postgres -D $DATADIR"
@@ -274,4 +305,4 @@ if [[ ${RUNDIR} ]];
 then
     rm -rf ${RUNDIR}
 fi
-
+send_mail
