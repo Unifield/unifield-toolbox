@@ -165,7 +165,7 @@ echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
 URL: http://${USERERP}.${rb_server_url}
-Testfield: http://${USERERP}_testfield.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
+Testfield: http://${USERERP}.testfield.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt
 

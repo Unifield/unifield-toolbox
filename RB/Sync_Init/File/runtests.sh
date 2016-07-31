@@ -22,7 +22,28 @@ send_mail() {
         MAILTO=$arrM
         unset IFS
     fi
-    mail -s "Testfield `whoami` $VERB ${1}" $MAILTO < ~/RB_info.txt
+    TMPFILE="/tmp/tetfield$$"
+    cp ~/RB_info.txt $TMPFILE
+    if [[ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]]; then
+        echo "Db dumps in $DIREXPORT/dumps" >> $TMPFILE
+    fi
+    if [[ -n "$STY" ]]; then
+        echo "screen -r -d $STY" >> $TMPFILE
+    fi
+    if [[ -d "${SERVERDIR}" ]]; then
+        echo "==== unifield-server ====" >> $TMPFILE
+        cd ${SERVERDIR}
+        bzr info >> $TMPFILE
+        bzr bzr version-info >> $TMFILE
+    fi
+    if [[ -d "${WEBDIR}" ]]; then
+        echo "==== unifield-web ====" >> $TMPFILE
+        cd ${WEBDIR}
+        bzr info >> $TMPFILE
+        bzr bzr version-info >> $TMFILE
+    fi
+    mail -s "Testfield `whoami` $VERB ${1}" $MAILTO < $TMPFILE
+    rm -f $TMPFILE
 }
 
 trap end_of_script EXIT
