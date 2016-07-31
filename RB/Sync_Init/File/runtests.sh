@@ -24,7 +24,7 @@ send_mail() {
     fi
     TMPFILE="/tmp/tetfield$$"
     cp ~/RB_info.txt $TMPFILE
-    if [[ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]]; then
+    if [ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]; then
         echo "Db dumps in $DIREXPORT/dumps" >> $TMPFILE
     fi
     if [[ -n "$STY" ]]; then
