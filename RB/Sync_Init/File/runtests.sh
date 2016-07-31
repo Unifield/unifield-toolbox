@@ -5,7 +5,12 @@ set -o errexit
 set -o pipefail
 
 end_of_script() {
-      send_mail 'FAILED'
+    if [[ $? -ne 0 ]]; then
+        STATUS='FAILED'
+    else
+        STATUS=''
+    fi
+    send_mail $STATUS
 }
 
 send_mail() {
@@ -305,4 +310,3 @@ if [[ ${RUNDIR} ]];
 then
     rm -rf ${RUNDIR}
 fi
-send_mail
