@@ -34,13 +34,13 @@ send_mail() {
         echo "==== unifield-server ====" >> $TMPFILE
         cd ${SERVERDIR}
         bzr info >> $TMPFILE
-        bzr bzr version-info >> $TMFILE
+        bzr bzr version-info >> $TMPFILE
     fi
     if [[ -d "${WEBDIR}" ]]; then
         echo "==== unifield-web ====" >> $TMPFILE
         cd ${WEBDIR}
         bzr info >> $TMPFILE
-        bzr bzr version-info >> $TMFILE
+        bzr bzr version-info >> $TMPFILE
     fi
     mail -s "Testfield `whoami` $VERB ${1}" $MAILTO < $TMPFILE
     rm -f $TMPFILE
