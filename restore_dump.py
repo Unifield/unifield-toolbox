@@ -256,7 +256,7 @@ class Web(object):
         else:
             host = self.default_host % 'ct1'
 
-        if not password and host.endswith('unifield.org'):
+        if not password and (host.endswith('unifield.org') or host.endswith('unifield.biz')):
             password = self.default_rb_password
 
         url = 'http://%s/' % (host,)
