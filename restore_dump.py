@@ -521,6 +521,8 @@ if __name__ == "__main__":
         sys.stdout.write(examples % {'prog': sys.argv[0]})
         sys.exit(1)
 
+    if not o.uf_password:
+        o.uf_password = 'admin'
     sql_queries = ''
     if o.sql == 'True':
         sql_queries="""update res_users set password='"""+o.uf_password+"""';
