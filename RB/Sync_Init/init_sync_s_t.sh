@@ -95,7 +95,7 @@ echo "env=\"$env\"" >> $BRANCHES
 USERERP=${REV}
 DBNAME="${REV}"
 BZBRANCH=""
-ADMINDBPASS="4unifield"
+ADMINDBPASS=$web_db_pass
 
 useradd -s /bin/bash -d /home/${USERERP} -m ${USERERP}
 userid=`id -u ${USERERP}`
@@ -103,6 +103,7 @@ userid=`id -u ${USERERP}`
 NETRPCPORT=${userid}1
 WEBPORT=${userid}2
 XMLRPCPORT=${userid}3
+PGPORT=${userid}4
 
 ADDONS=""
 ADDONSDIR="'unifield-server', 'unifield-web'"
@@ -113,18 +114,20 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@DBNAME@@#${DBNAME}#g" \
     -e "s#@@XMLRPCPORT@@#${XMLRPCPORT}#g" \
     -e "s#@@NETRPCPORT@@#${NETRPCPORT}#g" \
+    -e "s#@@PGPORT@@#${PGPORT}#g" \
     -e "s#@@ADMINDBPASS@@#${ADMINDBPASS}#g" \
     -e "s#@@URL@@#${URL}#g" \
     -e "s#@@ADDONS@@#${ADDONS}#g" \
     -e "s#@@RB_SERVER_URL@@#${rb_server_url}#g" \
+    -e "s#@@CLOUD_BENCH_KEY@@#${CLOUD_BENCH_KEY}#g" \
     -e "s#@@USER_DUMP_SYNC@@#${user_dump_sync}#g" \
     -e "s#@@PASS_DUMP_SYNC@@#${pass_dump_sync}#g" \
     -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
+    -e "s#@@UF_PASSWORD@@#${UF_PASSWORD}#g" \
     -e "s#@@WEB_ADMIN_PASS@@#${web_admin_pass}#g" \
     -e "s#@@WEB_LOGIN_USER@@#${web_login_user}#g" \
     -e "s#@@WEB_LOGIN_PASS@@#${web_login_pass}#g" \
     -e "s#@@NUM_PROJECT@@#${num_project}#g" \
-    -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
     -e "s#@@ADDONSDIR@@#${ADDONSDIR}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
@@ -140,10 +143,13 @@ config_file() {
     create_file ./File/bash_profile /home/${USERERP}/.bash_profile
     create_file ./File/apache.conf /etc/apache2/sites-enabled/${USERERP}
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
+    create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
 
+    cp ./File/runtests.sh /home/${USERERP}/
+    cp ./File/perf.wsgi /home/${USERERP}/
     chmod +x /home/${USERERP}/build_and_test.sh
-    chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh
+    chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/perf.wsgi
     update-rc.d ${USERERP}-web defaults
     update-rc.d ${USERERP}-server defaults
     chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
@@ -165,11 +171,6 @@ bzr ${bzr_type} -r ${server_tag:=-1} "${server:=${BRANCH_DEFAULT_SERVER}}" unifi
 bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
 
 mkdir etc log exports
-#createdb ${DBNAME}
-
-#cd /home/${USERERP}/unifield-server/bin/
-#echo unifield-server/bin/openerp-server.py -c ../../etc/openerprc -d ${DBNAME} --without-demo=all
-#echo Configure http://5.196.80.167:${WEBPORT}/
 EOF
 }
 
@@ -192,7 +193,8 @@ restart_servers
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
-URL: http://$USERERP.uf5.unifield.org""" > /home/${USERERP}/RB_info.txt
+URL: http://${USERERP}.${rb_server_url}
+Testfield: http://${USERERP}.testfield.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt
 
