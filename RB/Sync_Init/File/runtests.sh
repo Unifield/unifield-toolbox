@@ -24,6 +24,9 @@ send_mail() {
     fi
     TMPFILE="/tmp/tetfield$$"
     cp ~/RB_info.txt $TMPFILE
+    if [[ -f "${DIREXPORT}/meta" ]]; then
+        cat ${DIREXPORT}/meta >> $TMPFILE
+    fi
     if [ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]; then
         echo "Db dumps in $DIREXPORT/dumps" >> $TMPFILE
     fi
@@ -42,7 +45,7 @@ send_mail() {
         bzr info >> $TMPFILE
         bzr version-info >> $TMPFILE
     fi
-    mail -s "Testfield `whoami` $VERB ${1}" $MAILTO < $TMPFILE
+    mail -s "Testfield `whoami` $VERB ${TEST_NAME} ${1}" $MAILTO < $TMPFILE
     rm -f $TMPFILE
 }
 
@@ -176,6 +179,7 @@ run_unifield()
 
         export TEST_DESCRIPTION=${TEST_DESCRIPTION:-$NAME}
         export TEST_NAME=${TEST_NAME:-$NAME}
+        export TEST_DATE=`date +%Y/%m/%d`
 
         rm -fr output/* || true
 
