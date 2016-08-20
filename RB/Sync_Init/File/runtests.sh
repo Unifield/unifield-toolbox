@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-set -o errexit
 #set -o nounset
 set -o pipefail
 
@@ -49,15 +48,35 @@ send_mail() {
     rm -f $TMPFILE
 }
 
-trap end_of_script EXIT
+kill_processes() {
+    tmux kill-session -t unifield
+    if [[ -f ${MYTMPDIR}/etc/web.pid ]]; then
+        kill -9 `cat ${MYTMPDIR}/etc/web.pid`
+    fi
+    tmux kill-session -t PostgreSQL
+}
 
-if [[ $# -lt 1 || ( "$1" != benchmark && "$1" != "test" ) ]];
+
+if [[ $# -lt 1 || ( "$1" != "benchmark" && "$1" != "test" && "$1" != "setup" && "$1" != "kill") ]];
 then
     echo "Usage: "
-    echo "  $0 benchmark [name]"
-    echo "  $0 test [name]"
+    echo "  $0 benchmark [[name] [server_branch] [web_branch] [lettuce_param]]"
+    echo "  $0 test [[name] [server_branch] [web_branch] [lettuce_param]]"
+    echo "  $0 setup [[server_branch] [web_branch]]"
+    echo "  $0 kill"
     exit 1
 fi
+
+source config.sh
+MYTMPDIR=$SERVER_TMPDIR
+
+if [[ "$1" == "kill" ]]; then
+    kill_processes
+    exit 0
+fi
+
+set -o errexit
+trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
     git clone https://github.com/hectord/testfield.git
@@ -70,12 +89,10 @@ cp config.sh testfield/
 cd testfield
 
 VERB=${1:-test}
-source config.sh
 if [[ "$VERB" == "benchmark" ]]; then
     export KEY_FETCH=$KEY_FETCH_BENCH
 fi
 ./fetch/owncloud/fetch.sh
-MYTMPDIR=$SERVER_TMPDIR
 ENVNAME=$SERVER_ENVNAME
 
 SERVERDIR=$MYTMPDIR/unifield-server
@@ -86,14 +103,12 @@ SESSION_NAME=unifield-$$
 
 NAME=${2:-`date +%Y-%m-%d-%H%M`}
 
-ONLY_SETUP=
-if [[ ${3} == --only-setup ]]
-then
-    ONLY_SETUP=yes
-    SERVERBRANCH=${4}
-    WEBBRANCH=${5}
+ONLY_SETUP="no"
+if [[ "$VERB" == "setup" ]]; then
+    ONLY_SETUP="yes"
+    SERVERBRANCH=${2}
+    WEBBRANCH=${3}
 else
-    ONLY_SETUP=no
     SERVERBRANCH=${3}
     WEBBRANCH=${4}
     LETTUCE_PARAMS="${*:5}"
@@ -111,20 +126,7 @@ fi
 
 export PGPASSWORD=$DBPASSWORD
 
-if [[ ${DBADDR} ]]
-then
-    PARAM_UNIFIELD_SERVER="--db_user=$DBUSERNAME --db_port=$DBPORT --db_password=$DBPASSWORD --db_host=$DBADDR -c $MYTMPDIR/etc/openerprc"
-else
-
-    if [[ ${DBPASSWORD} ]]
-    then
-        echo "If you peer connect to PostgreSQL, you cannot set a password"
-        return 1
-    fi
-
-    PARAM_UNIFIELD_SERVER="--db_user=$DBUSERNAME -c $MYTMPDIR/etc/openerprc"
-fi
-
+PARAM_UNIFIELD_SERVER="--db_user=$DBUSERNAME --db_port=$DBPORT --db_password=$DBPASSWORD --db_host=$DBADDR -c $MYTMPDIR/etc/openerprc"
 
 
 upgrade_server()
@@ -171,6 +173,10 @@ run_unifield()
         $BEFORE_COMMAND python $WEBDIR/openerp-web.py -c $MYTMPDIR/etc/openerp-web.cfg
         "
     sleep 20
+}
+
+run_lettuce()
+{
     case $VERB in
 
     test)
@@ -228,14 +234,6 @@ run_unifield()
         ;;
 
     esac
-    #tmux new-window -t $SESSION_NAME -n web send-keys C-r
-    #tmux new-window -t $SESSION_NAME -n web send-keys C-r
-    #tmux new-window -t $SESSION_NAME -n server send-keys C-r
-    tmux kill-session -t $SESSION_NAME
-
-    if [[ -f ${MYTMPDIR}/etc/web.pid ]]; then
-        kill -9 `cat ${MYTMPDIR}/etc/web.pid`
-    fi
 }
 
 launch_database()
@@ -287,17 +285,14 @@ export DATABASES=$DATABASES
 ./generate_credentials.sh $FIRST_DATABASE $DBPREFIX
 launch_database;
 
-if [[ $ONLY_SETUP == "no" ]]
-then
-    python restore.py --reset-versions $ENVNAME
-else
-    python restore.py $ENVNAME
-fi
+python restore.py --reset-versions $ENVNAME
 
 if [[ "$RELOAD_BASE_MODULE" != 'no' ]]
 then
     upgrade_server;
 fi
+
+run_unifield;
 
 if [[ $ONLY_SETUP == "yes" ]]
 then
@@ -313,18 +308,14 @@ then
     export DISPLAY=:$$
 fi
 
-run_unifield;
-
+run_lettuce;
 if [[ -z "$DISPLAY_BEFORE" ]];
 then
     tmux kill-session -t X_$$
     pkill -f "Xvfb :$$"
 fi
 
-if [[ ${DBPATH} && ${FORCED_DATE} ]];
-then
-    tmux kill-session -t PostgreSQL_$$
-fi
+kill_processes
 
 if [[ ${DATADIR} ]];
 then
