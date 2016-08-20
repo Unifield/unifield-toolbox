@@ -165,6 +165,7 @@ restart_servers
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
+Testfield PGPORT: $PGPORT
 URL: http://${USERERP}.${rb_server_url}
 Testfield: http://${USERERP}.testfield.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
 
