@@ -65,5 +65,4 @@ for db in o.dbs_name.split(','):
                         else:
                             data.append(row)
                     obj = netrpc.get(model)
-                    if obj and fields and data:
-                        obj.import_data(fields, data)
+                    obj.import_data(fields, data)
