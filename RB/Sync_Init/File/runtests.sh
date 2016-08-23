@@ -191,6 +191,12 @@ run_lettuce()
 
         ./runtests_local.sh $LETTUCE_PARAMS || true
 
+        WEBVERSION=`bzr revno --tree $WEBDIR`
+        SERVERVERSION=`bzr revno --tree $SERVERDIR`
+        DBVERSION=`find instances/$ENVNAME -name '*.dump' -exec md5sum {} \; | md5sum`
+        METAVERSION=`find features/ -name '*.feature' -exec md5sum {} \; | md5sum`
+        TESTVERSION=`git rev-parse HEAD`
+        echo "S${SERVERVERSION} W${WEBVERSION} D${DBVERSION:0:10} M${METAVERSION:0:10} T${TESTVERSION:0:10}" > output/version
         DIREXPORT=website/tests/$NAME
         if [[ -e "$DIREXPORT" ]]
         then
