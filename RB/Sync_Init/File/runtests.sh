@@ -306,21 +306,8 @@ then
     exit 0
 fi
 
-DISPLAY_BEFORE=$DISPLAY
-
-if [[ -z "$DISPLAY" ]];
-then
-    tmux new -d -s X_$$ "Xvfb :$$"
-    export DISPLAY=:$$
-fi
 
 run_lettuce;
-if [[ -z "$DISPLAY_BEFORE" ]];
-then
-    tmux kill-session -t X_$$
-    pkill -f "Xvfb :$$"
-fi
-
 kill_processes
 
 if [[ ${DATADIR} ]];
