@@ -526,12 +526,12 @@ if __name__ == "__main__":
     sql_queries = ''
     if o.sql == 'True':
         sql_queries="""update res_users set password='"""+o.uf_password+"""';
-update res_users set login='"""+o.uf_password+"""' where id=1;
+update res_users set login='"""+o.uf_password.lower()+"""' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
 update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Update stock mission');
 update sync_client_version set patch=NULL;
-UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(netrpc_port)s, protocol='netrpc';
+UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password.lower()+"""', port=%(netrpc_port)s, protocol='netrpc';
 -- SERVER
 UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     elif not o.list and o.sql:
