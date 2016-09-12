@@ -501,6 +501,7 @@ if __name__ == "__main__":
     parser.add_argument('--db-host', action="store", help='PSQL Host')
 
     parser.add_argument('--trust-me-i-know-what-i-m-doing', action="store_true", help=argparse.SUPPRESS),
+    parser.add_argument('--auto-confirm', action="store_true", help=argparse.SUPPRESS),
     sync_light = parser.add_argument_group('Restore Sync Light')
     sync_light.add_argument('-s', '--sync', action='store_true', help='restore light sync from uf5 daily sync-prod')
     sync_light.add_argument('--apache-user', metavar="USER")
@@ -605,12 +606,13 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
                 raise SystemExit('Unable to start a sync if SYNC SERVER DB is missing (add option --sync-db)')
         add_info.append('Start sync on port %s, db %s' % (o.sync_port, db_sync))
 
-    sys.stdout.write("%s\nDbs to restore:\n - %s\n%s\n" % (info, '\n - '.join(dbs_name), ' / '.join(add_info)))
-    ret = ' '
-    while ret.lower() not in ('', 'y', 'n'):
-        ret = raw_input("Do you confirm ? [Y/n] ")
-    if ret.lower() == 'n':
-        raise SystemExit("Abort")
+    if not o.auto_confirm:
+        sys.stdout.write("%s\nDbs to restore:\n - %s\n%s\n" % (info, '\n - '.join(dbs_name), ' / '.join(add_info)))
+        ret = ' '
+        while ret.lower() not in ('', 'y', 'n'):
+            ret = raw_input("Do you confirm ? [Y/n] ")
+        if ret.lower() == 'n':
+            raise SystemExit("Abort")
     if transport and isinstance(transport, Web):
         if 'SYNC_SERVER_XXX' in dbs_name:
             raise SystemExit("SYNC_SERVER_XXX ? Sorry it's too large ... please see (light) DAILY_SYNC_SERVER")
