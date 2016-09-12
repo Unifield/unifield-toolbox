@@ -131,7 +131,9 @@ config_file() {
 bzr_type=branch
 init_user() {
     su - postgres -c -- "createuser -S -R -d ${USERERP}"
-    cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
+    if [ ! -d /home/${USERERP}/.bzr ]; then
+        cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
+    fi
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
