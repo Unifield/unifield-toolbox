@@ -27,6 +27,7 @@ default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
 currency = 'eur' # or chf
 lang = False # fr_MF or es_MF
+default_oc = 'oca'
 
 # WARNING:
 # hq_count = h, coordo_count = c, project_count = p 
