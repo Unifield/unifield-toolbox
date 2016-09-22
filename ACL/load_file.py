@@ -65,4 +65,6 @@ for db in o.dbs_name.split(','):
                         else:
                             data.append(row)
                     obj = netrpc.get(model)
-                    obj.import_data(fields, data)
+                    ret = obj.import_data(fields, data)
+                    if ret and ret[0] == -1:
+                        print "######### Import failed %s %s" % (ret[1], ret[2])
