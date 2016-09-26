@@ -79,7 +79,7 @@ set -o errexit
 trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
-    git clone https://github.com/hectord/testfield.git
+    git clone https://github.com/Unifield/testfield.git
     cp -f ~/perf.wsgi testfield/website
 fi
 
@@ -128,49 +128,44 @@ export PGPASSWORD=$DBPASSWORD
 
 PARAM_UNIFIELD_SERVER="--db_user=$DBUSERNAME --db_port=$DBPORT --db_password=$DBPASSWORD --db_host=$DBADDR -c $MYTMPDIR/etc/openerprc"
 
+FAKETIME_ARG=''
+if [[ ${FORCED_DATE} ]]; then
+    ORIG=`date -d ${FORCED_DATE} '+%s'`
+    NOW=`date '+%s'`
+    DELAY=$[ $NOW - $ORIG ]
+    FAKETIME_ARG="FAKETIME=-${DELAY}s LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1"
+fi
 
 upgrade_server()
 {
     # at first we have to upgrade all the databases
-    BEFORE_COMMAND=
-    if [[ ${FORCED_DATE} ]]
-    then
-        BEFORE_COMMAND="faketime \"${FORCED_DATE} `date +%H:%M:%S`\""
-    fi
     sed -i.bak "s/FOR UPDATE NOWAIT//g" $SERVERDIR/bin/addons/base/ir/ir_sequence.py
     for DBNAME in $DATABASES;
     do
         REAL_NAME=$DBNAME
-
         if [[ "$DBPREFIX" ]]
         then
             REAL_NAME=${DBPREFIX}_${REAL_NAME}
         fi
 
-        echo $BEFORE_COMMAND python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER -u base --stop-after-init -d $REAL_NAME
-        eval $BEFORE_COMMAND python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER -u base --stop-after-init -d $REAL_NAME
+        echo $FAKETIME_ARG python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER -u base --stop-after-init -d $REAL_NAME
+        eval $FAKETIME_ARG python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER -u base --stop-after-init -d $REAL_NAME
     done
 }
 
 
 run_unifield()
 {
-    BEFORE_COMMAND=
-    if [[ ${FORCED_DATE} ]]
-    then
-        BEFORE_COMMAND="faketime \"${FORCED_DATE} `date +%H:%M:%S`\""
-    fi
-
     # we print the commands to launch the components in a separate window in order to debug.
     #  We'll launch them later in a tmux
-    echo "Run the web server:" $BEFORE_COMMAND python $WEBDIR/openerp-web.py -c $MYTMPDIR/etc/openerp-web.cfg
-    echo "Run the server:" $BEFORE_COMMAND python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER
+    echo "Run the web server:" $FAKETIME_ARG python $WEBDIR/openerp-web.py -c $MYTMPDIR/etc/openerp-web.cfg
+    echo "Run the server:" $FAKETIME_ARG python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER
 
     tmux new -d -s $SESSION_NAME -n server "
-        $BEFORE_COMMAND python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER
+        $FAKETIME_ARG python $SERVERDIR/bin/openerp-server.py $PARAM_UNIFIELD_SERVER
         "
     tmux new-window -t $SESSION_NAME -n web "
-        $BEFORE_COMMAND python $WEBDIR/openerp-web.py -c $MYTMPDIR/etc/openerp-web.cfg
+        $FAKETIME_ARG python $WEBDIR/openerp-web.py -c $MYTMPDIR/etc/openerp-web.cfg
         "
     sleep 20
 }
@@ -180,7 +175,7 @@ run_lettuce()
     case $VERB in
 
     test)
-        export TIME_BEFORE_FAILURE=${TIME_BEFORE_FAILURE:-40}
+        export TIME_BEFORE_FAILURE=${TIME_BEFORE_FAILURE:-70}
         export COUNT=2;
 
         export TEST_DESCRIPTION=${TEST_DESCRIPTION:-$NAME}
@@ -264,8 +259,7 @@ launch_database()
         #echo 'work_mem = 50MB' >> $DATADIR/postgresql.conf
         #echo 'maintenance_work_mem = 512MB' >> $DATADIR/postgresql.conf
         echo 'random_page_cost = 2.0' >> $DATADIR/postgresql.conf
-
-        LAUNCH_DB="faketime \"${FORCED_DATE} `date +%H:%M:%S`\" $DBPATH/postgres -D $DATADIR"
+        LAUNCH_DB="$FAKETIME_ARG $DBPATH/postgres -D $DATADIR"
         tmux new -d -s PostgreSQL_$$ "$LAUNCH_DB; read"
         #TODO: Fix that... we should wait until psql can connect
         sleep 2
@@ -308,7 +302,7 @@ fi
 
 
 run_lettuce;
-kill_processes
+kill_processes;
 
 if [[ ${DATADIR} ]];
 then
