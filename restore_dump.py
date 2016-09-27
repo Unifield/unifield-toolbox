@@ -43,6 +43,9 @@ import re
 import psycopg2
 import tempfile
 from subprocess import call
+import threading
+import time
+
 try:
     from requests.packages import urllib3
     # disable tls warning with jira
@@ -346,6 +349,23 @@ def get_harware_id():
     mac.sort()
     return hashlib.md5(''.join(mac)).hexdigest()
 
+def do_upgrade(port, database, uf_pass):
+    while True:
+        netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
+        try:
+            netrpc.login(uf_pass, uf_pass)
+            return True
+            #sys.exit(0)
+        except Exception, e:
+            if 'ServerUpdate' in '%s'%e.message:
+                time.sleep(10)
+            else:
+                return True
+                #sys.exit(0)
+    return True
+    #sys.exit(0)
+    # TODO update sync rules if modules not installed
+
 def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admin'):
     if not has_oerplib:
         return False
@@ -372,13 +392,14 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
                 sys.stderr.write("%s: unable to sync connect\n%s\n" % (db, e))
     return True
 
-def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync_db=False, sync_port=0 , drop=False):
+def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync_db=False, sync_port=0 , drop=False, upgrade=False, passw=False):
     restored = []
     sql_data = {
         'hardware_id': get_harware_id(),
         'netrpc_port': sync_port or 8061,
         'server_db': sync_db or 'SYNC_SERVER',
     }
+    list_threads = []
     for db in transport.get_dbs():
         dump_name = transport.get_db_name(db)
         if output_dir:
@@ -457,8 +478,12 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                             db_conn.rollback()
                             cr = db_conn.cursor()
             db_conn.close()
-
-    return restored
+        if upgrade:
+            do_upgrade(sync_port, new_db_name, passw)
+            #thread = threading.Thread(target=do_upgrade, args=(sync_port, new_db_name, passw))
+            #list_threads.append(thread)
+            #thread.start()
+    return restored, list_threads
 
 if __name__ == "__main__":
     defaults = {
@@ -466,6 +491,7 @@ if __name__ == "__main__":
         'sync_port': '8070',
         'prefix': getpass.getuser(),
         'uf_password': 'admin',
+        'upgrade': False,
     }
     rcfile = '~/.restore_dumprc'
     cfile = os.path.realpath(os.path.expanduser(rcfile))
@@ -487,6 +513,7 @@ if __name__ == "__main__":
     parser.add_argument("--include", "-i", metavar="DB1,DB2", default='', help="comma separated list of dbs to restore (postfix db_name with + for exact match)")
     parser.add_argument("--uf-password", action='store', help="UniField admin login & password")
     parser.add_argument("--drop", action='store_true', help="drop db if exists")
+    parser.add_argument("--upgrade", action='store_true', help="upgrade base module")
     parser.add_argument('-o', '--directory', action='store', default='', help='save dumps to directory')
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
 
@@ -539,6 +566,10 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
         f = open(o.sql, 'r')
         sql_queries = f.read()
         f.close()
+
+    if o.upgrade:
+        sql_queries = """update ir_module_module set state='to upgrade' where state='installed';
+%s""" % (sql_queries,)
 
     if o.db_port:
         os.environ['PGPORT'] = o.db_port
@@ -620,6 +651,7 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
             raise SystemExit("If you really need to restore more than 5 dbs from a Web Instance add the option --trust-me-i-know-what-i-m-doing to the script")
     sync_db = o.sync_db
     prefix = o.prefix
+    threads = []
     if o.sync or o.sync_only:
         master_kind = {
             'with_master': 'SYNC_SERVER_LIGHT_WITH_MASTER',
@@ -628,9 +660,18 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
         }
         dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
-        sync_db = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop)[0]
-
+        sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, upgrade=o.upgrade, passw=o.uf_password)[0]
+        if list_threads:
+            threads += list_threads
     if not o.sync_only:
-        dbs = restore_dump(transport, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, sync_db=sync_db, sync_port=o.sync_port, drop=o.drop)
+        dbs, list_threads = restore_dump(transport, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, sync_db=sync_db, sync_port=o.sync_port, drop=o.drop, upgrade=o.upgrade, passw=o.uf_password)
+        if list_threads:
+            threads += list_threads
+            for x in threads:
+                sys.stdout.write("Waiting end of modules upgrade\n")
+                x.join()
+            threads = []
         if o.sync_port:
             connect_and_sync(dbs, o.sync_port, o.sync_run, sync_db, o.uf_password)
+    for x in threads:
+        x.join()
