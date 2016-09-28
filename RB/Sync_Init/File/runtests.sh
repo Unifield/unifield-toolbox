@@ -48,12 +48,22 @@ send_mail() {
     rm -f $TMPFILE
 }
 
+kill_deletedb() {
+    echo ${PGDATADIR}/postmaster.pid
+    if [[ -f ${PGDATADIR}/postmaster.pid ]]; then
+        $DBPATH/pg_ctl stop -m immediate -D $PGDATADIR 
+    fi
+    if [[ -d ${PGDATADIR} ]]; then
+        rm -fr ${PGDATADIR}
+    fi
+}
+
 kill_processes() {
     tmux kill-session -t unifield
     if [[ -f ${MYTMPDIR}/etc/web.pid ]]; then
         kill -9 `cat ${MYTMPDIR}/etc/web.pid`
     fi
-    tmux kill-session -t PostgreSQL
+    kill_deletedb
 }
 
 
@@ -69,6 +79,8 @@ fi
 
 source config.sh
 MYTMPDIR=$SERVER_TMPDIR
+PGDATADIR=$SERVER_TMPDIR/pgdata-$USER
+PGRUNDIR=$SERVER_TMPDIR/pgrun-$USER
 
 if [[ "$1" == "kill" ]]; then
     kill_processes
@@ -92,7 +104,6 @@ VERB=${1:-test}
 if [[ "$VERB" == "benchmark" ]]; then
     export KEY_FETCH=$KEY_FETCH_BENCH
 fi
-./fetch/owncloud/fetch.sh
 ENVNAME=$SERVER_ENVNAME
 
 SERVERDIR=$MYTMPDIR/unifield-server
@@ -113,6 +124,8 @@ else
     WEBBRANCH=${4}
     LETTUCE_PARAMS="${*:5}"
 fi
+
+./fetch/owncloud/fetch.sh
 
 if [[ -n "${SERVERBRANCH}" ]]; then
     rm -fr ${SERVERDIR}
@@ -237,30 +250,30 @@ run_lettuce()
     esac
 }
 
+
 launch_database()
 {
     # we have to setup a database if required
     LAUNCH_DB=
     if [[ ${DBPATH} && ${FORCED_DATE} ]];
     then
-        DATADIR=$SERVER_TMPDIR/data-$$
-        RUNDIR=$SERVER_TMPDIR/run-$$
         DBADDR=localhost
+        kill_deletedb
+        mkdir -p $PGDATADIR $PGRUNDIR
 
-        mkdir $DATADIR $RUNDIR
+        $DBPATH/initdb --username=$USER --encoding=UTF8 $PGDATADIR
 
-        $DBPATH/initdb --username=$USER --encoding=UTF8 $DATADIR
-
-        echo "port = $DBPORT" >> $DATADIR/postgresql.conf
-        echo "unix_socket_directory = '$RUNDIR'" >> $DATADIR/postgresql.conf
-        #echo "shared_buffers = 1GB" >> $DATADIR/postgresql.conf
-        echo 'checkpoint_segments = 10' >> $DATADIR/postgresql.conf
-        echo 'checkpoint_completion_target = 0.9' >> $DATADIR/postgresql.conf
-        #echo 'work_mem = 50MB' >> $DATADIR/postgresql.conf
-        #echo 'maintenance_work_mem = 512MB' >> $DATADIR/postgresql.conf
-        echo 'random_page_cost = 2.0' >> $DATADIR/postgresql.conf
-        LAUNCH_DB="$FAKETIME_ARG $DBPATH/postgres -D $DATADIR"
-        tmux new -d -s PostgreSQL_$$ "$LAUNCH_DB; read"
+        echo "port = $DBPORT" >> $PGDATADIR/postgresql.conf
+        echo "unix_socket_directory = '$PGRUNDIR'" >> $PGDATADIR/postgresql.conf
+        #echo "shared_buffers = 1GB" >> $PGDATADIR/postgresql.conf
+        echo 'checkpoint_segments = 10' >> $PGDATADIR/postgresql.conf
+        echo 'checkpoint_completion_target = 0.9' >> $PGDATADIR/postgresql.conf
+        #echo 'work_mem = 50MB' >> $PGDATADIR/postgresql.conf
+        #echo 'maintenance_work_mem = 512MB' >> $PGDATADIR/postgresql.conf
+        echo 'random_page_cost = 2.0' >> $PGDATADIR/postgresql.conf
+        #LAUNCH_DB="$FAKETIME_ARG $DBPATH/postgres -D $PGDATADIR"
+        #tmux new -d -s PostgreSQL_$$ "$LAUNCH_DB; read"
+        eval $FAKETIME_ARG $DBPATH/pg_ctl start -D $PGDATADIR -l $PGRUNDIR/postgresql.log
         #TODO: Fix that... we should wait until psql can connect
         sleep 2
         psql -h $DBADDR -p $DBPORT postgres -c "CREATE USER $DBUSERNAME WITH CREATEDB PASSWORD '$DBPASSWORD'" || echo $?
@@ -283,16 +296,16 @@ FIRST_DATABASE=`echo $DATABASES | cut -d " " -f1`
 export DATABASES=$DATABASES
 
 ./generate_credentials.sh $FIRST_DATABASE $DBPREFIX
-launch_database;
+launch_database
 
 python restore.py --reset-versions $ENVNAME
 
 if [[ "$RELOAD_BASE_MODULE" != 'no' ]]
 then
-    upgrade_server;
+    upgrade_server
 fi
 
-run_unifield;
+run_unifield
 
 if [[ $ONLY_SETUP == "yes" ]]
 then
@@ -300,16 +313,5 @@ then
     exit 0
 fi
 
-
-run_lettuce;
-kill_processes;
-
-if [[ ${DATADIR} ]];
-then
-    rm -rf ${DATADIR}
-fi
-
-if [[ ${RUNDIR} ]];
-then
-    rm -rf ${RUNDIR}
-fi
+run_lettuce
+kill_processes
