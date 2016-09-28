@@ -350,6 +350,7 @@ def get_harware_id():
     return hashlib.md5(''.join(mac)).hexdigest()
 
 def do_upgrade(port, database, uf_pass):
+    sys.stdout.write("upgrade base module\n")
     while True:
         netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
         try:
@@ -660,7 +661,7 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
         }
         dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
-        sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, upgrade=o.upgrade, passw=o.uf_password)
+        sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, sync_port=o.sync_port, upgrade=o.upgrade, passw=o.uf_password)
         sync_db = sync_db[0]
         if list_threads:
             threads += list_threads
