@@ -75,7 +75,7 @@ class dbmatch(object):
             if x.endswith('+'):
                 if x[0:-1] == name:
                     return True
-            elif x in name:
+            elif re.search(x, name):
                 return True
 
 class PG_param(object):
@@ -309,8 +309,16 @@ class JIRA(dbmatch):
     def __init__(self, host, user, password, issue_key, include_dbs):
         if host:
             self.host = host
-        j_obj = jira.JIRA(self.host, options={'check_update': False}, basic_auth=(user, password))
-        self.issue = j_obj.issue(issue_key)
+        try:
+            j_obj = jira.JIRA(self.host, options={'check_update': False}, basic_auth=(user, password))
+            self.issue = j_obj.issue(issue_key)
+        except jira.utils.JIRAError, error:
+            if error.status_code == 401:
+                message = 'Unauthorized'
+            else:
+                message = error.text
+            sys.stderr.write("Jira Error %s: %s\n" % (error.status_code, message))
+            sys.exit(1)
         self.info = 'Jira key %s' % issue_key
         self.include_dbs = include_dbs.split(',')
         self.attach = []
@@ -352,7 +360,10 @@ def get_harware_id():
 def do_upgrade(port, database, uf_pass):
     sys.stdout.write("upgrade base module\n")
     while True:
-        netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
+        try:
+            netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
+        except Exception, e:
+            sys.stderr.write("%s: unable to upgrade modules\n%s\n" % (database, e))
         try:
             netrpc.login(uf_pass, uf_pass)
             return True
@@ -365,7 +376,6 @@ def do_upgrade(port, database, uf_pass):
                 #sys.exit(0)
     return True
     #sys.exit(0)
-    # TODO update sync rules if modules not installed
 
 def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admin'):
     if not has_oerplib:
@@ -429,14 +439,17 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
         ok = False
         i = 1
         # check if db exists
+        cant_drop = False
         while not ok:
             try:
                 db_conn = psycopg2.connect(PG_param.get_dsn(new_db_name))
-                if drop:
+                if drop and not cant_drop:
                     db_conn.close()
-                    call(['dropdb', new_db_name])
-                    sys.exit(0)
-                    break
+                    if call(['dropdb', new_db_name]) != 0:
+                        cant_drop = True
+                        sys.stdout.write("Unable to drop %s\n" % new_db_name)
+                    else:
+                        break
                 new_db_name = '%s_%s' % (orig_db_name, i)
                 db_conn.close()
                 i += 1
@@ -478,6 +491,39 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                             sys.stderr.write("Error during sql queries:\n%s\n" % e)
                             db_conn.rollback()
                             cr = db_conn.cursor()
+
+            # increment sequences so db ids used after the dump are not re-used
+            cr.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S'")
+            for x in cr.fetchall():
+                cr.execute("SELECT last_value FROM %s" % x[0])
+                new_seq = cr.fetchone()[0]*2
+                cr.execute("ALTER SEQUENCE %s RESTART WITH %s" % (x[0], new_seq))
+            cr.execute("update ir_sequence set number_next=number_next*2")
+            db_conn.commit()
+
+            if is_server_db and upgrade:
+                # if prod sync server: install msf_sync_data_server to auto update sync rules
+                # change xmlid of existing sync_server.message_rule / sync.server.group_type
+                cr.execute("select state from ir_module_module where name='msf_sync_data_server'")
+                x = cr.fetchone()
+                if x and x[0] == 'uninstalled':
+                    cr.execute("update ir_module_module set state='to upgrade' where name='msf_sync_data_server'")
+                    cr.execute("update ir_model_data set module='msf_sync_data_server' where model='sync_server.message_rule' and module=''")
+                    for xmlid, group_name in [
+                            ('group_type_oc', 'OC'),
+                            ('group_type_usb', 'USB'),
+                            ('group_type_misson', 'MISSION'),
+                            ('group_type_coordo', 'COORDINATIONS'),
+                            ('group_type_hq_mission', 'HQ + MISSION'),
+                            ]:
+                        cr.execute('select id from sync_server_group_type where name=%s', (group_name, ))
+                        res_id = cr.fetchone()[0]
+
+                        cr.execute("""insert into ir_model_data (name, module, model, res_id, noupdate, force_recreation)
+                            values (%s, 'msf_sync_data_server', 'sync.server.group_type', %s, 'f', 'f') """, (xmlid, res_id))
+                    db_conn.commit()
+
+
             db_conn.close()
         if upgrade:
             do_upgrade(sync_port, new_db_name, passw)
@@ -543,7 +589,7 @@ if __name__ == "__main__":
     web_parser.add_argument("--web-pass", "-w", metavar="pwd", default="", help="web backup password")
 
     sync_parser = parser.add_argument_group('Restore Sync Server Light')
-    sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
+    sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update', '7days'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
 
     o = parser.parse_args()
     if o.examples:
@@ -558,9 +604,10 @@ if __name__ == "__main__":
 update res_users set login='"""+o.uf_password.lower()+"""' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
-update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Update stock mission');
+update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup');
+update ir_cron set nextcall='2100-01-01 00:00:00' where name='Update stock mission';
 update sync_client_version set patch=NULL;
-UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(netrpc_port)s, protocol='netrpc';
+UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(netrpc_port)s, protocol='netrpc', netrpc_retry=2, timeout=1200;
 -- SERVER
 UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     elif not o.list and o.sql:
@@ -598,6 +645,8 @@ delete from sync_server_version;
             transport = RBIndex(o.rb, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
+            if web_host.endswith('/'):
+                web_host = web_host[0:-1]
             transport = Web(web_host, o.web_pass, o.include)
 
         dbs = transport.get_dbs()
@@ -626,6 +675,8 @@ delete from sync_server_version;
         add_info.append("Drop existing dbs")
     if o.sql:
         add_info.append("Execute sql")
+    if o.upgrade:
+        add_info.append("Upgrade base module")
 
     if o.sync_run:
         if not has_oerplib:
@@ -662,6 +713,7 @@ delete from sync_server_version;
             'with_master': 'SYNC_SERVER_LIGHT_WITH_MASTER',
             'no_master': 'SYNC_SERVER_LIGHT_NO_MASTER',
             'no_update': 'SYNC_SERVER_LIGHT_NO_UPDATE',
+            '7days': 'SYNC_SERVER_LIGHT_7DAYS',
         }
         dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
