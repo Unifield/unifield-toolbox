@@ -359,19 +359,23 @@ def get_harware_id():
 
 def do_upgrade(port, database, uf_pass):
     sys.stdout.write("upgrade base module\n")
+    # Max 1h to upgrade
+    max_sec = 60*60
+    begin = time.time()
     while True:
         try:
             netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
-        except Exception, e:
-            sys.stderr.write("%s: unable to upgrade modules\n%s\n" % (database, e))
-        try:
             netrpc.login(uf_pass, uf_pass)
             return True
             #sys.exit(0)
         except Exception, e:
             if 'ServerUpdate' in '%s'%e.message:
+                if time.time() - begin > max_sec:
+                    sys.stderr.write("%s: timeout during upgrade" % (database,))
+                    return True
                 time.sleep(10)
             else:
+                sys.stderr.write("%s: unable to upgrade modules\n%s\n" % (database, e))
                 return True
                 #sys.exit(0)
     return True
