@@ -604,7 +604,8 @@ if __name__ == "__main__":
         o.uf_password = 'admin'
     sql_queries = ''
     if o.sql == 'True':
-        sql_queries="""update res_users set password='"""+o.uf_password+"""';
+        sql_queries="""-- BOTH
+update res_users set password='"""+o.uf_password+"""';
 update res_users set login='"""+o.uf_password.lower()+"""' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
