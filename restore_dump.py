@@ -650,7 +650,7 @@ delete from sync_server_version;
             transport = RBIndex(o.rb, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
-            if web_host.endswith('/'):
+            if web_host and web_host.endswith('/'):
                 web_host = web_host[0:-1]
             transport = Web(web_host, o.web_pass, o.include)
 
