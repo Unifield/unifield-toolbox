@@ -38,6 +38,18 @@ default_oc = 'oca'
 hq_count = 1
 coordo_count = 1
 project_count = @@NUM_PROJECT@@
+# or describe the instances with instance_tree
+"""
+instance_tree = {
+    'HQ1': {
+        'C1': ['P1', 'P2'],
+        'C2': ['P1'],
+    },
+    'HQ2': {
+        'C1': [],
+    },
+}
+"""
 
 load_test = 1250
 source_path = '/home/@@USERERP@@'
@@ -56,5 +68,6 @@ dump_dir = '/home/@@USERERP@@/exports'
 #    'data/extra/msf_field_access_rights.field_access_rule.csv',
 #    'data/extra/msf_field_access_rights.field_access_rule_line.csv',
 #    'data/extra/msf_button_access_rights.button_access_rule.csv',
+#    'data/master_hq/product.product.csv',
 #]
 
