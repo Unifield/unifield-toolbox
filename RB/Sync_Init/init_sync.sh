@@ -33,8 +33,13 @@ MKDB_CURR='eur'
 num_hq=1
 num_coordo=1
 INIT_ONLY=
-while getopts i:s:w:m:l:c:atdhn opt; do
+COMMENT_ACL='"""'
+while getopts i:s:w:m:l:c:atdhnu opt; do
 case $opt in
+    u)
+        AUTO=1
+        COMMENT_ACL=
+        ;;
     s)
         server=$OPTARG
         AUTO=1
@@ -96,6 +101,7 @@ case $opt in
           -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
           -l: lang es/fr
           -m: mkdb branch
+          -u: load acl
           -s: server branch
           -w: web branch
         """
@@ -210,6 +216,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@MAILTO@@#${MAILTO}#g" \
     -e "s#@@MKDB_LANG@@#${MKDB_LANG}#g" \
     -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
+    -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 
