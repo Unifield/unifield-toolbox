@@ -263,7 +263,7 @@ if [[ "$TESTFIELD" ]]; then
     su - $USERERP -c "./runtests.sh test"
 elif [[ "$DEVTEST" ]]; then
     su - $USERERP -c ./build_and_test.sh
-elif [[ -n "$INIT_ONLY" ]];
+elif [[ -n "$INIT_ONLY" ]]; then
     su - $USERERP -c ./sync_env_script/mkdb.py
 fi
 exit 0
