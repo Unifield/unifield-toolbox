@@ -26,24 +26,34 @@ if [[ -f ~/RBconfig ]]; then
 fi
 
 AUTO=
-TESTFIELD=
-DEVTEST=
 MKDB_LANG="False"
 MKDB_CURR='eur'
 num_hq=1
 num_coordo=1
-INIT_ONLY=
+INIT_TYPE="mkdb"
 COMMENT_ACL='"""'
 FULL_TREE='"""'
-while getopts i:s:w:m:l:c:atdhnuf opt; do
+while getopts t:i:s:w:m:l:c:aufh opt; do
 case $opt in
-    f)
+    t)
+         if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
+             echo "-t option should be mkdb|testfield|devtests|none"
+             exit 1
+        fi
+        INIT_TYPE=$OPTARG
+        if [[ "$INIT_TYPE" == "mkdb" ]]; then
+            NUM_PROJECT=2
+        fi
         AUTO=1
-        FULL_TREE=
         ;;
-    u)
+    i)
         AUTO=1
-        COMMENT_ACL=
+        IFS="-"
+        arr=($OPTARG)
+        unset IFS
+        num_hq=${arr[0]-1}
+        num_coordo=${arr[1]-1}
+        num_project=${arr[2]-1}
         ;;
     s)
         server=$OPTARG
@@ -76,38 +86,27 @@ case $opt in
     a)
         AUTO=1
         ;;
-    t)
-        TESTFIELD=1
-        ;;
-    d)
-        DEVTEST=1
-        NUM_PROJECT=2
-        ;;
-    i)
+    u)
         AUTO=1
-        IFS="-"
-        arr=($OPTARG)
-        unset IFS
-        num_hq=${arr[0]-1}
-        num_coordo=${arr[1]-1}
-        num_project=${arr[2]-1}
+        COMMENT_ACL=
         ;;
-    n)
-        INIT_ONLY=1
+    f)
         AUTO=1
+        FULL_TREE=
         ;;
     h)
         echo """$0
-          -t: exec testfield
-          -d: exec devtest
-          -a: auto start (use trunk branches)
+          -t [mkdb|testfield|devtests|none]: command to start (default: mkdb)
+          -a: start mkdb with trunk branches
+
+          # MKDB options
           -c: currency eur/chf
-          -n: init only do not start mkdb
           -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
           -f: full tree instances: HQ1C1(P1/P2) H1C2P1 H1C1
           -l: lang es/fr
           -m: mkdb branch
           -u: load acl
+
           -s: server branch
           -w: web branch
         """
@@ -145,8 +144,10 @@ if [ "$AUTO" ]; then
 elif [ -f "$BRANCHES" ]; then
     . "$BRANCHES"
     correct=skip
+    INIT_TYPE=
 else
     correct=no
+    INIT_TYPE=
 fi
 
 while ! [ $correct == "y" ]
@@ -297,11 +298,15 @@ URL: http://${USERERP}.${rb_server_url}
 
 cat /home/${USERERP}/RB_info.txt
 
-if [[ "$TESTFIELD" ]]; then
+case $INIT_TYPE in
+  testfield)
     su - $USERERP -c "./runtests.sh test"
-elif [[ "$DEVTEST" ]]; then
+    ;;
+  devtests)
     su - $USERERP -c ./build_and_test.sh
-elif [[ -z "$INIT_ONLY" ]]; then
+    ;;
+  mkdb)
     su - $USERERP -c ./sync_env_script/mkdb.py
-fi
+    ;;
+esac
 exit 0

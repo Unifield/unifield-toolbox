@@ -1,8 +1,9 @@
 cat <<EOF
 Net-RPC port: @@NETRPCPORT@@
 XML-RPC port: @@XMLRPCPORT@@
-URL: http://@@USERERP@@.@@RB_SERVER_URL@@
+Testfield PGPORT: @@PGPORT@@
 Testfield: http://@@USERERP@@.testfield.@@RB_SERVER_URL@@
+URL: http://@@USERERP@@.@@RB_SERVER_URL@@
 
 EOF
 
