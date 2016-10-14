@@ -260,12 +260,12 @@ init_user() {
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
-echo bzr ${bzr_type} "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
-bzr ${bzr_type} "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
-echo bzr ${bzr_type} "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
-bzr ${bzr_type} "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
-echo bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
-bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
+echo bzr ${bzr_type} ${web:=${BRANCH_DEFAULT_WEB}} unifield-web
+bzr ${bzr_type} ${web:=${BRANCH_DEFAULT_WEB}} unifield-web
+echo bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
+bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
+echo bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
+bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
 
 mkdir etc log exports
 EOF
