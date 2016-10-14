@@ -60,15 +60,15 @@ dump_dir = '/home/@@USERERP@@/exports'
 
 # uncomment the next 3 parameters to load UserRights
 @@COMMENT_ACL@@
-load_uac_file = 'data/uac.xml'
-load_users_file = 'data/unifield_users.csv'
+load_uac_file = '/home/@@USERERP@@/sync_env_script/data/uac.xml'
+load_users_file = '/home/@@USERERP@@/sync_env_script/data/unifield_users.csv'
 load_extra_files = [
-    'data/extra/ir.actions.act_window.csv',
-    'data/extra/ir.model.access.csv',
-    'data/extra/ir.rule.csv',
-    'data/extra/msf_field_access_rights.field_access_rule.csv',
-    'data/extra/msf_field_access_rights.field_access_rule_line.csv',
-    'data/extra/msf_button_access_rights.button_access_rule.csv',
-    'data/master_hq/product.product.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.actions.act_window.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.model.access.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule_line.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_button_access_rights.button_access_rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/master_hq/product.product.csv',
 ]
 @@COMMENT_ACL@@
