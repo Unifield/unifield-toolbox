@@ -218,7 +218,7 @@ config_file() {
 
 bzr_type=branch
 init_user() {
-    su - postgres -c -- "psql -c 'DROP ROLE IF EXISTS ${USERERP};'"
+    su - postgres -c -- "psql -c 'DROP ROLE IF EXISTS \"${USERERP}\";'"
     su - postgres -c -- "createuser -S -R -d ${USERERP}"
     if [ ! -d /home/${USERERP}/.bzr ]; then
         cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
