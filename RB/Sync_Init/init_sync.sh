@@ -9,7 +9,14 @@ end_of_script() {
     send_mail $STATUS
 }
 send_mail() {
-    mail -s "RB ${REV} ${1}" $MAILTO < /home/$USERERP/RB_info.txt
+    TMPFILE=/tmp/mkdb$$
+    cat /home/$USERERP/RB_info.txt > $TMPFILE
+    echo >> $TMPFILE
+    echo >> $TMPFILE
+    echo "---------------" >> $TMPFILE
+    cat $LOGFILE >> $TMPFILE
+    mail -s "RB ${REV} ${1}" $MAILTO < $TMPFILE
+    rm -f $TMPFILE
 }
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
@@ -102,13 +109,12 @@ REV="$1"
 [ -z "$REV" ] && echo "Please specify revision: dsp-utp141 for example" && exit 1
 BRANCHES="branches/$REV"
 
-if [ -f "$BRANCHES" ]; then
-    . "$BRANCHES"
-    correct=skip
-else
-    correct=no
-fi
 if [ "$AUTO" ]; then
+    if [ ! -d LOG/ ]; then
+        mkdir LOG/
+    fi
+    LOGFILE=LOG/$REV.log
+    echo > $LOGFILE
     correct='y'
     if [ -d /home/$REV ]; then
         echo "Dir /home/$REV exists"
@@ -116,7 +122,21 @@ if [ "$AUTO" ]; then
     fi
     set -o errexit
     trap end_of_script EXIT
+    # Close STDOUT file descriptor
+    exec 1<&-
+    # Close STDERR FD
+    exec 2<&-
+    # Open STDOUT as $LOG_FILE file for read and write.
+    exec 1<>$LOGFILE
+    # Redirect STDERR to STDOUT
+    exec 2>&1
+elif [ -f "$BRANCHES" ]; then
+    . "$BRANCHES"
+    correct=skip
+else
+    correct=no
 fi
+
 while ! [ $correct == "y" ]
 do
     if ! [ "$correct" == "skip" ]; then
@@ -226,8 +246,11 @@ init_user() {
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
+echo bzr ${bzr_type} "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
 bzr ${bzr_type} "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
+echo bzr ${bzr_type} "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
 bzr ${bzr_type} "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
+echo bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
 bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
 
 mkdir etc log exports
@@ -264,7 +287,7 @@ if [[ "$TESTFIELD" ]]; then
     su - $USERERP -c "./runtests.sh test"
 elif [[ "$DEVTEST" ]]; then
     su - $USERERP -c ./build_and_test.sh
-elif [[ -n "$INIT_ONLY" ]]; then
+elif [[ -z "$INIT_ONLY" ]]; then
     su - $USERERP -c ./sync_env_script/mkdb.py
 fi
 exit 0
