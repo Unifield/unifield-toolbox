@@ -1,24 +1,103 @@
 #!/bin/bash
-if [ "$1" == "--old" ]; then
-        BRANCH_DEFAULT_SERVER="lp:unifield-server/old"
-        BRANCH_DEFAULT_ADDONS="lp:unifield-addons"
-        BRANCH_DEFAULT_WM="lp:unifield-wm"
-        BRANCH_DEFAULT_SYNC="lp:unifield-wm/sync"
-        REV="$2"
-else
-        BRANCH_DEFAULT_SERVER="lp:unifield-server"
-        BRANCH_DEFAULT_ADDONS=""
-        BRANCH_DEFAULT_WEB="lp:unifield-web"
-        BRANCH_DEFAULT_WM=""
-        BRANCH_DEFAULT_SYNC=""
-        REV="$1"
 
-fi
-
-source ~/RBconfig
-
+end_of_script() {
+    if [[ $? -ne 0 ]]; then
+        STATUS='FAILED'
+    else
+        STATUS='OK'
+    fi
+    send_mail $STATUS
+}
+send_mail() {
+    mail -s "RB ${REV} ${1}" $MAILTO < /home/$USERERP/RB_info.txt
+}
+BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
+if [[ -f ~/RBconfig ]]; then
+    source ~/RBconfig
+fi
+
+AUTO=
+TESTFIELD=
+DEVTEST=
+MKDB_LANG=
+MKDB_CURR='eur'
+num_hq=1
+num_coordo=1
+INIT_ONLY=
+while getopts i:s:w:m:l:c:atdhn opt; do
+case $opt in
+    s)
+        server=$OPTARG
+        AUTO=1
+        ;;
+    w)
+        web=$OPTARG
+        AUTO=1
+        ;;
+    m)
+        env=$OPTARG
+        AUTO=1
+        ;;
+    l)
+        if [[ "$OPTARG" != "es" && "$OPTARG" != "fr" ]]; then
+            echo "-l option should be en or fr not $MKDB_LANG"
+            exit 1
+        fi
+        MKDB_LANG="'${OPTARG}_MF'"
+        AUTO=1
+        ;;
+    c)
+        MKDB_CURR=$OPTARG
+        if [[ "$MKDB_CURR" != "eur" && "$MKDB_CURR" != "chf" ]]; then
+            echo "-c option should be eur or chf not $MKDB_CURR"
+            exit 1
+        fi
+        AUTO=1
+        ;;
+    a)
+        AUTO=1
+        ;;
+    t)
+        TESTFIELD=1
+        ;;
+    d)
+        DEVTEST=1
+        NUM_PROJECT=2
+        ;;
+    i)
+        AUTO=1
+        IFS="-"
+        arr=($OPTARG)
+        unset IFS
+        num_hq=${arr[0]-1}
+        num_coordo=${arr[1]-1}
+        num_project=${arr[2]-1}
+        ;;
+    n)
+        INIT_ONLY=1
+        AUTO=1
+        ;;
+    h)
+        echo """$0
+          -t: exec testfield
+          -d: exec devtest
+          -a: auto start (use trunk branches)
+          -c: currency eur/chf
+          -n: init only do not start mkdb
+          -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
+          -l: lang es/fr
+          -m: mkdb branch
+          -s: server branch
+          -w: web branch
+        """
+        exit 1
+    esac
+done
+
+shift $((OPTIND - 1))
+REV="$1"
 
 [ -z "$REV" ] && echo "Please specify revision: dsp-utp141 for example" && exit 1
 BRANCHES="branches/$REV"
@@ -29,46 +108,50 @@ if [ -f "$BRANCHES" ]; then
 else
     correct=no
 fi
-
+if [ "$AUTO" ]; then
+    correct='y'
+    if [ -d /home/$REV ]; then
+        echo "Dir /home/$REV exists"
+        exit 1
+    fi
+    set -o errexit
+    trap end_of_script EXIT
+fi
 while ! [ $correct == "y" ]
 do
     if ! [ "$correct" == "skip" ]; then
         echo -n "Enter server branch [$BRANCH_DEFAULT_SERVER]: "; read server
         [ -z "$server" ] && server=$BRANCH_DEFAULT_SERVER
-        echo -n "Enter addons branch [$BRANCH_DEFAULT_ADDONS]: "; read addons
-        [ -z "$addons" ] && addons=$BRANCH_DEFAULT_ADDONS
         echo -n "Enter web branch [$BRANCH_DEFAULT_WEB]: "; read web
         [ -z "$web" ] && web=$BRANCH_DEFAULT_WEB
-        echo -n "Enter wm branch [$BRANCH_DEFAULT_WM]: "; read wm
-        [ -z "$wm" ] && wm=$BRANCH_DEFAULT_WM
-        echo -n "Enter sync branch [$BRANCH_DEFAULT_SYNC]: "; read sync
-        [ -z "$sync" ] && sync=$BRANCH_DEFAULT_SYNC
         echo -n "Enter env branch [$BRANCH_DEFAULT_ENV]: "; read env
         [ -z "$env" ] && env=$BRANCH_DEFAULT_ENV
     fi
     echo "Please check the branches:"
     echo "+ Unifield Server: $server"
-    echo "+ Unifield Addons: $addons"
     echo "+ Unifield Web: $web"
-    echo "+ Unifield WM: $wm"
-    echo "+ Unifield Sync: $sync"
     echo "+ Unifield Sync Env: $env"
     echo -n "=> Is it correct? [Y] "; read correct
     [ -z "$correct" ] && correct=y
 done
 
 echo "server=\"$server\"" > $BRANCHES
-echo "addons=\"$addons\"" >> $BRANCHES
 echo "web=\"$web\"" >> $BRANCHES
-echo "wm=\"$wm\"" >> $BRANCHES
-echo "sync=\"$sync\"" >> $BRANCHES
 echo "env=\"$env\"" >> $BRANCHES
+
+IFS='_'
+arrIN=($REV)
+IFS='-'
+arrM=($arrIN)
+MAILTO=$arrM
+unset IFS
 
 
 USERERP=${REV}
 DBNAME="${REV}"
 BZBRANCH=""
 ADMINDBPASS=$web_db_pass
+
 
 useradd -s /bin/bash -d /home/${USERERP} -m ${USERERP}
 userid=`id -u ${USERERP}`
@@ -100,8 +183,13 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@WEB_ADMIN_PASS@@#${web_admin_pass}#g" \
     -e "s#@@WEB_LOGIN_USER@@#${web_login_user}#g" \
     -e "s#@@WEB_LOGIN_PASS@@#${web_login_pass}#g" \
+    -e "s#@@NUM_HQ@@#${num_hq}#g" \
+    -e "s#@@NUM_COORDO@@#${num_coordo}#g" \
     -e "s#@@NUM_PROJECT@@#${num_project}#g" \
     -e "s#@@ADDONSDIR@@#${ADDONSDIR}#g" \
+    -e "s#@@MAILTO@@#${MAILTO}#g" \
+    -e "s#@@MKDB_LANG@@#${MKDB_LANG}#g" \
+    -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 
@@ -137,11 +225,8 @@ init_user() {
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
-[ -n "$wm" ] && bzr ${bzr_type} "${wm:=${BRANCH_DEFAULT_WM}}" unifield-wm
-[ -n "$addons" ] && bzr ${bzr_type} "${addons:=${BRANCH_DEFAULT_ADDONS}}" unifield-addons
 bzr ${bzr_type} "${web:=${BRANCH_DEFAULT_WEB}}" unifield-web
 bzr ${bzr_type} "${server:=${BRANCH_DEFAULT_SERVER}}" unifield-server
-[ -n "$sync" ] && bzr ${bzr_type} "${sync:=${BRANCH_DEFAULT_SYNC}}" sync_module_prod
 bzr ${bzr_type} "${env:=${BRANCH_DEFAULT_ENV}}" sync_env_script
 
 mkdir etc log exports
@@ -168,15 +253,17 @@ echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
 Testfield PGPORT: $PGPORT
+Testfield: http://${USERERP}.testfield.${rb_server_url}
 URL: http://${USERERP}.${rb_server_url}
-Testfield: http://${USERERP}.testfield.${rb_server_url}""" > /home/${USERERP}/RB_info.txt
+""" > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt
 
-echo "Please run ./mkdb.py as user $USERERP to finish:"
-echo "su - $USERERP"
-echo "cd ~/sync_env_script; python mkdb.py"
-#echo "OR"
-#echo "bash build_and_test.sh"
-#echo "./mkdb.py ; cp /home/$USERERP/unifield.config /home/$USERERP/unifield-wm/unifield_tests/; cd /home/$USERERP/unifield-wm/unifield_tests/; python test_runner.py"
-
+if [[ "$TESTFIELD" ]]; then
+    su - $USERERP -c "./runtests.sh test"
+elif [[ "$DEVTEST" ]]; then
+    su - $USERERP -c ./build_and_test.sh
+elif [[ -n "$INIT_ONLY" ]];
+    su - $USERERP -c ./sync_env_script/mkdb.py
+fi
+exit 0

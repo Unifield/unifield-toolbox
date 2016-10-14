@@ -25,8 +25,8 @@ prefix = "@@DBNAME@@"
 sync_user_admin = False
 default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
-currency = 'eur' # or chf
-lang = False # fr_MF or es_MF
+currency = '@@MKDB_CURR@@' # or chf
+lang = @@MKDB_LANG@@ # fr_MF or es_MF
 default_oc = 'oca'
 
 # WARNING:
@@ -35,8 +35,8 @@ default_oc = 'oca'
 # h hq instance, 
 # (c*h) coordo, 
 # and (p*c*h) projects !
-hq_count = 1
-coordo_count = 1
+hq_count = @@NUM_HQ@@
+coordo_count = @@NUM_COORDO@@
 project_count = @@NUM_PROJECT@@
 # or describe the instances with instance_tree
 """

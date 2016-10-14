@@ -146,7 +146,11 @@ if [[ ${FORCED_DATE} ]]; then
     ORIG=`date -d ${FORCED_DATE} '+%s'`
     NOW=`date '+%s'`
     DELAY=$[ $NOW - $ORIG ]
-    FAKETIME_ARG="FAKETIME=-${DELAY}s LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1"
+    if [ -f /usr/local/lib/faketime/libfaketime.so.1 ]; then
+        FAKETIME_ARG="FAKETIME=-${DELAY}s LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1"
+    else
+        FAKETIME_ARG="FAKETIME=-${DELAY}s LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1"
+    fi
 fi
 
 upgrade_server()
