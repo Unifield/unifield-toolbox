@@ -34,8 +34,13 @@ num_hq=1
 num_coordo=1
 INIT_ONLY=
 COMMENT_ACL='"""'
-while getopts i:s:w:m:l:c:atdhnu opt; do
+FULL_TREE='"""'
+while getopts i:s:w:m:l:c:atdhnuf opt; do
 case $opt in
+    f)
+        AUTO=1
+        FULL_TREE=
+        ;;
     u)
         AUTO=1
         COMMENT_ACL=
@@ -99,6 +104,7 @@ case $opt in
           -c: currency eur/chf
           -n: init only do not start mkdb
           -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
+          -f: full tree instances: HQ1C1(P1/P2) H1C2P1 H1C1
           -l: lang es/fr
           -m: mkdb branch
           -u: load acl
@@ -217,6 +223,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@MKDB_LANG@@#${MKDB_LANG}#g" \
     -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
+    -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 

@@ -39,7 +39,7 @@ hq_count = @@NUM_HQ@@
 coordo_count = @@NUM_COORDO@@
 project_count = @@NUM_PROJECT@@
 # or describe the instances with instance_tree
-"""
+@@FULL_TREE@@
 instance_tree = {
     'HQ1': {
         'C1': ['P1', 'P2'],
@@ -49,7 +49,7 @@ instance_tree = {
         'C1': [],
     },
 }
-"""
+@@FULL_TREE@@
 
 load_test = 1250
 source_path = '/home/@@USERERP@@'
