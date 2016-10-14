@@ -21,7 +21,7 @@ fi
 AUTO=
 TESTFIELD=
 DEVTEST=
-MKDB_LANG=
+MKDB_LANG="False"
 MKDB_CURR='eur'
 num_hq=1
 num_coordo=1
