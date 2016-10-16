@@ -6,7 +6,9 @@ end_of_script() {
     else
         STATUS='OK'
     fi
-    send_mail $STATUS
+    if [[ "${STATUS}" != 'OK' || "${INIT_TYPE}" != 'devtests' ]]; then
+        send_mail $STATUS
+    fi
 }
 send_mail() {
     TMPFILE=/tmp/mkdb$$
@@ -15,7 +17,7 @@ send_mail() {
     echo >> $TMPFILE
     echo "---------------" >> $TMPFILE
     cat $LOGFILE >> $TMPFILE
-    mail -s "RB ${REV} ${1}" $MAILTO < $TMPFILE
+    mail -a 'Content-Type: text/plain' -s "RB ${REV} ${1}" $MAILTO < $TMPFILE
     rm -f $TMPFILE
 }
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
@@ -41,8 +43,8 @@ case $opt in
              exit 1
         fi
         INIT_TYPE=$OPTARG
-        if [[ "$INIT_TYPE" == "mkdb" ]]; then
-            NUM_PROJECT=2
+        if [[ "$INIT_TYPE" == "devtests" ]]; then
+            num_project=2
         fi
         AUTO=1
         ;;
@@ -131,6 +133,8 @@ if [ "$AUTO" ]; then
         echo "Dir /home/$REV exists"
         exit 1
     fi
+    echo "Running ... to display progress:"
+    echo "tail -f $LOGFILE"
     set -o errexit
     trap end_of_script EXIT
     # Close STDOUT file descriptor
@@ -307,6 +311,11 @@ case $INIT_TYPE in
     ;;
   mkdb)
     su - $USERERP -c ./sync_env_script/mkdb.py
+    ;;
+  *)
+    echo "Please run ./mkdb.py as user $USERERP to finish:"
+    echo "su - $USERERP"
+    echo "cd ~/sync_env_script; python mkdb.py"
     ;;
 esac
 exit 0
