@@ -25,8 +25,8 @@ prefix = "@@DBNAME@@"
 sync_user_admin = False
 default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
-currency = 'eur' # or chf
-lang = False # fr_MF or es_MF
+currency = '@@MKDB_CURR@@' # or chf
+lang = @@MKDB_LANG@@ # fr_MF or es_MF
 default_oc = 'oca'
 
 # WARNING:
@@ -35,11 +35,11 @@ default_oc = 'oca'
 # h hq instance, 
 # (c*h) coordo, 
 # and (p*c*h) projects !
-hq_count = 1
-coordo_count = 1
+hq_count = @@NUM_HQ@@
+coordo_count = @@NUM_COORDO@@
 project_count = @@NUM_PROJECT@@
 # or describe the instances with instance_tree
-"""
+@@FULL_TREE@@
 instance_tree = {
     'HQ1': {
         'C1': ['P1', 'P2'],
@@ -49,7 +49,7 @@ instance_tree = {
         'C1': [],
     },
 }
-"""
+@@FULL_TREE@@
 
 load_test = 1250
 source_path = '/home/@@USERERP@@'
@@ -59,15 +59,16 @@ web_restart_cmd = '/etc/init.d/@@USERERP@@-web restart'
 dump_dir = '/home/@@USERERP@@/exports'
 
 # uncomment the next 3 parameters to load UserRights
-#load_uac_file = 'data/uac.xml'
-#load_users_file = 'data/unifield_users.csv'
-#load_extra_files = [
-#    'data/extra/ir.actions.act_window.csv',
-#    'data/extra/ir.model.access.csv',
-#    'data/extra/ir.rule.csv',
-#    'data/extra/msf_field_access_rights.field_access_rule.csv',
-#    'data/extra/msf_field_access_rights.field_access_rule_line.csv',
-#    'data/extra/msf_button_access_rights.button_access_rule.csv',
-#    'data/master_hq/product.product.csv',
-#]
-
+@@COMMENT_ACL@@
+load_uac_file = '/home/@@USERERP@@/sync_env_script/data/uac.xml'
+load_users_file = '/home/@@USERERP@@/sync_env_script/data/unifield_users.csv'
+load_extra_files = [
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.actions.act_window.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.model.access.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/ir.rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule_line.csv',
+    '/home/@@USERERP@@/sync_env_script/data/extra/msf_button_access_rights.button_access_rule.csv',
+    '/home/@@USERERP@@/sync_env_script/data/master_hq/product.product.csv',
+]
+@@COMMENT_ACL@@

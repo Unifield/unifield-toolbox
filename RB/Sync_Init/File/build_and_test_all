@@ -1,6 +1,6 @@
 #! /bin/bash
 
-EMAIL=""
+EMAIL="@@MAILTO@@"
 
 if [ -z "$EMAIL" ]; then
 read -p  "Email empty continue (Y/n): " cont
