@@ -133,8 +133,8 @@ if [ "$AUTO" ]; then
         echo "Dir /home/$REV exists"
         exit 1
     fi
-    echo "Running ... to display progress:"
-    echo "tail -f $LOGFILE"
+    echo "Running ..."
+    tail -f $LOGFILE &
     set -o errexit
     trap end_of_script EXIT
     # Close STDOUT file descriptor
