@@ -6,6 +6,9 @@ end_of_script() {
     else
         STATUS='OK'
     fi
+    if [[ -n "$TAILPID" ]]; then
+        kill $TAILPID
+    fi
     if [[ "${STATUS}" != 'OK' || "${INIT_TYPE}" != 'devtests' ]]; then
         send_mail $STATUS
     fi
@@ -27,6 +30,7 @@ if [[ -f ~/RBconfig ]]; then
     source ~/RBconfig
 fi
 
+TAILPID=
 AUTO=
 MKDB_LANG="False"
 MKDB_CURR='eur'
@@ -135,6 +139,7 @@ if [ "$AUTO" ]; then
     fi
     echo "Running ..."
     tail -f $LOGFILE &
+    TAILPID=$!
     set -o errexit
     trap end_of_script EXIT
     # Close STDOUT file descriptor
