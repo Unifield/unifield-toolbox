@@ -43,8 +43,9 @@ import re
 import psycopg2
 import tempfile
 from subprocess import call
-import threading
+#import threading
 import time
+from base64 import b64encode
 
 try:
     from requests.packages import urllib3
@@ -252,10 +253,12 @@ class Web(object):
     default_password = 'bkAdmin'
     default_rb_password = '4unifield'
 
-    def __init__(self, host, password, include_dbs):
+    def __init__(self, host, password, include_dbs, basic_user=False, basic_password=False):
         if host:
             if len(host) == 3:
                 host = self.default_host % host
+            elif host == 'prod-dbs':
+                host = 'production-dbs.uf5.unifield.org'
         else:
             host = self.default_host % 'ct1'
 
@@ -267,11 +270,15 @@ class Web(object):
         self.backup_url = '%sopenerp/database/do_backup' % (url, )
         self.headers = {
             'Referer': '%sopenerp/database/backup' % (url, ),
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
         }
 
+        if basic_user and basic_password:
+            self.headers['Authorization'] = 'Basic %s' %  b64encode(b"%s:%s" % (basic_user, basic_password)).decode("ascii")
+
+
         cnx = httplib2.Http()
-        resp, content = cnx.request('%sopenerp/database/backup' % (url, ) , "GET")
+        resp, content = cnx.request('%sopenerp/database/backup' % (url, ) , "GET", headers=self.headers)
         parser = MyHTMLParser(include_dbs)
         parser.feed(content)
         parser.close()
@@ -519,7 +526,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                             ('group_type_misson', 'MISSION'),
                             ('group_type_coordo', 'COORDINATIONS'),
                             ('group_type_hq_mission', 'HQ + MISSION'),
-                            ]:
+                    ]:
                         cr.execute('select id from sync_server_group_type where name=%s', (group_name, ))
                         res_id = cr.fetchone()[0]
 
@@ -577,6 +584,8 @@ if __name__ == "__main__":
     parser.add_argument('--db-user', action="store", help='PSQL user')
     parser.add_argument('--db-password', action="store", help='PSQL Password')
     parser.add_argument('--db-host', action="store", help='PSQL Host')
+    parser.add_argument('--apache-prod-user', action="store", help='Apache User')
+    parser.add_argument('--apache-prod-password', action="store", help='Apache Password')
 
     parser.add_argument('--trust-me-i-know-what-i-m-doing', action="store_true", help=argparse.SUPPRESS),
     parser.add_argument('--auto-confirm', action="store_true", help=argparse.SUPPRESS),
@@ -652,7 +661,12 @@ delete from sync_server_version;
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
             if web_host and web_host.endswith('/'):
                 web_host = web_host[0:-1]
-            transport = Web(web_host, o.web_pass, o.include)
+            apache_prod_user = False
+            apache_prod_password = False
+            if 'production-dbs.uf5.unifield.org' in web_host or 'prod-dbs' in web_host:
+                apache_prod_user = o.apache_prod_user
+                apache_prod_password = o.apache_prod_password
+            transport = Web(web_host, o.web_pass, o.include, apache_prod_user, apache_prod_password)
 
         dbs = transport.get_dbs()
         if o.list:
