@@ -222,6 +222,8 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@PASS_DUMP_SYNC@@#${pass_dump_sync}#g" \
     -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
     -e "s#@@UF_PASSWORD@@#${UF_PASSWORD}#g" \
+    -e "s#@@APACHE_PROD_USER@@#${APACHE_PROD_USER}#g" \
+    -e "s#@@APACHE_PROD_PASSWORD@@#${APACHE_PROD_PASSWORD}#g" \
     -e "s#@@WEB_ADMIN_PASS@@#${web_admin_pass}#g" \
     -e "s#@@WEB_LOGIN_USER@@#${web_login_user}#g" \
     -e "s#@@WEB_LOGIN_PASS@@#${web_login_pass}#g" \
