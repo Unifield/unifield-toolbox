@@ -193,7 +193,7 @@ run_lettuce()
 
     test)
         export TIME_BEFORE_FAILURE=${TIME_BEFORE_FAILURE:-70}
-        export COUNT=2;
+        export COUNT=6;
 
         export TEST_DESCRIPTION=${TEST_DESCRIPTION:-$NAME}
         export TEST_NAME=${TEST_NAME:-$NAME}
@@ -209,17 +209,19 @@ run_lettuce()
         METAVERSION=`find features/ -name '*.feature' -exec md5sum {} \; | md5sum`
         TESTVERSION=`git rev-parse HEAD`
         echo "S${SERVERVERSION} W${WEBVERSION} D${DBVERSION:0:10} M${METAVERSION:0:10} T${TESTVERSION:0:10}" > output/version
+
         DIREXPORT=website/tests/$NAME
         if [[ -e "$DIREXPORT" ]]
         then
             rm -rf "$DIREXPORT" || true
         fi
-        mkdir "$DIREXPORT"
+        mkdir -p "$DIREXPORT"
 
         mkdir output/dumps
             for DBNAME in $DATABASES; do
                 pg_dump -h $DBADDR -p $DBPORT -Fc $DBNAME > output/dumps/$DBNAME.dump
         done
+
 
         cp -R output/* $DIREXPORT/ || true
 
@@ -302,7 +304,7 @@ export DATABASES=$DATABASES
 ./generate_credentials.sh $FIRST_DATABASE $DBPREFIX
 launch_database
 
-python restore.py --reset-versions $ENVNAME
+python restore.py --reset-sync --reset-versions $ENVNAME
 
 if [[ "$RELOAD_BASE_MODULE" != 'no' ]]
 then
