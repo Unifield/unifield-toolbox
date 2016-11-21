@@ -54,7 +54,11 @@ PATCH_DIR=`readlink -f $3`
 WEB_PATCH=${PATCH_DIR}/web/
 WARN=""
 while read ff; do
-    if [[ "${ff}" == ${SRC}* ]]; then
+    if [[ "${ff}" == "${DEST%%bin/}doc/openerp-server.conf" ]]; then
+        echo "openerp-server.conf modified but ignored. Can be ovewritten by patch"
+    elif [[ "${ff}" == "${DEST%%bin/}setup.py" ]]; then
+        echo "setup.py ingored"
+    elif [[ "${ff}" == ${SRC}* ]]; then
         # if the diff is in from_tree => file remove
         # copy the file, and empty it
         # TODO: missing dir
@@ -73,6 +77,14 @@ while read ff; do
         fi
         cp -a --parents ${ff##$DEST} ${PATCH_DIR}
         cd - >> /dev/null
+    elif [[ "${ff}" == ${WEBSRC}* ]]; then
+    # file removed from web tree
+        mkdir -p ${WEB_PATCH}
+        echo "Missing: ${ff##$WEBSRC}"
+        cd $WEBSRC
+        cp --parents ${ff##$WEBSRC} ${WEB_PATCH}
+        cd - >> /dev/null
+        echo >   ${WEB_PATCH}/${ff##$WEBSRC}
     elif [[ "${ff}" == ${WEBDST}* ]]; then
         mkdir -p ${WEB_PATCH}
         cd ${WEBDST}
