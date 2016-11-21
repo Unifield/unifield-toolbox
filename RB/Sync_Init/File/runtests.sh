@@ -82,8 +82,8 @@ MYTMPDIR=$SERVER_TMPDIR
 PGDATADIR=$SERVER_TMPDIR/pgdata-$USER
 PGRUNDIR=$SERVER_TMPDIR/pgrun-$USER
 
+kill_processes
 if [[ "$1" == "kill" ]]; then
-    kill_processes
     exit 0
 fi
 
@@ -126,6 +126,21 @@ else
 fi
 
 ./fetch/owncloud/fetch.sh
+RUNFIRST="meta_features/A_run_first"
+mkdir $RUNFIRST
+TO_RUN_FIRST=(
+   "supply/Cancel and Tickets"
+   "supply/A_Complete_flow_from_ IR_PROJ.meta_feature"
+   "finance/HQ split entry_verify negative amounts can be split and correct dates and amounts are used.meta_feature"
+)
+
+for tomove in "${TO_RUN_FIRST[@]}"; do
+    if [ -d "meta_features/${tomove}" ]; then
+        mv "meta_features/${tomove}"/* ${RUNFIRST}
+    elif [ -f "meta_features/${tomove}" ]; then
+        mv "meta_features/${tomove}" ${RUNFIRST}
+    fi
+done
 
 if [[ -n "${SERVERBRANCH}" ]]; then
     rm -fr ${SERVERDIR}
@@ -320,4 +335,4 @@ then
 fi
 
 run_lettuce
-kill_processes
+#kill_processes
