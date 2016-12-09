@@ -131,6 +131,7 @@ mkdir $RUNFIRST
 TO_RUN_FIRST=(
    "supply/Cancel and Tickets"
    "supply/A_Complete_flow_from_ IR_PROJ.meta_feature"
+   "supply/Tickets/US-839_Import_Order_ NOM_Prod_to ESC.meta_feature"
    "finance/HQ split entry_verify negative amounts can be split and correct dates and amounts are used.meta_feature"
 )
 
@@ -262,7 +263,7 @@ run_lettuce()
         then
             rm -rf "$DIREXPORT" || true
         fi
-        mkdir "$DIREXPORT"
+        mkdir -p "$DIREXPORT"
 
         cp -R results/* "$DIREXPORT/"
 
