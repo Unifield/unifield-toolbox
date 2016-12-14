@@ -173,6 +173,8 @@ upgrade_server()
 {
     # at first we have to upgrade all the databases
     sed -i.bak "s/FOR UPDATE NOWAIT//g" $SERVERDIR/bin/addons/base/ir/ir_sequence.py
+    echo "88888888888888888888888888888888
+66f490e4359128c556be7ea2d152e03b 2013-04-27 16:49:56" > $SERVERDIR/bin/unifield-version.txt
     for DBNAME in $DATABASES;
     do
         REAL_NAME=$DBNAME
