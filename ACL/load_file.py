@@ -2,7 +2,6 @@
 # -*- encoding: utf-8 -*-
 import oerplib
 import os
-import sys
 import time
 import base64
 import argparse
@@ -38,7 +37,7 @@ for db in o.dbs_name.split(','):
             if model in ('product.nomenclature', 'product.category', 'product.product'):
                 req = netrpc.get('res.request')
                 nb = req.search([])
-                wiz = self.db.get('import_data')
+                wiz = netrpc.get('import_data')
                 f = open(filename, 'rb')
                 rec_id = wiz.create({'object': model, 'file': base64.encodestring(f.read())})
                 f.close()
