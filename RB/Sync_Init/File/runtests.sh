@@ -298,9 +298,9 @@ launch_database()
         echo 'random_page_cost = 2.0' >> $PGDATADIR/postgresql.conf
         #LAUNCH_DB="$FAKETIME_ARG $DBPATH/postgres -D $PGDATADIR"
         #tmux new -d -s PostgreSQL_$$ "$LAUNCH_DB; read"
-        eval $FAKETIME_ARG $DBPATH/pg_ctl start -D $PGDATADIR -l $PGRUNDIR/postgresql.log
-        #TODO: Fix that... we should wait until psql can connect
-        sleep 2
+        export PGPORT=$DBPORT
+        export PGHOST=127.0.0.1
+        eval $FAKETIME_ARG $DBPATH/pg_ctl -w start -D $PGDATADIR -l $PGRUNDIR/postgresql.log
         psql -h $DBADDR -p $DBPORT postgres -c "CREATE USER $DBUSERNAME WITH CREATEDB PASSWORD '$DBPASSWORD'" || echo $?
 
     else
