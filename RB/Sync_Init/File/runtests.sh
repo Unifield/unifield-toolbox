@@ -91,7 +91,8 @@ set -o errexit
 trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
-    git clone https://github.com/Unifield/testfield.git
+    #git clone https://github.com/Unifield/testfield.git
+    git clone https://github.com/jftempo/testfield.git
     cp -f ~/perf.wsgi testfield/website
 fi
 
