@@ -269,7 +269,10 @@ class Web(object):
         if not password and (host.endswith('unifield.org') or host.endswith('unifield.biz')):
             password = self.default_rb_password
 
-        url = 'http://%s/' % (host,)
+        if host.startswith('http'):
+            url = '%s/' % (host, )
+        else:
+            url = 'http://%s/' % (host,)
         self.password = password or self.default_password
         self.backup_url = '%sopenerp/database/do_backup' % (url, )
         self.headers = {
@@ -281,7 +284,7 @@ class Web(object):
             self.headers['Authorization'] = 'Basic %s' %  b64encode(b"%s:%s" % (basic_user, basic_password)).decode("ascii")
 
 
-        cnx = httplib2.Http()
+        cnx = httplib2.Http(disable_ssl_certificate_validation=True)
         resp, content = cnx.request('%sopenerp/database/backup' % (url, ) , "GET", headers=self.headers)
         parser = MyHTMLParser(include_dbs)
         parser.feed(content)
@@ -302,7 +305,7 @@ class Web(object):
         return db
 
     def write_dump(self, db, file_desc):
-        cnx = httplib2.Http()
+        cnx = httplib2.Http(disable_ssl_certificate_validation=True)
         resp, content = cnx.request(self.backup_url, 'POST', body=urllib.urlencode({'dbname': db, 'password': self.password}), headers=self.headers)
         file_desc.write(content)
 
