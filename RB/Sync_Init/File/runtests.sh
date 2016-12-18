@@ -134,6 +134,7 @@ TO_RUN_FIRST=(
    "supply/A_Complete_flow_from_ IR_PROJ.meta_feature"
    "supply/Tickets/US-839_Import_Order_ NOM_Prod_to ESC.meta_feature"
    "finance/HQ split entry_verify negative amounts can be split and correct dates and amounts are used.meta_feature"
+   "finance/1_HQ split entry_verify negative amounts can be split and correct dates and amounts are used.meta_feature"
 )
 
 for tomove in "${TO_RUN_FIRST[@]}"; do
