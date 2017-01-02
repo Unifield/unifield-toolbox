@@ -7,6 +7,7 @@ end_of_script() {
         STATUS='OK'
     fi
     if [[ -n "$TAILPID" ]]; then
+	sleep 2
         kill $TAILPID
     fi
     if [[ "${STATUS}" != 'OK' || "${INIT_TYPE}" != 'devtests' ]]; then
@@ -23,13 +24,17 @@ send_mail() {
     mail -a 'Content-Type: text/plain' -s "RB ${REV} ${1}" $MAILTO < $TMPFILE
     rm -f $TMPFILE
 }
+WITH_SSL="Yes"
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 if [[ -f ~/RBconfig ]]; then
     source ~/RBconfig
 fi
-
+PROTO='http'
+if [[ "$WITH_SSL" == "Yes" ]]; then
+    PROTO='https'
+fi
 TAILPID=
 AUTO=
 MKDB_LANG="False"
@@ -236,6 +241,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
+    -e "s#@@PROTO@@#${PROTO}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 
@@ -244,15 +250,21 @@ config_file() {
     create_file ./File/openerp-server-sprint1  /etc/init.d/${USERERP}-server
     create_file ./File/openerp-web-sprint1 /etc/init.d/${USERERP}-web
     create_file ./File/openerpallrc /home/${USERERP}/etc/openerprc
-    create_file ./File/openerp-web.cfg /home/${USERERP}/etc/openerp-web.cfg
     create_file ./File/sync-envall.py /home/${USERERP}/sync_env_script/config.py
     create_file ./File/unifield.config /home/${USERERP}/unifield.config
-    create_file ./File/bash_profile /home/${USERERP}/.bash_profile
-    create_file ./File/apache.conf /etc/apache2/sites-enabled/${USERERP}
+    create_file ./File/bash_profile2 /home/${USERERP}/.bash_profile
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
     create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
+    
+if [[ "$WITH_SSL" == "Yes" ]]; then
+    create_file ./File/apache-1ssl.conf /etc/apache2/sites-enabled/${USERERP}
+    create_file ./File/openerp-web-ssl.cfg /home/${USERERP}/etc/openerp-web.cfg
+else
+    create_file ./File/apache.conf /etc/apache2/sites-enabled/${USERERP}
+    create_file ./File/openerp-web.cfg /home/${USERERP}/etc/openerp-web.cfg
 
+fi
     cp ./File/runtests.sh /home/${USERERP}/
     cp ./File/perf.wsgi /home/${USERERP}/
     chmod +x /home/${USERERP}/build_and_test.sh
@@ -299,12 +311,18 @@ config_file
 restart_servers
 /etc/init.d/apache2 reload
 
+if [[ "$WITH_SSL" == "Yes" ]]; then
+~/certbot/certbot-auto certonly -n --webroot -w /var/www -d ${USERERP}.${rb_server_url}
+create_file ./File/apache-ssl.conf /etc/apache2/sites-enabled/${USERERP}
+/etc/init.d/apache2 reload
+fi
+
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 HTML port: $WEBPORT
 Testfield PGPORT: $PGPORT
 Testfield: http://${USERERP}.testfield.${rb_server_url}
-URL: http://${USERERP}.${rb_server_url}
+URL: ${PROTO}://${USERERP}.${rb_server_url}
 """ > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt

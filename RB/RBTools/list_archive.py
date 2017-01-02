@@ -22,6 +22,8 @@ j = jira_lib.Jira(jira_url, jira_user, passwd)
 for rb in home_dir:
     rb = rb.strip()
     issues = j.search("Runbot ~ 'http://%s.%s'" % (rb, rb_server_url), fixVersion=True)
+    if not issues:
+        issues = j.search("Runbot ~ 'https://%s.%s'" % (rb, rb_server_url), fixVersion=True)
     st = []
     for k in issues:
         st.append(issues[k])
