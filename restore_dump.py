@@ -258,7 +258,7 @@ class Web(object):
             if len(host) == 3:
                 host = self.default_host % host
             elif host == 'prod-dbs':
-                host = 'production-dbs.uf5.unifield.org'
+                host = 'https://production-dbs.uf5.unifield.org'
         else:
             host = self.default_host % 'ct1'
 
