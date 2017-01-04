@@ -12,11 +12,13 @@ cfg = ConfigObj(config_file)
 
 jira_url = cfg['jira_url']
 jira_user = cfg['jira_user']
+passwd = cfg['jira_pass']
 rb_server_url = cfg['rb_server_url']
 
 path_dir = '/home'
 home_dir = [f for f in os.listdir(path_dir) if os.path.isdir(os.path.join(path_dir, f)) and not os.path.exists(os.path.join(path_dir, f, 'archive'))]
-passwd = getpass.getpass('Jira Password : ')
+if not passwd:
+    passwd = getpass.getpass('Jira Password : ')
 j = jira_lib.Jira(jira_url, jira_user, passwd)
 
 for rb in home_dir:

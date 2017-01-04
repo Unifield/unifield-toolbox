@@ -13,13 +13,15 @@ cfg = ConfigObj(config_file)
 
 jira_url = cfg['jira_url']
 jira_user = cfg['jira_user']
+passwd = cfg['jira_pass']
 rb_server_url = cfg['rb_server_url']
 
 fileobj = NamedTemporaryFile('wr')
 subprocess.call(['./lib/list_rb.sh'], stdout=fileobj)
 fileobj.seek(0)
 
-passwd = getpass.getpass('Jira Password : ')
+if not passwd:
+    passwd = getpass.getpass('Jira Password : ')
 j = jira_lib.Jira(jira_url, jira_user, passwd)
 
 for rb in fileobj:
