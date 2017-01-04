@@ -7,7 +7,7 @@ end_of_script() {
         STATUS='OK'
     fi
     if [[ -n "$TAILPID" ]]; then
-	sleep 2
+        sleep 2
         kill $TAILPID
     fi
     if [[ "${STATUS}" != 'OK' || "${INIT_TYPE}" != 'devtests' ]]; then
@@ -44,7 +44,8 @@ num_coordo=1
 INIT_TYPE="mkdb"
 COMMENT_ACL='"""'
 FULL_TREE='"""'
-while getopts t:i:s:w:m:l:c:aufh opt; do
+JIRA=
+while getopts t:i:s:w:m:l:c:aufhj opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -56,6 +57,9 @@ case $opt in
             num_project=2
         fi
         AUTO=1
+        ;;
+    j)
+        JIRA=1
         ;;
     i)
         AUTO=1
@@ -118,6 +122,7 @@ case $opt in
           -m: mkdb branch
           -u: load acl
 
+          -j: get launchpad branches from Jira ticket
           -s: server branch
           -w: web branch
         """
@@ -131,6 +136,17 @@ REV="$1"
 [ -z "$REV" ] && echo "Please specify revision: dsp-utp141 for example" && exit 1
 BRANCHES="branches/$REV"
 
+if [ "$JIRA" ]; then
+    jira=($(python Jira/get_branch.py $REV))
+    if [[ $? -ne 0 ]]; then
+        echo "Jira Error"
+        exit 1
+    fi
+    server=${jira[0]}
+    web=${jira[1]}
+    REV="${jira[2]}-$REV"
+    AUTO=1
+fi
 if [ "$AUTO" ]; then
     if [ ! -d LOG/ ]; then
         mkdir LOG/
