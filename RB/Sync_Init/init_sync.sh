@@ -35,6 +35,7 @@ PROTO='http'
 if [[ "$WITH_SSL" == "Yes" ]]; then
     PROTO='https'
 fi
+cd `dirname $0`
 TAILPID=
 AUTO=
 MKDB_LANG="False"

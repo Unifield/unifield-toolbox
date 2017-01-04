@@ -36,7 +36,7 @@ except jira.utils.JIRAError, error:
     sys.exit(1)
 
 
-server_branch = issue.fields.customfield_10062
+server_branch = issue.fields.customfield_10065 or issue.fields.customfield_10062
 web_branch = issue.fields.customfield_10061
 dev = issue.fields.customfield_10020
 if not dev:
