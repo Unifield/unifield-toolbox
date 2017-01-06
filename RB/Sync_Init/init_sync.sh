@@ -46,7 +46,8 @@ INIT_TYPE="mkdb"
 COMMENT_ACL='"""'
 FULL_TREE='"""'
 JIRA=
-while getopts t:i:s:w:m:l:c:aufhj opt; do
+SET_RB=
+while getopts t:i:s:w:m:l:c:aufhjr opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -59,6 +60,9 @@ case $opt in
         fi
         AUTO=1
         ;;
+    r)
+        SET_RB=1
+	;;
     j)
         JIRA=1
         ;;
@@ -124,6 +128,7 @@ case $opt in
           -u: load acl
 
           -j: get launchpad branches from Jira ticket
+          -r: set RB field in Jira (if -j is used)
           -s: server branch
           -w: web branch
         """
@@ -353,6 +358,8 @@ case $INIT_TYPE in
     ;;
   mkdb)
     su - $USERERP -c ./sync_env_script/mkdb.py
+    echo "su - $USERERP"
+    echo "${PROTO}://${USERERP}.${rb_server_url}"
     ;;
   *)
     echo "Please run ./mkdb.py as user $USERERP to finish:"
@@ -360,4 +367,8 @@ case $INIT_TYPE in
     echo "cd ~/sync_env_script; python mkdb.py"
     ;;
 esac
+
+if [[ "$JIRA" && "$SET_RB" ]]; then
+    python Jira/set_rb.py $1 ${PROTO}://${USERERP}.${rb_server_url}
+fi
 exit 0
