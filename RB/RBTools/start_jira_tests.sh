@@ -13,5 +13,5 @@ PREF_SEL=${2}-s
 /root/RBTools/deleteRB.sh ${PREF_DEV}-${TICKET}
 /root/RBTools/deleteRB.sh ${PREF_SEL}-${TICKET}
 
-/root/Sync_Init/init_sync_test.sh -jp ${PREF_DEV} -t devtests ${TICKET} &
-/root/Sync_Init/init_sync_test.sh -jp ${PREF_SEL} -t testfield ${TICKET} &
+/root/Sync_Init/init_sync.sh -jp ${PREF_DEV} -t devtests ${TICKET} &
+/root/Sync_Init/init_sync.sh -jp ${PREF_SEL} -t testfield ${TICKET} &

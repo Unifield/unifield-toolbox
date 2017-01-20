@@ -47,7 +47,8 @@ COMMENT_ACL='"""'
 FULL_TREE='"""'
 JIRA=
 SET_RB=
-while getopts t:i:s:w:m:l:c:aufhjr opt; do
+RB_PREFIX=
+while getopts t:i:s:w:m:l:c:p:aufhjr opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -62,7 +63,10 @@ case $opt in
         ;;
     r)
         SET_RB=1
-	;;
+        ;;
+    p)
+        RB_PREFIX=$OPTARG
+        ;;
     j)
         JIRA=1
         ;;
@@ -129,6 +133,7 @@ case $opt in
 
           -j: get launchpad branches from Jira ticket
           -r: set RB field in Jira (if -j is used)
+          -p: change RB prefix name
           -s: server branch
           -w: web branch
         """
@@ -148,11 +153,22 @@ if [ "$JIRA" ]; then
         echo "Jira Error"
         exit 1
     fi
-    server=${jira[0]}
-    web=${jira[1]}
-    REV="${jira[2]}-$REV"
+    if [[ -z "$server" ]]; then
+        server=${jira[0]}
+    fi
+    if [[ -z "$web" ]]; then
+        web=${jira[1]}
+    fi
+    if [[ -z "$RB_PREFIX" ]]; then
+        RB_PREFIX=${jira[2]}
+    fi
     AUTO=1
 fi
+
+if [[ -n "$RB_PREFIX" ]]; then
+        REV="${RB_PREFIX}-${REV}"
+fi
+
 if [ "$AUTO" ]; then
     if [ ! -d LOG/ ]; then
         mkdir LOG/
