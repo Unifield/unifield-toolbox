@@ -10,9 +10,10 @@ mkdir -p /home/$1/archive
 /etc/init.d/$1-web stop
 update-rc.d -f $1-server remove
 update-rc.d -f $1-web remove
-cp /etc/apache2/sites-enabled/$1 /home/$1/etc/apache_config
+[[ -f /etc/apache2/sites-enabled/$1 ]] && cp /etc/apache2/sites-enabled/$1 /home/$1/etc/apache_config
 
-rm /etc/apache2/sites-enabled/$1
+a2dissite ${1}.conf
+[[ -f /etc/apache2/sites-enabled/$1 ]] && rm /etc/apache2/sites-enabled/$1
 /etc/init.d/apache2 reload
 for i in  `psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = '$1';"`; do 
 echo "Dump $i"

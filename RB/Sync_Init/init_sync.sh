@@ -300,7 +300,7 @@ if [[ "$WITH_SSL" == "Yes" ]]; then
     create_file ./File/openerp-web-ssl.cfg /home/${USERERP}/etc/openerp-web.cfg
 else
     create_file ./File/apache.conf /etc/apache2/sites-available/${USERERP}.conf
-    a2ensite ${USERERP}
+    a2ensite ${USERERP}.conf
     create_file ./File/openerp-web.cfg /home/${USERERP}/etc/openerp-web.cfg
 
 fi
