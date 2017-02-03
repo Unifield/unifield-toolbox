@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:             openerp-web
+# Provides:             openerp-web-@@USERERP@@
 # Required-Start:       $syslog
 # Required-Stop:        $syslog
 # Should-Start:         $network
@@ -19,6 +19,9 @@ DESC=openerp-web-@@USERERP@@
 
 # Specify the user name (Default: openerp).
 USER="@@USERERP@@"
+[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
+_SYSTEMCTL_SKIP_REDIRECT=1
+export _SYSTEMCTL_SKIP_REDIRECT
 
 # Specify an alternate config file (Default: /etc/openerp-web.cfg).
 CONFIGFILE=/home/@@USERERP@@/etc/openerp-web.cfg

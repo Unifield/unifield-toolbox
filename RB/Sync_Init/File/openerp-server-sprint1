@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:		openerp-server
+# Provides:		openerp-server-@@USERERP@@
 # Required-Start:	$remote_fs $syslog
 # Required-Stop:	$remote_fs $syslog
 # Should-Start:		$network
@@ -18,6 +18,9 @@ NAME=openerp-server-@@USERERP@@
 DESC=openerp-server-@@USERERP@@
 
 USER=@@USERERP@@
+[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
+_SYSTEMCTL_SKIP_REDIRECT=1
+export _SYSTEMCTL_SKIP_REDIRECT
 
 LOG=/home/@@USERERP@@/log/openerp-server.log
 CONFIG=/home/@@USERERP@@/etc/openerprc
