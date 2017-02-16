@@ -38,7 +38,7 @@ fi
 cd `dirname $0`
 TAILPID=
 AUTO=
-MKDB_LANG="fr_MF"
+MKDB_LANG="'fr_MF'"
 MKDB_CURR='eur'
 num_hq=1
 num_coordo=1
@@ -97,7 +97,7 @@ case $opt in
             echo "-l option should be en or fr not $MKDB_LANG"
             exit 1
         fi
-        MKDB_LANG="${OPTARG}_MF"
+        MKDB_LANG="'${OPTARG}_MF'"
         AUTO=1
         ;;
     L)
