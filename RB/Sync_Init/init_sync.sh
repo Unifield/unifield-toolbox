@@ -38,17 +38,18 @@ fi
 cd `dirname $0`
 TAILPID=
 AUTO=
-MKDB_LANG="False"
+MKDB_LANG="fr_MF"
 MKDB_CURR='eur'
 num_hq=1
 num_coordo=1
 INIT_TYPE="mkdb"
-COMMENT_ACL='"""'
+COMMENT_ACL=
 FULL_TREE='"""'
 JIRA=
 SET_RB=
 RB_PREFIX=
-while getopts t:i:s:w:m:l:c:p:aufhjr opt; do
+
+while getopts t:i:s:w:m:l:c:p:auULfhjr opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -96,8 +97,12 @@ case $opt in
             echo "-l option should be en or fr not $MKDB_LANG"
             exit 1
         fi
-        MKDB_LANG="'${OPTARG}_MF'"
+        MKDB_LANG="${OPTARG}_MF"
         AUTO=1
+        ;;
+    L)
+        MKDB_LANG="False"
+        #AUTO=1
         ;;
     c)
         MKDB_CURR=$OPTARG
@@ -111,8 +116,10 @@ case $opt in
         AUTO=1
         ;;
     u)
+        ;;
+    U)
         AUTO=1
-        COMMENT_ACL=
+        COMMENT_ACL='"""'
         ;;
     f)
         AUTO=1
@@ -127,9 +134,9 @@ case $opt in
           -c: currency eur/chf
           -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
           -f: full tree instances: HQ1C1(P1/P2) H1C2P1 H1C1
-          -l: lang es/fr
+          -L: do not load fr lang
           -m: mkdb branch
-          -u: load acl
+          -U: dot not load acl
 
           -j: get launchpad branches from Jira ticket
           -r: set RB field in Jira (if -j is used)
