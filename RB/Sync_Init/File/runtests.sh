@@ -93,7 +93,6 @@ trap end_of_script EXIT
 if [[ ! -d testfield ]]; then
     #git clone https://github.com/Unifield/testfield.git
     git clone https://github.com/jftempo/testfield.git
-    cp -f ~/perf.wsgi testfield/website
 fi
 
 /etc/init.d/${USER}-server stop
@@ -144,6 +143,10 @@ for tomove in "${TO_RUN_FIRST[@]}"; do
         mv "meta_features/${tomove}" ${RUNFIRST}
     fi
 done
+
+if [ -f "meta_features/1_run/Supply/FO_SCRATCH_VAL.meta_feature" ]; then
+    mv "meta_features/1_run/Supply/FO_SCRATCH_VAL.meta_feature" "meta_features/supply/"
+fi
 
 if [[ -n "${SERVERBRANCH}" ]]; then
     rm -fr ${SERVERDIR}
