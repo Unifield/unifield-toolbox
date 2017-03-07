@@ -58,6 +58,8 @@ while read ff; do
         echo "openerp-server.conf modified but ignored. Can be ovewritten by patch"
     elif [[ "${ff}" == "${DEST%%bin/}setup.py" ]]; then
         echo "setup.py ingored"
+    elif [[ "${ff}" == "${DEST%%bin/}setup_py2exe_custom.py" ]]; then
+        echo "setup_py2exe_custom.py ignored"
     elif [[ "${ff}" == ${SRC}* ]]; then
         # if the diff is in from_tree => file remove
         # copy the file, and empty it
@@ -71,9 +73,15 @@ while read ff; do
     elif [[ "${ff}" == ${DEST}* ]]; then
         cd $DEST
         if [[ "${ff##$DEST}" == "openerp-server.py" ]]; then
-            WARN="""===== WARNING openerp-server.py modified =====
-===== openerp-server.exe must be included in the patch file ====="""
+            WARN="""$WARN===== WARNING openerp-server.py modified =====
+===== openerp-server.exe must be included in the patch file =====
+"""
             echo "$WARN"
+        fi
+        if [[ "${ff##$DEST}" == "win32/OpenERPServerService.py" ]]; then
+            WARN="""$WARN===== WARNING win32/OpenERPServerService.py modified =====
+===== service/OpenERPServerService.exe must be included in the patch file =====
+"""
         fi
         cp -a --parents ${ff##$DEST} ${PATCH_DIR}
         cd - >> /dev/null
@@ -88,6 +96,17 @@ while read ff; do
     elif [[ "${ff}" == ${WEBDST}* ]]; then
         mkdir -p ${WEB_PATCH}
         cd ${WEBDST}
+        echo "${ff##$WEBDST}"
+        if [[ "${ff##$WEBDST}" == "win32/OpenERPWebService.py" ]]; then
+            WARN="""$WARN===== WARNING web/win32/OpenERPWebService.py modified =====
+===== services/OpenERPWebService.exe must be included in the patch file =====
+"""
+        fi
+        if [[ "${ff##$WEBDST}" == "openerp-web.py" ]]; then
+            WARN="""$WARN===== WARNING web/openerp-web.py modified =====
+===== openerp-web.exe must be included in the patch file =====
+"""
+        fi
         cp -a --parents ${ff##$WEBDST} ${WEB_PATCH}
         cd - >> /dev/null
     else
