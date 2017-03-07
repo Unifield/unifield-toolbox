@@ -96,7 +96,6 @@ while read ff; do
     elif [[ "${ff}" == ${WEBDST}* ]]; then
         mkdir -p ${WEB_PATCH}
         cd ${WEBDST}
-        echo "${ff##$WEBDST}"
         if [[ "${ff##$WEBDST}" == "win32/OpenERPWebService.py" ]]; then
             WARN="""$WARN===== WARNING web/win32/OpenERPWebService.py modified =====
 ===== services/OpenERPWebService.exe must be included in the patch file =====
