@@ -100,6 +100,8 @@ while read ff; do
             WARN="""$WARN===== WARNING web/win32/OpenERPWebService.py modified =====
 ===== services/OpenERPWebService.exe must be included in the patch file =====
 """
+            mkdir -p ${WEB_PATCH}/service/libs
+            cp -a ${ff##$WEBDST} ${WEB_PATCH}/service/libs/
         fi
         if [[ "${ff##$WEBDST}" == "openerp-web.py" ]]; then
             WARN="""$WARN===== WARNING web/openerp-web.py modified =====
