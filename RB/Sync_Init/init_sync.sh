@@ -47,7 +47,7 @@ JIRA=
 SET_RB=
 RB_PREFIX=
 
-while getopts t:i:s:w:m:l:e:c:p:auULfhjr opt; do
+while getopts t:i:s:w:m:l:c:p:auULfhjre opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -130,6 +130,7 @@ case $opt in
         echo """$0
           -t [mkdb|testfield|devtests|none]: command to start (default: mkdb)
           -a: start mkdb with trunk branches
+          -e: encrypt (use ssl proxy)
 
           # MKDB options
           -c: currency eur/chf
