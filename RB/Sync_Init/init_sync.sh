@@ -28,13 +28,11 @@ WITH_SSL="Yes"
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
+CERTBOT_SCRIPT="~/certbot/certbot-auto"
 if [[ -f ~/RBconfig ]]; then
     source ~/RBconfig
 fi
 PROTO='http'
-if [[ "$WITH_SSL" == "Yes" ]]; then
-    PROTO='https'
-fi
 cd `dirname $0`
 TAILPID=
 AUTO=
@@ -49,7 +47,7 @@ JIRA=
 SET_RB=
 RB_PREFIX=
 
-while getopts t:i:s:w:m:l:c:p:auULfhjr opt; do
+while getopts t:i:s:w:m:l:e:c:p:auULfhjr opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -64,6 +62,9 @@ case $opt in
         ;;
     r)
         SET_RB=1
+        ;;
+    e)
+        WITH_SSL="Yes"
         ;;
     p)
         RB_PREFIX=$OPTARG
@@ -147,6 +148,10 @@ case $opt in
         exit 1
     esac
 done
+
+if [[ "$WITH_SSL" == "Yes" ]]; then
+    PROTO='https'
+fi
 
 shift $((OPTIND - 1))
 REV="$1"
@@ -301,7 +306,7 @@ config_file() {
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
     create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
-    
+
 if [[ "$WITH_SSL" == "Yes" ]]; then
     create_file ./File/apache-1ssl.conf /etc/apache2/sites-enabled/${USERERP}
     create_file ./File/openerp-web-ssl.cfg /home/${USERERP}/etc/openerp-web.cfg
@@ -357,9 +362,9 @@ restart_servers
 /etc/init.d/apache2 reload
 
 if [[ "$WITH_SSL" == "Yes" ]]; then
-~/certbot/certbot-auto certonly -n --webroot -w /var/www -d ${USERERP}.${rb_server_url}
-create_file ./File/apache-ssl.conf /etc/apache2/sites-enabled/${USERERP}
-/etc/init.d/apache2 reload
+    ${CERTBOT_SCRIPT} certonly -n --webroot -w /var/www -d ${USERERP}.${rb_server_url}
+    create_file ./File/apache-ssl.conf /etc/apache2/sites-enabled/${USERERP}
+    /etc/init.d/apache2 reload
 fi
 
 echo """Net-RPC port: $NETRPCPORT
