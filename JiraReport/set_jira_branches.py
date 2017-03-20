@@ -10,6 +10,7 @@ from configobj import ConfigObj
 import re
 
 DRY_RUN = False
+TOUCH = '/var/log/jira-lp_lastsync'
 
 if DRY_RUN:
     sys.stdout.write("DRY RUN MODE: JIRA WILL NOT BE UPDATED\n")
@@ -90,4 +91,7 @@ for k, dev in to_set.iteritems():
             sys.stdout.write("Update values %s %s\n" % (k, to_write))
             if not DRY_RUN:
                 ticket.update(fields=to_write)
+
+if TOUCH:
+    open(TOUCH, 'wb').close()
 
