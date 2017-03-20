@@ -59,31 +59,37 @@ for k, values in to_set.iteritems():
     except:
         sys.stderr.write("Issue not found %s\n" % k)
         continue
+
+    lp_dev = values['dev']
     if ticket.fields.status.name not in ('Open', 'In Progress'):
         continue
+
     to_write = {}
-    lp_dev = values['dev']
     if 'server' in values:
         server_branch = ticket.fields.customfield_10065 or ticket.fields.customfield_10062
         if not server_branch:
             to_write['customfield_10062'] = values['server']
             if not ticket.fields.customfield_10020 and 'customfield_10020' not in to_write:
                 to_write['customfield_10020'] = {'name': values['dev']}
+
     if 'web' in values and not ticket.fields.customfield_10061:
         to_write['customfield_10061'] = values['web']
         if not ticket.fields.customfield_10020 and 'customfield_10020' not in to_write:
             to_write['customfield_10020'] = {'name': values['dev']}
 
     if to_write:
-        if ticket.fields.status.name == 'Open' and ticket.fields.assignee.name == lp_dev:
-            # 231 : In Progress
-            sys.stdout.write("Update trans %s\n" % k)
-            if not DRY_RUN:
-                j_obj.transition_issue(ticket, '231', fields=to_write)
+        if ticket.fields.assignee.name != lp_dev:
+            sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee.name, lp_dev))
         else:
-            sys.stdout.write("Update values %s\n" % k)
-            if not DRY_RUN:
-                ticket.update(fields=to_write)
+            if ticket.fields.status.name == 'Open' and ticket.fields.assignee.name == lp_dev:
+                # 231 : In Progress
+                sys.stdout.write("Update trans %s\n" % k)
+                if not DRY_RUN:
+                    j_obj.transition_issue(ticket, '231', fields=to_write)
+            else:
+                sys.stdout.write("Update values %s\n" % k)
+                if not DRY_RUN:
+                    ticket.update(fields=to_write)
 
 
 
