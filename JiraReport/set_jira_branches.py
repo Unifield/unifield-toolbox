@@ -36,7 +36,6 @@ if not jira_url or not jira_user or not jira_pass:
 
 j_obj = jira.JIRA(jira_url, options={'check_update': False}, basic_auth=(jira_user, jira_pass))
 
-
 cachedir = os.path.expanduser("~/.launchpadlib/cache/")
 launchpad = Launchpad.login_anonymously('find_branches','production',cachedir)
 
@@ -51,20 +50,24 @@ for component, project in [('web', project_web), ('server', project_server)]:
             m = re.search('(US-[0-9]+)$', b.bzr_identity, flags=re.IGNORECASE)
             if m:
                 ticket = m.group(1).lower()
-                to_set.setdefault(ticket, {}).update({component: b.web_link, 'dev': dev_map[b.registrant.name]})
+                to_set.setdefault(ticket, {}).setdefault(dev_map[b.registrant.name], {}).update({component: b.web_link})
 
-for k, values in to_set.iteritems():
+for k, dev in to_set.iteritems():
     try:
         ticket = j_obj.issue(k, fields='customfield_10065,customfield_10062,customfield_10020,customfield_10061,status,assignee')
     except:
         sys.stderr.write("Issue not found %s\n" % k)
         continue
-
-    lp_dev = values['dev']
+    
     if ticket.fields.status.name not in ('Open', 'In Progress'):
         continue
 
     to_write = {}
+    if ticket.fields.assignee.name not in dev:
+        sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee.name, dev.keys()))
+        continue
+
+    values = dev[ticket.fields.assignee.name]
     if 'server' in values:
         server_branch = ticket.fields.customfield_10065 or ticket.fields.customfield_10062
         if not server_branch:
@@ -78,19 +81,13 @@ for k, values in to_set.iteritems():
             to_write['customfield_10020'] = {'name': values['dev']}
 
     if to_write:
-        if ticket.fields.assignee.name != lp_dev:
-            sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee.name, lp_dev))
+        if ticket.fields.status.name == 'Open':
+            # 231 : In Progress
+            sys.stdout.write("Update trans %s\n" % k)
+            if not DRY_RUN:
+                j_obj.transition_issue(ticket, '231', fields=to_write)
         else:
-            if ticket.fields.status.name == 'Open' and ticket.fields.assignee.name == lp_dev:
-                # 231 : In Progress
-                sys.stdout.write("Update trans %s\n" % k)
-                if not DRY_RUN:
-                    j_obj.transition_issue(ticket, '231', fields=to_write)
-            else:
-                sys.stdout.write("Update values %s\n" % k)
-                if not DRY_RUN:
-                    ticket.update(fields=to_write)
-
-
-
+            sys.stdout.write("Update values %s\n" % k)
+            if not DRY_RUN:
+                ticket.update(fields=to_write)
 
