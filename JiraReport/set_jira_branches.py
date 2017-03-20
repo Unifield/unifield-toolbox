@@ -9,7 +9,7 @@ import jira
 from configobj import ConfigObj
 import re
 
-DRY_RUN = True
+DRY_RUN = False
 
 if DRY_RUN:
     sys.stdout.write("DRY RUN MODE: JIRA WILL NOT BE UPDATED\n")
@@ -58,13 +58,13 @@ for k, dev in to_set.iteritems():
     except:
         sys.stderr.write("Issue not found %s\n" % k)
         continue
-    
+
     if ticket.fields.status.name not in ('Open', 'In Progress'):
         continue
 
     to_write = {}
-    if ticket.fields.assignee.name not in dev:
-        sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee.name, dev.keys()))
+    if not ticket.fields.assignee or ticket.fields.assignee.name not in dev:
+        sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee and ticket.fields.assignee.name or 'None', dev.keys()))
         continue
 
     values = dev[ticket.fields.assignee.name]
@@ -83,11 +83,11 @@ for k, dev in to_set.iteritems():
     if to_write:
         if ticket.fields.status.name == 'Open':
             # 231 : In Progress
-            sys.stdout.write("Update trans %s\n" % k)
+            sys.stdout.write("Update trans %s, %s\n" % (k, to_write))
             if not DRY_RUN:
                 j_obj.transition_issue(ticket, '231', fields=to_write)
         else:
-            sys.stdout.write("Update values %s\n" % k)
+            sys.stdout.write("Update values %s %s\n" % (k, to_write))
             if not DRY_RUN:
                 ticket.update(fields=to_write)
 
