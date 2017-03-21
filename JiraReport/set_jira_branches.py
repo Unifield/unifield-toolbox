@@ -68,18 +68,19 @@ for k, dev in to_set.iteritems():
         sys.stdout.write("Nothing done on %s: Jira assignee (%s) and lp dev (%s) mismatch\n" % (k, ticket.fields.assignee and ticket.fields.assignee.name or 'None', dev.keys()))
         continue
 
-    values = dev[ticket.fields.assignee.name]
+    jira_dev = ticket.fields.assignee.name
+    values = dev[jira_dev]
     if 'server' in values:
         server_branch = ticket.fields.customfield_10065 or ticket.fields.customfield_10062
         if not server_branch:
             to_write['customfield_10062'] = values['server']
             if not ticket.fields.customfield_10020 and 'customfield_10020' not in to_write:
-                to_write['customfield_10020'] = {'name': values['dev']}
+                to_write['customfield_10020'] = {'name': jira_dev}
 
     if 'web' in values and not ticket.fields.customfield_10061:
         to_write['customfield_10061'] = values['web']
         if not ticket.fields.customfield_10020 and 'customfield_10020' not in to_write:
-            to_write['customfield_10020'] = {'name': values['dev']}
+            to_write['customfield_10020'] = {'name': jira_dev}
 
     if to_write:
         if ticket.fields.status.name == 'Open':
