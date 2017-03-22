@@ -182,6 +182,9 @@ if [[ -n "$RB_PREFIX" ]]; then
         REV="${RB_PREFIX}-${REV}"
 fi
 
+# lower RB name
+REV=${REV,,}
+
 if [ "$AUTO" ]; then
     if [ ! -d LOG/ ]; then
         mkdir LOG/
