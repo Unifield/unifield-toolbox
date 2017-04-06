@@ -46,6 +46,16 @@ from subprocess import call
 #import threading
 import time
 from base64 import b64encode
+from urlparse import urlparse
+import zipfile
+
+webdav = True
+try:
+    import easywebdav
+except ImportError:
+    print sys.stderr.write("Run pip install easywebdav to restore dumps from OwnCloud")
+    webdav = False
+
 
 try:
     from requests.packages import urllib3
@@ -131,7 +141,6 @@ class MyHTMLParser(HTMLParser, dbmatch):
             self.div_version = False
 
 class Directory(dbmatch):
-
     def __init__(self, directory, include_dbs):
         self.directory = directory
         self.dumps = []
@@ -157,6 +166,7 @@ class Directory(dbmatch):
         src = open(db, 'rb')
         shutil.copyfileobj(src, file_desc)
         src.close()
+
 
 class RBIndex(dbmatch):
     include_dbs = []
@@ -246,6 +256,46 @@ class ApacheIndexes(object):
             file_desc.write(data)
         f.close()
 
+class Owncloud(dbmatch):
+    def __init__(self, url, passwd, include_dbs):
+        self.dumps = []
+        self.info = 'OwnCloud %s' % url
+        parsed_url = urlparse(url)
+        self.dav = easywebdav.connect(parsed_url.netloc,
+                    username=parsed_url.path.split('/')[-1],
+                    password=passwd,
+                    protocol=parsed_url.scheme)
+
+        self.include_dbs = include_dbs.split(',')
+        for listfile in self.dav.ls('owncloud/public.php/webdav'):
+            full_file = listfile.name
+            name, ext = os.path.splitext(full_file.split('/')[-1])
+            if name and (not ext or ext == '.dump') and self.match(name):
+                if 'SYNC' in name:
+                    self.dumps.insert(0, full_file)
+                else:
+                    self.dumps.append(full_file)
+
+    def get_dbs(self):
+        return self.dumps
+
+    def get_db_name(self, db):
+        return '-'.join(os.path.splitext(os.path.basename(db))[0].split('-')[0:2])
+
+    def write_dump(self, db, file_desc):
+        temp1 = tempfile.NamedTemporaryFile(delete=True)
+        self.dav.download(db, temp1)
+        temp1.seek(0, 0)
+        name = None
+        if zipfile.is_zipfile(temp1.name):
+            zip_f = zipfile.ZipFile(temp1.name)
+            zip_names = zip_f.namelist()
+            name = '-'.join(zip_names[0].split('-')[0:2])
+            temp1.close()
+            temp1 = zip_f.open(zip_names[0])
+        shutil.copyfileobj(temp1, file_desc)  
+        temp1.close()
+        return name
 
 class Web(object):
 
@@ -441,7 +491,9 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
             file_name = f.name
         sys.stdout.write("get %s to %s\n" % (dump_name, file_name))
-        transport.write_dump(db, f)
+        ex_dump = transport.write_dump(db, f)
+        if ex_dump:
+            dump_name = ex_dump
         f.close()
 
         if not os.path.getsize(file_name):
@@ -572,6 +624,8 @@ if __name__ == "__main__":
     group.add_argument('-j', '--issue', action='store', help='restore from Jira Issue Key')
     group.add_argument('-d', '--from-dir', action='store', help='restore dump from directory')
     group.add_argument('-f', '--uf-web', metavar='HOST[:PORT]', nargs='?', default=' ', help="UniField Web host:port default: ct1")
+    if webdav:
+        group.add_argument('-c', '--oc',  help="OwnCloud url")
     group.add_argument('--rb', metavar='HOST[:PORT]', help="From mkdb rb_dump exports")
     group.add_argument('--sync-only', action='store_true', help='restore *only* light sync')
 
@@ -607,6 +661,9 @@ if __name__ == "__main__":
 
     web_parser = parser.add_argument_group('Restore from UniField Web')
     web_parser.add_argument("--web-pass", "-w", metavar="pwd", default="", help="web backup password")
+    
+    web_parser = parser.add_argument_group('Restore from OwnCloud')
+    web_parser.add_argument("--oc-pass", metavar="ocpwd", default="", help="OwnCloud Pass")
 
     sync_parser = parser.add_argument_group('Restore Sync Server Light')
     sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update', '7days'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
@@ -664,6 +721,8 @@ delete from sync_server_version;
             transport = Directory(o.from_dir, o.include)
         elif o.rb:
             transport = RBIndex(o.rb, o.include)
+        elif o.oc:
+            transport = Owncloud(o.oc, o.oc_pass, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
             if web_host and web_host.endswith('/'):
