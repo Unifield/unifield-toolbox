@@ -227,6 +227,7 @@ class RBIndex(dbmatch):
             file_desc.write(data)
         f.close()
 
+
 class ApacheIndexes(object):
     host = 'sync-prod_dump.uf5.unifield.org'
     proto = 'http'
@@ -262,24 +263,31 @@ class Owncloud(dbmatch):
         self.info = 'OwnCloud %s' % url
         parsed_url = urlparse(url)
         self.dav = easywebdav.connect(parsed_url.netloc,
-                    username=parsed_url.path.split('/')[-1],
-                    password=passwd,
-                    protocol=parsed_url.scheme)
+                                      username=parsed_url.path.split('/')[-1],
+                                      password=passwd,
+                                      protocol=parsed_url.scheme)
+
+        self.owc_path = '/owncloud/public.php/webdav/'
 
         self.include_dbs = include_dbs.split(',')
-        for listfile in self.dav.ls('owncloud/public.php/webdav'):
+        for listfile in self.dav.ls(self.owc_path):
             full_file = listfile.name
             name, ext = os.path.splitext(full_file.split('/')[-1])
-            if name and (not ext or ext == '.dump') and self.match(name):
+            if name and (not ext or ext in ('.dump','.zip')) and self.match(name):
                 if 'SYNC' in name:
                     self.dumps.insert(0, full_file)
                 else:
                     self.dumps.append(full_file)
+            elif full_file == self.owc_path:
+                # single file shared
+                self.dumps.append(full_file)
 
     def get_dbs(self):
         return self.dumps
 
     def get_db_name(self, db):
+        if db == self.owc_path:
+            return 'No_Name'
         return '-'.join(os.path.splitext(os.path.basename(db))[0].split('-')[0:2])
 
     def write_dump(self, db, file_desc):
@@ -291,11 +299,13 @@ class Owncloud(dbmatch):
             zip_f = zipfile.ZipFile(temp1.name)
             zip_names = zip_f.namelist()
             name = '-'.join(zip_names[0].split('-')[0:2])
+            temp2 = zip_f.open(zip_names[0])
             temp1.close()
-            temp1 = zip_f.open(zip_names[0])
-        shutil.copyfileobj(temp1, file_desc)  
+            temp1 = temp2
+        shutil.copyfileobj(temp1, file_desc)
         temp1.close()
         return name
+
 
 class Web(object):
 
