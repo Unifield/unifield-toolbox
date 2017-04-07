@@ -721,7 +721,7 @@ delete from sync_server_version;
             transport = Directory(o.from_dir, o.include)
         elif o.rb:
             transport = RBIndex(o.rb, o.include)
-        elif o.oc:
+        elif webdav and o.oc:
             transport = Owncloud(o.oc, o.oc_pass, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
