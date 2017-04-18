@@ -26,9 +26,9 @@ send_mail() {
     if [[ -f "${DIREXPORT}/meta" ]]; then
         cat ${DIREXPORT}/meta >> $TMPFILE
     fi
-    if [ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]; then
-        echo "Db dumps in $DIREXPORT/dumps" >> $TMPFILE
-    fi
+    #if [ "${VERB}" == "test" -a -d $DIREXPORT/dumps ]; then
+    #    echo "Db dumps in $DIREXPORT/dumps" >> $TMPFILE
+    #fi
     if [[ -n "$STY" ]]; then
         echo "screen -r -d $STY" >> $TMPFILE
     fi
@@ -148,6 +148,10 @@ if [ -f "meta_features/1_run/Supply/FO_SCRATCH_VAL.meta_feature" ]; then
     mv "meta_features/1_run/Supply/FO_SCRATCH_VAL.meta_feature" "meta_features/supply/"
 fi
 
+if [ -f "meta_features/IT/user_account_management/us1381-UserAccountMgmt-6.meta_feature" ]; then
+	sed -i "s/TESTS_HQ1C1/HQ1C1/" meta_features/IT/user_account_management/us1381-UserAccountMgmt-6.meta_feature
+fi
+
 if [[ -n "${SERVERBRANCH}" ]]; then
     rm -fr ${SERVERDIR}
     bzr branch ${SERVERBRANCH} ${SERVERDIR}
@@ -241,9 +245,9 @@ run_lettuce()
         mkdir -p "$DIREXPORT"
 
         mkdir output/dumps
-            for DBNAME in $DATABASES; do
-                pg_dump -h $DBADDR -p $DBPORT -Fc $DBNAME > output/dumps/$DBNAME.dump
-        done
+        #for DBNAME in $DATABASES; do
+        #        pg_dump -h $DBADDR -p $DBPORT -Fc $DBNAME > output/dumps/$DBNAME.dump
+        #done
 
 
         cp -R output/* $DIREXPORT/ || true
