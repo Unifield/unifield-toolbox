@@ -1,5 +1,11 @@
 #! /bin/bash
 
+dv=`diffstat --version`
+if [ "$dv" != "diffstat version 1.54" ]; then
+	echo "Wrong diffstat version: $dv"
+	exit 1
+fi
+
 usage() {
 cat << EOF
   $0 <from_tree> <to_tree> <destination_diff> [tag_name]
