@@ -2,6 +2,7 @@
 
 #set -o nounset
 set -o pipefail
+[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
 
 end_of_script() {
     if [[ $? -ne 0 ]]; then

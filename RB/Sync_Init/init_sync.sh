@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
+
 end_of_script() {
     if [[ $? -ne 0 ]]; then
         STATUS='FAILED'
@@ -296,6 +298,8 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
     -e "s#@@PROTO@@#${PROTO}#g" \
+    -e "s#@@PG_PATH@@#${PG_PATH:=None}#g" \
+    -e "s#@@DBPATH@@#${PG_PATH:=/usr/lib/postgresql/8.4/bin/}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 
@@ -330,8 +334,8 @@ fi
 
 bzr_type=branch
 init_user() {
-    su - postgres -c -- "psql -c 'DROP ROLE IF EXISTS \"${USERERP}\";'"
-    su - postgres -c -- "createuser -S -R -d ${USERERP}"
+    su - ${PG_USER} -c -- "${PG_PATH}psql -c 'DROP ROLE IF EXISTS \"${USERERP}\";'"
+    su - ${PG_USER} -c -- "${PG_PATH}createuser -S -R -d ${USERERP}"
     if [ ! -d /home/${USERERP}/.bzr ]; then
         cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
     fi
