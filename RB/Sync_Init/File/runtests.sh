@@ -2,6 +2,7 @@
 
 #set -o nounset
 set -o pipefail
+[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
 
 end_of_script() {
     if [[ $? -ne 0 ]]; then
@@ -91,8 +92,8 @@ set -o errexit
 trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
-    #git clone https://github.com/Unifield/testfield.git
-    git clone https://github.com/jftempo/testfield.git
+    git clone https://github.com/Unifield/testfield.git
+    #git clone https://github.com/jftempo/testfield.git
 fi
 
 /etc/init.d/${USER}-server stop
