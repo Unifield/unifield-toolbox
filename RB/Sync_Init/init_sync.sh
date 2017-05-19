@@ -48,8 +48,8 @@ FULL_TREE='"""'
 JIRA=
 SET_RB=
 RB_PREFIX=
-
-while getopts t:i:s:w:m:l:c:p:auULfhjre opt; do
+BUILD_PYTHON_ENV=
+while getopts t:i:s:w:m:l:c:p:auULfhjrev opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
@@ -82,6 +82,9 @@ case $opt in
         num_hq=${arr[0]-1}
         num_coordo=${arr[1]-1}
         num_project=${arr[2]-1}
+        ;;
+    v)
+        BUILD_PYTHON_ENV=1
         ;;
     s)
         server=$OPTARG
@@ -133,6 +136,7 @@ case $opt in
           -t [mkdb|testfield|devtests|none]: command to start (default: mkdb)
           -a: start mkdb with trunk branches
           -e: encrypt (use ssl proxy)
+          -v: build a new virtual env
 
           # MKDB options
           -c: currency eur/chf
@@ -338,7 +342,6 @@ init_user() {
     su - ${PG_USER} -c -- "${PG_PATH}createuser -S -R -d ${USERERP}"
     if [ ! -d /home/${USERERP}/.bzr ]; then
         cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
-	[ -f /opt/unifield-venv/bin/activate ] && ln -s /opt/unifield-venv/bin/activate /home/${USERERP}/.myenv
     fi
 
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
@@ -353,6 +356,24 @@ bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
 
 mkdir etc log exports
 EOF
+    if [[ -n "${BUILD_PYTHON_ENV}" ]]; then
+	su - ${USERERP} <<EOF
+virtualenv -p ${PYTHON_EXE} /home/${USERERP}/unifield-venv
+. /home/${USERERP}/unifield-venv/bin/activate
+cd unifield-server
+python setup.py develop
+pip install -U setuptools
+pip install bzr
+pip install easywebdav
+pip install jira
+pip install httplib2
+cd ../unifield-web
+python setup.py develop
+EOF
+    fi
+    if [[ -f /opt/unifield-venv/bin/activate &&  ! -d /home/${USERERP}/unifield-venv ]]; then
+	 ln -s /opt/unifield-venv /home/${USERERP}/unifield-venv
+    fi
 }
 
 restart_servers() {
@@ -395,7 +416,11 @@ case $INIT_TYPE in
     su - $USERERP -c ./build_and_test.sh
     ;;
   mkdb)
-    su - $USERERP -c ./sync_env_script/mkdb.py
+    PY_PATH=""
+    if [[ -f /home/$USERERP/unifield-venv/bin/python ]]; then
+        PY_PATH="/home/$USERERP/unifield-venv/bin/"
+    fi
+    su - $USERERP -c "${PY_PATH}python ./sync_env_script/mkdb.py"
     echo "su - $USERERP"
     echo "${PROTO}://${USERERP}.${rb_server_url}"
     ;;

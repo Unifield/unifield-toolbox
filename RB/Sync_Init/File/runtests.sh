@@ -2,7 +2,7 @@
 
 #set -o nounset
 set -o pipefail
-[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
+[ -f ~/unifield-venv/bin/activate ] && . ~/unifield-venv/bin/activate
 
 end_of_script() {
     if [[ $? -ne 0 ]]; then
@@ -93,6 +93,9 @@ trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
     git clone https://github.com/Unifield/testfield.git
+    if [[ -d ~/unifield-venv ]]; then
+        pip install -r testfield/requirements.txt
+    fi
     #git clone https://github.com/jftempo/testfield.git
 fi
 
