@@ -302,7 +302,7 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
     -e "s#@@PROTO@@#${PROTO}#g" \
-    -e "s#@@PG_PATH@@#${PG_PATH:=None}#g" \
+    -e "s#@@PG_PATH@@#${PG_PATH:=}#g" \
     -e "s#@@DBPATH@@#${PG_PATH:=/usr/lib/postgresql/8.4/bin/}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }

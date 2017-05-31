@@ -1,5 +1,6 @@
 #! /bin/bash
 
+[ -f ~/unifield-venv/bin/activate ] && . ~/unifield-venv/bin/activate
 EMAIL="@@MAILTO@@"
 
 if [ -z "$EMAIL" ]; then

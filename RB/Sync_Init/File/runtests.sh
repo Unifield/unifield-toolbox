@@ -301,13 +301,13 @@ launch_database()
         $DBPATH/initdb --username=$USER --encoding=UTF8 $PGDATADIR
 
         echo "port = $DBPORT" >> $PGDATADIR/postgresql.conf
-        echo "unix_socket_directory = '$PGRUNDIR'" >> $PGDATADIR/postgresql.conf
+        echo "unix_socket_directories = '$PGRUNDIR'" >> $PGDATADIR/postgresql.conf
         #echo "shared_buffers = 1GB" >> $PGDATADIR/postgresql.conf
-        echo 'checkpoint_segments = 10' >> $PGDATADIR/postgresql.conf
-        echo 'checkpoint_completion_target = 0.9' >> $PGDATADIR/postgresql.conf
+        #echo 'checkpoint_segments = 10' >> $PGDATADIR/postgresql.conf
+        #echo 'checkpoint_completion_target = 0.9' >> $PGDATADIR/postgresql.conf
         #echo 'work_mem = 50MB' >> $PGDATADIR/postgresql.conf
         #echo 'maintenance_work_mem = 512MB' >> $PGDATADIR/postgresql.conf
-        echo 'random_page_cost = 2.0' >> $PGDATADIR/postgresql.conf
+        #echo 'random_page_cost = 2.0' >> $PGDATADIR/postgresql.conf
         #LAUNCH_DB="$FAKETIME_ARG $DBPATH/postgres -D $PGDATADIR"
         #tmux new -d -s PostgreSQL_$$ "$LAUNCH_DB; read"
         export PGPORT=$DBPORT
