@@ -406,4 +406,14 @@ esac
 if [[ "$JIRA" && "$SET_RB" ]]; then
     python Jira/set_rb.py $1 ${PROTO}://${USERERP}.${rb_server_url}
 fi
+
+# add some alias to make easier the RB managment:
+echo "alias webrestart='/etc/init.d/$USERERP-web restart'
+alias serverrestart='/etc/init.d/$USERERP-server restart'
+alias webstart='/etc/init.d/$USERERP-web start'
+alias webstop='/etc/init.d/$USERERP-web stop'
+alias serverstart='/etc/init.d/$USERERP-server start'
+alias serverstop='/etc/init.d/$USERERP-server stop'
+alias servertail='tail -f -n 100 ~/log/openerp-server.log'" >> /home/${USERERP}/.bashrc
+
 exit 0
