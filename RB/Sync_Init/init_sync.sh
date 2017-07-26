@@ -261,6 +261,7 @@ NETRPCPORT=${userid}1
 WEBPORT=${userid}2
 XMLRPCPORT=${userid}3
 PGPORT=${userid}4
+XMLRPCSPORT=${userid}5
 
 ADDONS=""
 ADDONSDIR="'unifield-server', 'unifield-web'"
@@ -270,6 +271,7 @@ create_file() {
 sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@DBNAME@@#${DBNAME}#g" \
     -e "s#@@XMLRPCPORT@@#${XMLRPCPORT}#g" \
+    -e "s#@@XMLRPCSPORT@@#${XMLRPCSPORT}#g" \
     -e "s#@@NETRPCPORT@@#${NETRPCPORT}#g" \
     -e "s#@@PGPORT@@#${PGPORT}#g" \
     -e "s#@@ADMINDBPASS@@#${ADMINDBPASS}#g" \
@@ -373,6 +375,7 @@ fi
 
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
+XML-RPCS port: $XMLRPCSPORT
 HTML port: $WEBPORT
 Testfield PGPORT: $PGPORT
 Testfield: http://${USERERP}.testfield.${rb_server_url}
@@ -403,4 +406,14 @@ esac
 if [[ "$JIRA" && "$SET_RB" ]]; then
     python Jira/set_rb.py $1 ${PROTO}://${USERERP}.${rb_server_url}
 fi
+
+# add some alias to make easier the RB managment:
+echo "alias webrestart='/etc/init.d/$USERERP-web restart'
+alias serverrestart='/etc/init.d/$USERERP-server restart'
+alias webstart='/etc/init.d/$USERERP-web start'
+alias webstop='/etc/init.d/$USERERP-web stop'
+alias serverstart='/etc/init.d/$USERERP-server start'
+alias serverstop='/etc/init.d/$USERERP-server stop'
+alias servertail='tail -f -n 100 ~/log/openerp-server.log'" >> /home/${USERERP}/.bashrc
+
 exit 0
