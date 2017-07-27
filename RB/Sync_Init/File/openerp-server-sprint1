@@ -18,7 +18,7 @@ NAME=openerp-server-@@USERERP@@
 DESC=openerp-server-@@USERERP@@
 
 USER=@@USERERP@@
-[ -f /opt/unifield-venv/bin/activate ] && . /opt/unifield-venv/bin/activate
+[ -f /home/${USER}/unifield-venv/bin/activate ] && . /home/${USER}/unifield-venv/bin/activate
 _SYSTEMCTL_SKIP_REDIRECT=1
 export _SYSTEMCTL_SKIP_REDIRECT
 

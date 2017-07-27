@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
 examples = """
@@ -443,7 +443,7 @@ def do_upgrade(port, database, uf_pass):
             return True
             #sys.exit(0)
         except Exception, e:
-            if 'ServerUpdate' in '%s'%e.message:
+            if 'ServerUpdate' in '%s'%e.message or ( e.args and isinstance(e.args, tuple) and 'ServerUpdate' in e.args[0].message):
                 if time.time() - begin > max_sec:
                     sys.stderr.write("%s: timeout during upgrade" % (database,))
                     return True
@@ -798,8 +798,6 @@ delete from sync_server_version;
     if transport and isinstance(transport, Web):
         if 'SYNC_SERVER_XXX' in dbs_name:
             raise SystemExit("SYNC_SERVER_XXX ? Sorry it's too large ... please see (light) DAILY_SYNC_SERVER")
-        if not o.trust_me_i_know_what_i_m_doing and len(dbs_name) > 5:
-            raise SystemExit("If you really need to restore more than 5 dbs from a Web Instance add the option --trust-me-i-know-what-i-m-doing to the script")
     sync_db = o.sync_db
     prefix = o.prefix
     threads = []

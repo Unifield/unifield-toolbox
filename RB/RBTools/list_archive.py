@@ -1,8 +1,7 @@
-#! /usr/bin/python -W ignore::DeprecationWarning
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import sys
 import getpass
-from tempfile import NamedTemporaryFile
 from lib import jira_lib
 import os
 from configobj import ConfigObj
