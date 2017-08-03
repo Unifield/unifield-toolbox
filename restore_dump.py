@@ -537,7 +537,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                 ok = True
         sys.stdout.write("restore %s\n" % new_db_name)
         call(['createdb', new_db_name])
-        call(['pg_restore', '--no-owner', '--no-acl', '-d', new_db_name, file_name])
+        call(['pg_restore', '--no-owner', '--no-acl', '-n', 'public'  '-d', new_db_name, file_name])
         restored.append(new_db_name)
         sys.stdout.write("restored\n")
         if not output_dir:
