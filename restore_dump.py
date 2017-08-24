@@ -671,12 +671,12 @@ if __name__ == "__main__":
 
     web_parser = parser.add_argument_group('Restore from UniField Web')
     web_parser.add_argument("--web-pass", "-w", metavar="pwd", default="", help="web backup password")
-    
+
     web_parser = parser.add_argument_group('Restore from OwnCloud')
     web_parser.add_argument("--oc-pass", metavar="ocpwd", default="", help="OwnCloud Pass")
 
     sync_parser = parser.add_argument_group('Restore Sync Server Light')
-    sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update', '7days'], default='no_master', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
+    sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update', '7days'], default='no_update', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
 
     o = parser.parse_args()
     if o.examples:
