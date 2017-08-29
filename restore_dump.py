@@ -472,7 +472,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
                 netrpc.login(uf_pass, uf_pass)
                 conn_manager = netrpc.get('sync.client.sync_server_connection')
                 conn_ids = conn_manager.search([])
-                conn_manager.write(conn_ids, {'password': uf_pass})
+                conn_manager.write(conn_ids, {'automatic_patching': False, 'password': uf_pass})
                 conn_manager.connect()
                 if o.sync_run:
                     netrpc.get('sync.client.entity').sync_manual_threaded()
