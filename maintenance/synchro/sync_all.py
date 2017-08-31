@@ -17,12 +17,12 @@ pwd = o.password
 host = o.host
 port = o.port
 
-oerp = oerplib.OERP(host, protocol=protocol, port=port)
+oerp = oerplib.OERP(host, protocol=protocol, port=port, version='6.0')
 for dbname in oerp.db.list():
     if 'SYNC' in dbname:
         continue
     print "Sync %s" % dbname
-    netrpc = oerplib.OERP(host, database=dbname, protocol=protocol, port=port, timeout=1000)
+    netrpc = oerplib.OERP(host, database=dbname, protocol=protocol, port=port, timeout=1000, version='6.0')
     netrpc.login(login, pwd, dbname)
     conn_manager = netrpc.get('sync.client.sync_server_connection')
     conn_ids = conn_manager.search([])

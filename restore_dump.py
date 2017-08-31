@@ -438,7 +438,7 @@ def do_upgrade(port, database, uf_pass):
     begin = time.time()
     while True:
         try:
-            netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database)
+            netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database, version='6.0')
             netrpc.login(uf_pass, uf_pass)
             return True
             #sys.exit(0)
@@ -467,7 +467,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
             continue
         if sync_db:
             try:
-                netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=sync_port, database=db)
+                netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=sync_port, database=db, version='6.0')
                 sys.stdout.write("%s: Connect to sync\n" % (db, ))
                 netrpc.login(uf_pass, uf_pass)
                 conn_manager = netrpc.get('sync.client.sync_server_connection')

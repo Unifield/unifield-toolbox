@@ -1,9 +1,7 @@
 # -*- encoding: utf-8 -*-
 import argparse
 import oerplib
-import time
 import socket
-from threading import Thread
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--host", "-H", metavar="host", default="127.0.0.1", help="Host [default: %(default)s]")
@@ -29,7 +27,7 @@ if o.exclude:
 
 if __name__ == '__main__':
     jobs = []
-    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port)
+    oerp = oerplib.OERP(host, protocol='xmlrpc', port=port, version='6.0')
     for db in oerp.db.list():
         if db in exclude:
             continue

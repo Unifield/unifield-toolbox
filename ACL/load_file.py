@@ -28,7 +28,7 @@ yaml_data = yaml.load(yaml_desc)
 yaml_desc.close()
 prefix_file = os.path.dirname(o.yml)
 for db in o.dbs_name.split(','):
-    netrpc = oerplib.OERP(host, protocol='netrpc', port=port, database=db)
+    netrpc = oerplib.OERP(host, protocol='netrpc', port=port, database=db, version='6.0')
     netrpc.login(user, pwd)
     for data_line in yaml_data:
         for model in data_line.keys():
