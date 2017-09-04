@@ -386,7 +386,7 @@ class JIRA(dbmatch):
         try:
             j_obj = jira.JIRA(self.host, options={'check_update': False}, basic_auth=(user, password))
             self.issue = j_obj.issue(issue_key)
-        except jira.utils.JIRAError, error:
+        except jira.exceptions.JIRAError, error:
             if error.status_code == 401:
                 message = 'Unauthorized'
             else:
