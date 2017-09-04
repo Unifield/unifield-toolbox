@@ -445,6 +445,17 @@ alias webstart='/etc/init.d/$USERERP-web start'
 alias webstop='/etc/init.d/$USERERP-web stop'
 alias serverstart='/etc/init.d/$USERERP-server start'
 alias serverstop='/etc/init.d/$USERERP-server stop'
-alias servertail='tail -f -n 100 ~/log/openerp-server.log'" >> /home/${USERERP}/.bashrc
+alias servertail='tail -f -n 100 ~/log/openerp-server.log'
+function update_all_dbs() {
+   for x in \`psql -td template1 -c \"SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user;\"\`; do
+       /home/$USERERP/unifield-server/bin/openerp-server.py -c /home/$USERERP/etc/openerprc -d \$x -u base --stop-after-init
+   done
+}
+XMLRPCPORT=$XMLRPCPORT
+TFPGPORT=$PGPORT
+NETRPCPORT=$NETRPCPORT
+HTMLPORT=$WEBPORT
+" >> /home/${USERERP}/.bashrc
+
 
 exit 0
