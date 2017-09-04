@@ -27,7 +27,7 @@ if not jira_url or not jira_user or not jira_pass:
 try:
     j_obj = jira.JIRA(jira_url, options={'check_update': False}, basic_auth=(jira_user, jira_pass))
     issue = j_obj.issue(sys.argv[1])
-except jira.utils.JIRAError, error:
+except jira.exceptions.JIRAError, error:
     if error.status_code == 401:
         message = 'Unauthorized'
     else:
