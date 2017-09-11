@@ -438,12 +438,12 @@ def do_upgrade(port, database, uf_pass):
     begin = time.time()
     while True:
         try:
-            netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=port, database=database, version='6.0')
-            netrpc.login(uf_pass, uf_pass)
+            xmlrpc = oerplib.OERP('127.0.0.1', protocol='xmlrpc', port=port, database=database, version='6.0')
+            xmlrpc.login(uf_pass, uf_pass)
             return True
             #sys.exit(0)
-        except Exception, e:
-            if 'ServerUpdate' in '%s'%e.message or ( e.args and isinstance(e.args, tuple) and 'ServerUpdate' in e.args[0].message):
+        except oerplib.error.RPCError, e:
+            if 'ServerUpdate' in '%s'%e.message or ( e.args and isinstance(e.args, tuple) and 'ServerUpdate' in e.args[0]):
                 if time.time() - begin > max_sec:
                     sys.stderr.write("%s: timeout during upgrade" % (database,))
                     return True
@@ -467,15 +467,15 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
             continue
         if sync_db:
             try:
-                netrpc = oerplib.OERP('127.0.0.1', protocol='netrpc', port=sync_port, database=db, version='6.0')
+                xmlrpc = oerplib.OERP('127.0.0.1', protocol='xmlrpc', port=sync_port, database=db, version='6.0')
                 sys.stdout.write("%s: Connect to sync\n" % (db, ))
-                netrpc.login(uf_pass, uf_pass)
-                conn_manager = netrpc.get('sync.client.sync_server_connection')
+                xmlrpc.login(uf_pass, uf_pass)
+                conn_manager = xmlrpc.get('sync.client.sync_server_connection')
                 conn_ids = conn_manager.search([])
                 conn_manager.write(conn_ids, {'automatic_patching': False, 'password': uf_pass})
                 conn_manager.connect()
                 if o.sync_run:
-                    netrpc.get('sync.client.entity').sync_manual_threaded()
+                    xmlrpc.get('sync.client.entity').sync_manual_threaded()
                     sys.stdout.write("Start sync\n")
             except Exception, e:
                 sys.stderr.write("%s: unable to sync connect\n%s\n" % (db, e))
@@ -485,7 +485,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
     restored = []
     sql_data = {
         'hardware_id': get_harware_id(),
-        'netrpc_port': sync_port or 8061,
+        'xmlrpc_port': sync_port or 8069,
         'server_db': sync_db or 'SYNC_SERVER',
     }
     list_threads = []
@@ -626,7 +626,14 @@ if __name__ == "__main__":
         config = ConfigParser.SafeConfigParser()
         config.read([cfile])
         defaults.update(dict(config.items("Restore")))
-
+    if not defaults.get('use_xmlrpc'):
+        # compat: sync_port is the netrpc port
+        netrpc = int(defaults['sync_port'])
+        if netrpc >= 10000:
+            # RB
+            defaults['sync_port'] = netrpc - 2
+        else:
+            defaults['sync_port'] = netrpc - 1
     parser = argparse.ArgumentParser()
     parser.set_defaults(**defaults)
     group = parser.add_mutually_exclusive_group(required=True)
@@ -648,7 +655,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-l', '--list', action='store_true', help='list dumps and exit')
     parser.add_argument('--prefix', nargs='?', metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
-    parser.add_argument('--sync-port', help='sync netrpc port, used to update instances [default: %(default)s]')
+    parser.add_argument('--sync-port', help='sync xmlrpc port, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-db', help='sync server db, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-run', action="store_true", help='try to start sync')
     parser.add_argument('--db-port', action="store", help='PSQL port')
@@ -695,7 +702,7 @@ update backup_config set beforeautomaticsync='f', beforemanualsync='f', afteraut
 update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup');
 update ir_cron set nextcall='2100-01-01 00:00:00' where name='Update stock mission';
 update sync_client_version set patch=NULL;
-UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(netrpc_port)s, protocol='netrpc', netrpc_retry=2, timeout=1200;
+UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(xmlrpc_port)s, protocol='xmlrpc', xmlrpc_retry=2, timeout=1200;
 -- SERVER
 UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     elif not o.list and o.sql:
