@@ -631,7 +631,7 @@ if __name__ == "__main__":
         netrpc = int(defaults['sync_port'])
         if netrpc >= 10000:
             # RB
-            defaults['sync_port'] = netrpc - 2
+            defaults['sync_port'] = netrpc + 2
         else:
             defaults['sync_port'] = netrpc - 1
     parser = argparse.ArgumentParser()

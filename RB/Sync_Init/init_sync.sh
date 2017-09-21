@@ -322,7 +322,8 @@ config_file() {
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
 
 if [[ "$WITH_SSL" == "Yes" ]]; then
-    create_file ./File/apache-1ssl.conf /etc/apache2/sites-enabled/${USERERP}
+    create_file ./File/apache-1ssl.conf /etc/apache2/sites-available/${USERERP}.conf
+    a2ensite ${USERERP}.conf
     create_file ./File/openerp-web-ssl.cfg /home/${USERERP}/etc/openerp-web.cfg
 else
     create_file ./File/apache.conf /etc/apache2/sites-available/${USERERP}.conf
@@ -396,7 +397,7 @@ restart_servers
 
 if [[ "$WITH_SSL" == "Yes" ]]; then
     ${CERTBOT_SCRIPT} certonly -n --webroot -w /var/www -d ${USERERP}.${rb_server_url}
-    create_file ./File/apache-ssl.conf /etc/apache2/sites-enabled/${USERERP}
+    create_file ./File/apache-ssl.conf /etc/apache2/sites-available/${USERERP}.conf
     /etc/init.d/apache2 reload
 fi
 
