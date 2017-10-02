@@ -52,7 +52,7 @@ BUILD_PYTHON_ENV=
 while getopts t:i:s:w:m:l:c:p:auULfhjrev opt; do
 case $opt in
     t)
-         if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" "$OPTARG" != "testfield_partial" && "$OPTARG" != "none" ]]; then
+         if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "testfield_partial" && "$OPTARG" != "none" ]]; then
              echo "-t option should be mkdb|testfield|testfield_partial|devtests|none"
              exit 1
         fi
