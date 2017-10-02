@@ -1,5 +1,8 @@
 #! /bin/bash
 
+[ -f ~/unifield-venv/bin/activate ] && . ~/unifield-venv/bin/activate
+
+
 if [[ ! -d testfield ]]; then
     git clone https://github.com/jftempo/testfield.git
 fi

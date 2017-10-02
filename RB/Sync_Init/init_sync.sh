@@ -417,6 +417,7 @@ case $INIT_TYPE in
     su - $USERERP -c "./runtests.sh test"
     ;;
   testfield_partial)
+    su - $USERERP -c "${PY_PATH}python ./sync_env_script/mkdb.py"
     su - $USERERP -c "./runtests_partial.sh test"
     ;;
   devtests)
