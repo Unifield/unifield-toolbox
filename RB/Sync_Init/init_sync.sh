@@ -52,8 +52,8 @@ BUILD_PYTHON_ENV=
 while getopts t:i:s:w:m:l:c:p:auULfhjrev opt; do
 case $opt in
     t)
-         if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "none" ]]; then
-             echo "-t option should be mkdb|testfield|devtests|none"
+         if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" "$OPTARG" != "testfield_partial" && "$OPTARG" != "none" ]]; then
+             echo "-t option should be mkdb|testfield|testfield_partial|devtests|none"
              exit 1
         fi
         INIT_TYPE=$OPTARG
@@ -133,7 +133,7 @@ case $opt in
         ;;
     h)
         echo """$0
-          -t [mkdb|testfield|devtests|none]: command to start (default: mkdb)
+          -t [mkdb|testfield|testfield_partial|devtests|none]: command to start (default: mkdb)
           -a: start mkdb with trunk branches
           -e: encrypt (use ssl proxy)
           -v: build a new virtual env
@@ -415,6 +415,9 @@ cat /home/${USERERP}/RB_info.txt
 case $INIT_TYPE in
   testfield)
     su - $USERERP -c "./runtests.sh test"
+    ;;
+  testfield_partial)
+    su - $USERERP -c "./runtests_partial.sh test"
     ;;
   devtests)
     su - $USERERP -c ./build_and_test.sh
