@@ -417,6 +417,10 @@ case $INIT_TYPE in
     su - $USERERP -c "./runtests.sh test"
     ;;
   testfield_partial)
+    PY_PATH=""
+    if [[ -f /home/$USERERP/unifield-venv/bin/python ]]; then
+        PY_PATH="/home/$USERERP/unifield-venv/bin/"
+    fi
     su - $USERERP -c "${PY_PATH}python ./sync_env_script/mkdb.py"
     su - $USERERP -c "./runtests_partial.sh test"
     ;;
