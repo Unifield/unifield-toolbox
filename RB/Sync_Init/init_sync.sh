@@ -320,6 +320,7 @@ config_file() {
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
     create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
+    create_file ./File_fab/runtests.sh /home/${USERERP}/runtests.sh
 
 if [[ "$WITH_SSL" == "Yes" ]]; then
     create_file ./File/apache-1ssl.conf /etc/apache2/sites-available/${USERERP}.conf
@@ -331,8 +332,8 @@ else
     create_file ./File/openerp-web.cfg /home/${USERERP}/etc/openerp-web.cfg
 
 fi
-    cp ./File/runtests.sh ./File/runtests_partial.sh /home/${USERERP}/
-    chmod +x /home/${USERERP}/build_and_test.sh
+    cp ./File/runtests_partial.sh /home/${USERERP}/
+    chmod +x /home/${USERERP}/runtests.sh /home/${USERERP}/build_and_test.sh
     chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
     chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
     update-rc.d ${USERERP}-web defaults

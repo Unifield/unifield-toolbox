@@ -129,7 +129,10 @@ else
     LETTUCE_PARAMS="${*:5}"
 fi
 
-./fetch/owncloud/fetch.sh
+wget --user @@USER_DUMP_SYNC@@ --password @@PASS_DUMP_SYNC@@ https://aiodev.uf6.unifield.org/testfield.zip
+unzip testfield.zip -d testfield_datas
+mv testfield_datas/testfield/* .
+rm -rf testfield_datas
 RUNFIRST="meta_features/A_run_first"
 mkdir $RUNFIRST
 TO_RUN_FIRST=(
