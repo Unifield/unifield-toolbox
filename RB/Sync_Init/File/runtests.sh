@@ -129,8 +129,8 @@ else
     LETTUCE_PARAMS="${*:5}"
 fi
 
-wget --user @@USER_DUMP_SYNC@@ --password @@PASS_DUMP_SYNC@@ https://aiodev.uf6.unifield.org/testfield.zip
-unzip testfield.zip -d testfield_datas
+wget --quiet --user @@USER_DUMP_SYNC@@ --password @@PASS_DUMP_SYNC@@ https://aiodev.uf6.unifield.org/testfield.zip
+unzip -qq testfield.zip -d testfield_datas
 mv testfield_datas/testfield/* .
 rm -rf testfield_datas
 RUNFIRST="meta_features/A_run_first"
