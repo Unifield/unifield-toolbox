@@ -368,6 +368,7 @@ cd unifield-server
 python setup.py develop
 pip install -U setuptools
 pip install bzr
+pip install bzrtools
 pip install easywebdav
 pip install jira
 pip install httplib2
