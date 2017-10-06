@@ -320,7 +320,7 @@ config_file() {
     create_file ./File/restore_dumprc /home/${USERERP}/.restore_dumprc
     create_file ./File/config.sh /home/${USERERP}/config.sh
     create_file ./File/build_and_test_all /home/${USERERP}/build_and_test.sh
-    create_file ./File_fab/runtests.sh /home/${USERERP}/runtests.sh
+    create_file ./File/runtests.sh /home/${USERERP}/runtests.sh
 
 if [[ "$WITH_SSL" == "Yes" ]]; then
     create_file ./File/apache-1ssl.conf /etc/apache2/sites-available/${USERERP}.conf
