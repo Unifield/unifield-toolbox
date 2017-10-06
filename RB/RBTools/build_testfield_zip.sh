@@ -3,7 +3,7 @@
 original_path=`pwd`
 
 if [ "$1" = "-h" ]; then
-    echo "KEY_FETCH=<the key> ./fetch.sh"
+    echo "KEY_FETCH=<the key> build_testfield_zip.sh"
     exit 1
 fi
 
