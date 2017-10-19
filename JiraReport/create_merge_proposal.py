@@ -22,32 +22,40 @@ if not jira_url or not jira_user or not jira_pass:
 j_obj = jira.JIRA(jira_url, options={'check_update': False}, basic_auth=(jira_user, jira_pass))
 server_branches = []
 web_branches = []
-for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available')"):
-    if issue.fields.customfield_10065:
-        server_branches.append(issue.fields.customfield_10065.replace('https://code.launchpad.net/', 'lp:'))
-    if issue.fields.customfield_10062:
-        server_branches.append(issue.fields.customfield_10062.replace('https://code.launchpad.net/', 'lp:'))
-    if issue.fields.customfield_10061:
-        web_branches.append(issue.fields.customfield_10061.replace('https://code.launchpad.net/', 'lp:'))
 
 cachedir = os.path.expanduser("~/.launchpadlib/cache/")
 launchpad = Launchpad.login_with('Jira-lp', 'production', cachedir)
 
 browser = launchpad._browser
+for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available')"):
+
+    target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/trunk')
+    target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/trunk')
+    for x in issue.fields.fixVersions:
+        if x.name.startswith('UF5'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf5')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf5')
+        elif x.name.startswith('UF6'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf6')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf6')
+
+    if issue.fields.customfield_10065:
+        server_branches.append((target_server_branch, issue.fields.customfield_10065.replace('https://code.launchpad.net/', 'lp:')))
+    if issue.fields.customfield_10062:
+        server_branches.append((target_server_branch,issue.fields.customfield_10062.replace('https://code.launchpad.net/', 'lp:')))
+    if issue.fields.customfield_10061:
+        web_branches.append((target_web_branch, issue.fields.customfield_10061.replace('https://code.launchpad.net/', 'lp:')))
 
 
-target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/trunk')
-target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/trunk')
-for target_branch, branches in [(target_server_branch, server_branches), (target_web_branch, web_branches)]:
-    for br in branches:
-        src_branch = launchpad.branches.getByUrl(url=br)
-        link = src_branch.landing_targets_collection_link
-        to_merge = True
-        if link:
-            b = json.loads(browser.get(link))
-            if b['entries']:
-                to_merge = False
-        if to_merge:
-            src_branch.createMergeProposal(target_branch=target_branch)
-            print 'To merge', br
+for target_branch, br in server_branches + web_branches:
+    src_branch = launchpad.branches.getByUrl(url=br)
+    link = src_branch.landing_targets_collection_link
+    to_merge = True
+    if link:
+        b = json.loads(browser.get(link))
+        if b['entries']:
+            to_merge = False
+    if to_merge:
+        src_branch.createMergeProposal(target_branch=target_branch)
+        print 'To merge', br, target_branch
 
