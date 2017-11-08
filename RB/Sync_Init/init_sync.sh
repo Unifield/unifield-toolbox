@@ -45,6 +45,8 @@ num_coordo=1
 INIT_TYPE="mkdb"
 COMMENT_ACL=
 FULL_TREE='"""'
+INTERMISSION_TREE='"""'
+INTERSECTION_TREE='"""'
 JIRA=
 SET_RB=
 RB_PREFIX=
@@ -76,12 +78,18 @@ case $opt in
         ;;
     i)
         AUTO=1
-        IFS="-"
-        arr=($OPTARG)
-        unset IFS
-        num_hq=${arr[0]-1}
-        num_coordo=${arr[1]-1}
-        num_project=${arr[2]-1}
+        if [[ "$OPTARG" == "s" ]]; then
+            INTERSECTION_TREE=""
+        elif [[ "$OPTARG" == "m" ]]; then
+            INTERMISSION_TREE=""
+        else
+            IFS="-"
+            arr=($OPTARG)
+            unset IFS
+            num_hq=${arr[0]-1}
+            num_coordo=${arr[1]-1}
+            num_project=${arr[2]-1}
+        fi
         ;;
     v)
         BUILD_PYTHON_ENV=1
@@ -140,7 +148,7 @@ case $opt in
 
           # MKDB options
           -c: currency eur/chf
-          -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1)
+          -i: #instances ex: 1-2-2 for 1 hq, 2 coordos, 2 projects (default: 1-1-1) / s for HQ1C1{1,2}P1 + HQ1C1 / m for HQ1C{1,2}P1
           -f: full tree instances: HQ1C1(P1/P2) H1C2P1 H1C1
           -L: do not load fr lang
           -m: mkdb branch
@@ -306,6 +314,8 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@PROTO@@#${PROTO}#g" \
     -e "s#@@PG_PATH@@#${PG_PATH:=}#g" \
     -e "s#@@DBPATH@@#${PG_PATH:=/usr/lib/postgresql/8.4/bin/}#g" \
+    -e "s#@@INTERMISSION_TREE@@#${INTERMISSION_TREE}#g" \
+    -e "s#@@INTERSECTION_TREE@@#${INTERSECTION_TREE}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 

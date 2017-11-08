@@ -56,13 +56,13 @@ WEBDIR=/home/$USER/unifield-web
 SERVERDIR=/home/$USER/unifield-server
 
 cd testfield
-python ${SERVERDIR}/bin/addons/unifield_tests/testfield/init_data/set_rb_partial_tf.py
 rm -fr meta_features
 rm -fr files
 rm -fr output/*
 
 cp -a ${SERVERDIR}/bin/addons/unifield_tests/testfield/meta_features/ .
 cp -a ${SERVERDIR}/bin/addons/unifield_tests/testfield/files/ .
+python ${SERVERDIR}/bin/addons/unifield_tests/testfield/init_data/set_rb_partial_tf.py
 NAME=`date +%Y%m%d-%H%M`
 export TIME_BEFORE_FAILURE=${TIME_BEFORE_FAILURE:-70}
 export COUNT=6

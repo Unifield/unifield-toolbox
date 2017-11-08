@@ -22,7 +22,7 @@ prefix = "@@DBNAME@@"
 
 
 ## Other stuffs
-sync_user_admin = False
+sync_user_admin = True
 default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
 currency = '@@MKDB_CURR@@' # or chf
@@ -50,6 +50,27 @@ instance_tree = {
     },
 }
 @@FULL_TREE@@
+
+@@INTERMISSION_TREE@@
+instance_tree = {
+    'HQ1': {
+        'C1': ['P1'],
+        'C2': ['P1'],
+    },
+}
+@@INTERMISSION_TREE@@
+
+@@INTERSECTION_TREE@@
+instance_tree = {
+    'HQ1': {
+        'C1': ['P1'],
+        'C2': ['P1'],
+    },
+    'HQ2': {
+        'C1': [],
+    },
+}
+@@INTERSECTION_TREE@@
 
 load_test = 1250
 source_path = '/home/@@USERERP@@'
