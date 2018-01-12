@@ -312,6 +312,7 @@ class Web(object):
     default_host = 'unifield-%s.ocg.msf.org:8061'
     default_password = 'bkAdmin'
     default_rb_password = '4unifield'
+    default_uf5hw_password = 'admin'
 
     def __init__(self, host, password, include_dbs, basic_user=False, basic_password=False):
         if host:
@@ -328,6 +329,8 @@ class Web(object):
 
         if not password and (host.endswith('unifield.org') or host.endswith('unifield.biz')):
             password = self.default_rb_password
+        if host.find('uf5-hw.unifield.org') != -1:
+            password = self.default_uf5hw_password
 
         if host.startswith('http'):
             url = '%s/' % (host, )
