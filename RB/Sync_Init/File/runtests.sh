@@ -92,11 +92,11 @@ set -o errexit
 trap end_of_script EXIT
 
 if [[ ! -d testfield ]]; then
-    git clone https://github.com/Unifield/testfield.git
+    git clone https://github.com/jftempo/testfield.git
+    #git clone https://github.com/Unifield/testfield.git
     if [[ -d ~/unifield-venv && ! -L ~/unifield-venv ]]; then
         pip install -r testfield/requirements.txt
     fi
-    #git clone https://github.com/jftempo/testfield.git
 fi
 
 /etc/init.d/${USER}-server stop
