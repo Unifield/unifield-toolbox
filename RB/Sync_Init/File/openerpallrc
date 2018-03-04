@@ -57,3 +57,5 @@ email_from = False
 addons_path = @@ADDONS@@
 static_http_document_root = None
 gzipxmlrpc = True
+sync_user_login = @@SYNC_USER_LOGIN@@
+sync_user_password = @@SYNC_USER_PASSWORD@@
