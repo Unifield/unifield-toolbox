@@ -281,6 +281,9 @@ ADDONS=""
 ADDONSDIR="'unifield-server', 'unifield-web'"
 UNIFIELDTEST="/home/${USERERP}/unifield-server/bin/addons/unifield_tests/"
 
+SYNC_USER_LOGIN=""
+SYNC_USER_PASSWORD=""
+
 create_file() {
 sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@DBNAME@@#${DBNAME}#g" \
@@ -311,7 +314,9 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
-    -e "s#@@PROTO@@#${PROTO}#g" \
+	-e "s#@@SYNC_USER_LOGIN@@#${SYNC_USER_LOGIN}#g" \
+	-e "s#@@SYNC_USER_PASSWORD@@#${SYNC_USER_PASSWORD}#g" \
+	-e "s#@@PROTO@@#${PROTO}#g" \
     -e "s#@@PG_PATH@@#${PG_PATH:=}#g" \
     -e "s#@@DBPATH@@#${PG_PATH:=/usr/lib/postgresql/8.4/bin/}#g" \
     -e "s#@@INTERMISSION_TREE@@#${INTERMISSION_TREE}#g" \
@@ -370,6 +375,12 @@ bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
 
 mkdir etc log exports
 EOF
+
+    if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_admin_sync" ]]; then
+		SYNC_USER_LOGIN="admin"
+		SYNC_USER_PASSWORD=$(echo -n $web_admin_pass | base64)
+	fi
+
     if [[ -n "${BUILD_PYTHON_ENV}" ]]; then
 	su - ${USERERP} <<EOF
 virtualenv -p ${PYTHON_EXE} /home/${USERERP}/unifield-venv
