@@ -27,7 +27,7 @@ cachedir = os.path.expanduser("~/.launchpadlib/cache/")
 launchpad = Launchpad.login_with('Jira-lp', 'production', cachedir)
 
 browser = launchpad._browser
-for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available')"):
+for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available', 'Pre-Integrated')"):
 
     target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/trunk')
     target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/trunk')
@@ -38,6 +38,9 @@ for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Availab
         elif x.name.startswith('UF6'):
             target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf6')
             target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf6')
+        elif x.name.startswith('UF7'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf7')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf7')
 
     if issue.fields.customfield_10065:
         server_branches.append((target_server_branch, issue.fields.customfield_10065.replace('https://code.launchpad.net/', 'lp:')))
@@ -53,7 +56,7 @@ for target_branch, br in server_branches + web_branches:
     to_merge = True
     if link:
         b = json.loads(browser.get(link))
-        if b['entries']:
+        if b['entries'] or src_branch == target_branch:
             to_merge = False
     if to_merge:
         src_branch.createMergeProposal(target_branch=target_branch)
