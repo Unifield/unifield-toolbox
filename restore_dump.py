@@ -699,7 +699,7 @@ update res_users set password='"""+o.uf_password+"""';
 update res_users set login='"""+o.uf_password.lower()+"""' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
-update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup');
+update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Send Remote Backup');
 update ir_cron set nextcall='2100-01-01 00:00:00' where name='Update stock mission';
 update sync_client_version set patch=NULL;
 UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(xmlrpc_port)s, protocol='xmlrpc', xmlrpc_retry=2, timeout=1200;
