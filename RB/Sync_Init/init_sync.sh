@@ -340,7 +340,7 @@ config_file() {
 
     if [[ "$POSTGRES_KEY" ]]; then
         DEST="/home/${USERERP}/.uf6_psql_key"
-        cp $POSTGRES_CER $DEST
+        cp $POSTGRES_KEY $DEST
         chown ${USERERP} $DEST
         chmod 600 $DEST
         POSTGRES_KEY=$DEST
