@@ -31,6 +31,8 @@ BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 CERTBOT_SCRIPT="~/certbot/certbot-auto"
+POSTGRES_CER=""
+POSTGRES_KEY=""
 if [[ -f ~/RBconfig ]]; then
     source ~/RBconfig
 fi
@@ -314,18 +316,36 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@MKDB_CURR@@#${MKDB_CURR}#g" \
     -e "s#@@COMMENT_ACL@@#${COMMENT_ACL}#g" \
     -e "s#@@FULL_TREE@@#${FULL_TREE}#g" \
-	-e "s#@@SYNC_USER_LOGIN@@#${SYNC_USER_LOGIN}#g" \
-	-e "s#@@SYNC_USER_PASSWORD@@#${SYNC_USER_PASSWORD}#g" \
-	-e "s#@@PROTO@@#${PROTO}#g" \
+    -e "s#@@SYNC_USER_LOGIN@@#${SYNC_USER_LOGIN}#g" \
+    -e "s#@@SYNC_USER_PASSWORD@@#${SYNC_USER_PASSWORD}#g" \
+    -e "s#@@PROTO@@#${PROTO}#g" \
     -e "s#@@PG_PATH@@#${PG_PATH:=}#g" \
     -e "s#@@DBPATH@@#${PG_PATH:=/usr/lib/postgresql/8.4/bin/}#g" \
     -e "s#@@INTERMISSION_TREE@@#${INTERMISSION_TREE}#g" \
     -e "s#@@INTERSECTION_TREE@@#${INTERSECTION_TREE}#g" \
+    -e "s#@@POSTGRES_CER@@#${POSTGRES_CER}#g" \
+    -e "s#@@POSTGRES_KEY@@#${POSTGRES_KEY}#g" \
     -e "s#@@WEBPORT@@#${WEBPORT}#g" $1  > $2
 }
 
 
 config_file() {
+    if [[ "$POSTGRES_CER" ]]; then
+        DEST="/home/${USERERP}/.uf6_psql_cer"
+        cp $POSTGRES_CER $DEST
+        chown ${USERERP} $DEST
+        chmod 600 $DEST
+        POSTGRES_CER=$DEST
+    fi
+
+    if [[ "$POSTGRES_KEY" ]]; then
+        DEST="/home/${USERERP}/.uf6_psql_key"
+        cp $POSTGRES_CER $DEST
+        chown ${USERERP} $DEST
+        chmod 600 $DEST
+        POSTGRES_KEY=$DEST
+
+    fi
     create_file ./File/openerp-server-sprint1  /etc/init.d/${USERERP}-server
     create_file ./File/openerp-web-sprint1 /etc/init.d/${USERERP}-web
     create_file ./File/openerpallrc /home/${USERERP}/etc/openerprc
