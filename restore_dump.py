@@ -307,6 +307,38 @@ class Owncloud(dbmatch):
         return name
 
 
+class Postgres(dbmatch):
+    host = 'uf6.unifield.org'
+    port = '5432'
+
+    def __init__(self, host, cert, key, include_dbs):
+        self.dbs = []
+        self.cert = cert
+        self.key = key
+        self.host = host
+        self.include_dbs = include_dbs.split(',')
+        conn = psycopg2.connect(host=self.host, port=self.port, sslmode='require', sslcert=cert, sslkey=key, user='production-dbs', dbname='template1')
+        cr = conn.cursor()
+        cr.execute('SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user')
+        for x in  cr.fetchall():
+            if self.match(x[0]):
+                self.dbs.append(x[0])
+        self.info = 'Postgres %s:%s' % (self.host, self.port)
+        conn.close()
+
+    def get_dbs(self):
+        return self.dbs
+
+    def get_db_name(self, db):
+        return db
+
+    def write_dump(self, db, file_desc):
+        my_env = os.environ.copy()
+        my_env['PGSSLCERT'] = self.cert
+        my_env['PGSSLKEY'] = self.key
+        call(['pg_dump', '-Fc', db, '--host', self.host, '--port', self.port, '--user', 'production-dbs'], stdout=file_desc, env=my_env)
+
+
 class Web(object):
 
     default_host = 'unifield-%s.ocg.msf.org:8061'
@@ -640,6 +672,7 @@ if __name__ == "__main__":
     group.add_argument('--examples', action='store_true', help='show usage examples and exit')
     group.add_argument('-j', '--issue', action='store', help='restore from Jira Issue Key')
     group.add_argument('-d', '--from-dir', action='store', help='restore dump from directory')
+    group.add_argument('-p', '--postgres', action='store', help='restore dump from posgtres')
     group.add_argument('-f', '--uf-web', metavar='HOST[:PORT]', nargs='?', default=' ', help="UniField Web host:port default: ct1")
     if webdav:
         group.add_argument('-c', '--oc',  help="OwnCloud url")
@@ -684,6 +717,10 @@ if __name__ == "__main__":
 
     sync_parser = parser.add_argument_group('Restore Sync Server Light')
     sync_parser.add_argument("--server-type", "-t", choices=['no_master', 'with_master', 'no_update', '7days'], default='no_update', help="kind of sync server dump to restore: no_master: only the last 2 months upd/msg, with_master: last 2 months upd/msg + master updates, no_update: empty sync server without any upd/msg, [default: %(default)s]")
+
+    psql_parser = parser.add_argument_group('Restore From PSQL')
+    psql_parser.add_argument("--postgres-cer", action="store", help="PSQL certificate")
+    psql_parser.add_argument("--postgres-key", action="store", help="PSQL key")
 
     o = parser.parse_args()
     if o.examples:
@@ -740,6 +777,10 @@ delete from sync_server_version;
             transport = RBIndex(o.rb, o.include)
         elif webdav and o.oc:
             transport = Owncloud(o.oc, o.oc_pass, o.include)
+        elif o.postgres:
+            if o.postgres == 'prod-dbs':
+                o.postgres = 'uf6.unifield.org'
+            transport = Postgres(o.postgres, o.postgres_cer, o.postgres_key, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
             if web_host and web_host.endswith('/'):
