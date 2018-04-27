@@ -229,7 +229,7 @@ class RBIndex(dbmatch):
 
 
 class ApacheIndexes(object):
-    host = 'sync-prod_dump.uf5.unifield.org'
+    host = 'sync-prod_dump.rb.unifield.org'
     proto = 'http'
     dump_name = 'SYNC_SERVER_LIGHT'
 
