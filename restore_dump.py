@@ -530,7 +530,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             file_name = os.path.join(output_dir, dump_name)
             f = open(file_name, 'wb')
         else:
-            f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
+            f = tempfile.NamedTemporaryFile(prefix=dump_name+'_', suffix='.dump', mode='wb', delete=False)
             file_name = f.name
         sys.stdout.write("get %s to %s\n" % (dump_name, file_name))
         ex_dump = transport.write_dump(db, f)
@@ -567,6 +567,8 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                 i += 1
             except:
                 ok = True
+        if o.just_download:
+            continue
         sys.stdout.write("restore %s\n" % new_db_name)
         call(['createdb', new_db_name])
         call(['pg_restore', '--no-owner', '--no-acl', '-n', 'public', '-d', new_db_name, file_name])
@@ -685,6 +687,7 @@ if __name__ == "__main__":
     parser.add_argument("--upgrade", action='store_true', help="upgrade base module")
     parser.add_argument('-o', '--directory', action='store', default='', help='save dumps to directory')
     parser.add_argument('--sql', nargs='?', default='True',  action='store', help='sql file to execute, set empty to disable default sql execution')
+    parser.add_argument('--just-download', action='store_true', help='Just download dumps, do not restore')
 
     parser.add_argument('-l', '--list', action='store_true', help='list dumps and exit')
     parser.add_argument('--prefix', nargs='?', metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
@@ -859,7 +862,8 @@ delete from sync_server_version;
         dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
         sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, sync_port=o.sync_port, upgrade=o.upgrade, passw=o.uf_password)
-        sync_db = sync_db[0]
+        if sync_db:
+            sync_db = sync_db[0]
         if list_threads:
             threads += list_threads
     if not o.sync_only:
