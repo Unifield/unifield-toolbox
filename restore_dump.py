@@ -513,7 +513,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
                 sys.stderr.write("%s: unable to sync connect\n%s\n" % (db, e))
     return True
 
-def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync_db=False, sync_port=0 , drop=False, upgrade=False, passw=False):
+def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync_db=False, sync_port=0 , drop=False, upgrade=False, passw=False, removeprefix=False):
     restored = []
     sql_data = {
         'hardware_id': get_harware_id(),
@@ -543,6 +543,8 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
             continue
 
         new_db_name = dump_name
+        if removeprefix:
+            new_db_name = re.sub('^'+removeprefix, '', new_db_name)
         if prefix_db:
             new_db_name = '%s_%s' % (prefix_db, new_db_name)
         new_db_name = re.sub('-[0-9]{6}(-(A|B|BP))?-UF.*.dump$', '', new_db_name).replace(' ','_')
@@ -688,6 +690,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-l', '--list', action='store_true', help='list dumps and exit')
     parser.add_argument('--prefix', nargs='?', metavar="DB PREFIX", help="prefix dbname by a string (set empty to disable) [default: user]")
+    parser.add_argument('--remove-prefix', default='', metavar="DB PREFIX TO REMOVE", help="remove prefix from orignal dbname")
     parser.add_argument('--sync-port', help='sync xmlrpc port, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-db', help='sync server db, used to update instances [default: %(default)s]')
     parser.add_argument('--sync-run', action="store_true", help='try to start sync')
@@ -858,12 +861,12 @@ delete from sync_server_version;
         }
         dump_name = master_kind.get(o.server_type, 'SYNC_SERVER_LIGHT_NO_MASTER')
         transport_ap = ApacheIndexes(user=o.apache_user, password=o.apache_password, dump_name=dump_name)
-        sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, sync_port=o.sync_port, upgrade=o.upgrade, passw=o.uf_password)
+        sync_db, list_threads = restore_dump(transport_ap, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, drop=o.drop, sync_port=o.sync_port, upgrade=o.upgrade, passw=o.uf_password, removeprefix=o.remove_prefix)
         sync_db = sync_db[0]
         if list_threads:
             threads += list_threads
     if not o.sync_only:
-        dbs, list_threads = restore_dump(transport, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, sync_db=sync_db, sync_port=o.sync_port, drop=o.drop, upgrade=o.upgrade, passw=o.uf_password)
+        dbs, list_threads = restore_dump(transport, prefix_db=prefix, output_dir=o.directory, sql_queries=sql_queries, sync_db=sync_db, sync_port=o.sync_port, drop=o.drop, upgrade=o.upgrade, passw=o.uf_password, removeprefix=o.remove_prefix)
         if list_threads:
             threads += list_threads
             for x in threads:
