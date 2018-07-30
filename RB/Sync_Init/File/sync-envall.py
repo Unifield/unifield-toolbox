@@ -25,9 +25,16 @@ prefix = "@@DBNAME@@"
 sync_user_admin = True
 default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
-currency = '@@MKDB_CURR@@' # or chf
 lang = @@MKDB_LANG@@ # fr_MF or es_MF
 default_oc = 'oca'
+default_currency = '@@MKDB_CURR@@' # 'chf' or 'eur'
+# or describe custom currency for HQs here (override default_currency above):
+'''
+currency_tree = {
+    'HQ1': 'eur',
+    'HQ2': 'chf',
+}
+'''
 
 # WARNING:
 # hq_count = h, coordo_count = c, project_count = p 
