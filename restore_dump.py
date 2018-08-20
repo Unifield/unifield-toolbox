@@ -579,10 +579,10 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
 
         is_server_db = 'SYNC' in new_db_name
         query_for_server = None
+        db_conn = psycopg2.connect(PG_param.get_dsn(new_db_name))
+        cr = db_conn.cursor()
         if sql_queries:
             sys.stdout.write("execute sql queries\n")
-            db_conn = psycopg2.connect(PG_param.get_dsn(new_db_name))
-            cr = db_conn.cursor()
             if is_server_db:
                 if not sync_db:
                     sql_data['server_db'] = new_db_name
@@ -638,12 +638,14 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                     db_conn.commit()
 
 
-            db_conn.close()
         if upgrade:
             do_upgrade(sync_port, new_db_name, passw)
             #thread = threading.Thread(target=do_upgrade, args=(sync_port, new_db_name, passw))
             #list_threads.append(thread)
             #thread.start()
+        #call(['vacuumdb', '-Z', new_db_name])
+        cr.execute('ANALYZE')
+        db_conn.close()
     return restored, list_threads
 
 if __name__ == "__main__":
