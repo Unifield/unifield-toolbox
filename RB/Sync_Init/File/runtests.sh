@@ -159,6 +159,15 @@ if [ -f "meta_features/IT/user_account_management/us1381-UserAccountMgmt-6.meta_
 	sed -i "s/TESTS_HQ1C1/HQ1C1/" meta_features/IT/user_account_management/us1381-UserAccountMgmt-6.meta_feature
 fi
 
+find meta_features/ -name "*meta_feature" -exec sed -i \
+    -e 's#I fill "id=_terp_listfields/order_line/product_qty" with "\([0-9,.]*\)"#I fill "\1" within column "QTY"#g' \
+    -e 's#I fill "id=_terp_listfields/order_line/price_unit" with "\([0-9,.]*\)"#I fill "\1" within column "Unit Price"#g' \
+    -e 's#I fill "id=_terp_listfields/order_line/confirmed_delivery_date" with "\(.*\)"#I fill "\1" within column "Delivery Confirmed Date"#g' \
+    -e 's#I fill "id=_terp_listfields/order_line/stock_take_date" with "\(.*\)"#I fill "\1" within column "Date of Stock Take"#g' \
+    {} \;
+
+
+
 if [[ -n "${SERVERBRANCH}" ]]; then
     rm -fr ${SERVERDIR}
     bzr branch ${SERVERBRANCH} ${SERVERDIR}
