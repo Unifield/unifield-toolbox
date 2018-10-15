@@ -9,7 +9,7 @@ original_path=`pwd`
 
 set -e
 
-echo "Clean up data"
+#echo "Clean up data"
 #[[ -e .tmp ]] && rm -rf .tmp
 #mkdir .tmp
 [[ -e testfield_data ]] && rm -rf testfield_data
@@ -29,7 +29,7 @@ mkdir -p testfield_data/testfield
 #echo "Unzip"
 #unzip tests.zip testfield/instances/*
 
-echo "Get meta_feature and files from testing"
+#echo "Get meta_feature and files from testing"
 mkdir -p testfield_data/testfield/instances/
 cp -R /home/testing/testfield/instances/lightweight/ testfield_data/testfield/instances
 cp -R /home/testing/testfield/meta_features testfield_data/testfield/
@@ -37,9 +37,9 @@ cp -R /home/testing/testfield/files testfield_data/testfield/
 #rm -rf .tmp
 
 cd testfield_data
-echo "Rebuild a new zip file"
-zip -r testfield.zip testfield
+#echo "Rebuild a new zip file"
+zip -qr testfield.zip testfield
 mv testfield.zip $original_path
 cd $original_path
-scp testfield.zip aiodev@uf6.unifield.org:/home/aiodev/packaging_py27/msf/pkg
+scp -q testfield.zip aiodev@uf6.unifield.org:/home/aiodev/packaging_py27/msf/pkg
 rm -rf testfield_data testfield.zip

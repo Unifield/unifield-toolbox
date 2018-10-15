@@ -5,6 +5,7 @@ import getpass
 from lib import jira_lib
 import os
 from configobj import ConfigObj
+import re
 
 config_file = os.path.realpath(os.path.expanduser('~/RBconfig'))
 cfg = ConfigObj(config_file)
@@ -22,14 +23,20 @@ j = jira_lib.Jira(jira_url, jira_user, passwd)
 
 for rb in home_dir:
     rb = rb.strip()
+    not_set = False
     issues = j.search("Runbot ~ 'http://%s.%s'" % (rb, rb_server_url), fixVersion=True)
     if not issues:
         issues = j.search("Runbot ~ 'https://%s.%s'" % (rb, rb_server_url), fixVersion=True)
+    if not issues:
+        m = re.search('(us-[0-9]+)', rb, re.I)
+        if m:
+            not_set = True
+            issues = j.search("key = %s" % (m.group(1),), fixVersion=True)
     st = []
     for k in issues:
         st.append(issues[k])
     if not st or st == [None]:
         print "%s: no associated Jira issue"%(rb,)
     else:
-        print "%s: %s"%(rb, ' '.join(st))
+        print "%s: %s %s"%(rb, ' '.join(st), not_set and 'NOT SET' or '')
 
