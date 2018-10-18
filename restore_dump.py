@@ -308,7 +308,7 @@ class Owncloud(dbmatch):
 
 
 class Postgres(dbmatch):
-    host = 'uf6.unifield.org'
+    host = 'uf7.unifield.org'
     port = '5432'
 
     def __init__(self, host, cert, key, include_dbs):
@@ -350,7 +350,7 @@ class Web(object):
             if len(host) == 3:
                 host = self.default_host % host
             elif host == 'prod-dbs':
-                host = 'https://production-dbs.uf6.unifield.org'
+                host = 'https://production-dbs.uf7.unifield.org'
         else:
             host = self.default_host % 'ct1'
 
@@ -795,7 +795,7 @@ delete from sync_server_version;
             transport = Owncloud(o.oc, o.oc_pass, o.include)
         elif o.postgres:
             if o.postgres == 'prod-dbs':
-                o.postgres = 'uf6.unifield.org'
+                o.postgres = 'uf7.unifield.org'
             transport = Postgres(o.postgres, o.postgres_cer, o.postgres_key, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
