@@ -68,7 +68,7 @@ for p in model_data_o.read(data_ids, ['name', 'res_id']):
 
 for def_code in sorted(data.keys()):
     try:
-        writer.writerow([def_code, xmlid[prod[def_code]], float(data[def_code])*rate])
+        writer.writerow([def_code, xmlid[prod[def_code]], round(float(data[def_code])*rate, 5)])
     except Exception, e:
         print e
         print def_code
