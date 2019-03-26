@@ -48,6 +48,7 @@ import time
 from base64 import b64encode
 from urlparse import urlparse
 import zipfile
+from passlib.hash import bcrypt
 
 webdav = True
 try:
@@ -744,7 +745,7 @@ if __name__ == "__main__":
     if o.sql == 'True':
         sql_queries="""-- BOTH
 update attachment_config set name=%(attach_patch)s;
-update res_users set password='"""+o.uf_password+"""';
+update res_users set password='"""+bcrypt.encrypt(o.uf_password)+"""';
 update res_users set login='admin' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
