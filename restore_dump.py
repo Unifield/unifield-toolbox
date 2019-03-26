@@ -471,7 +471,7 @@ def do_upgrade(port, database, uf_pass):
     while True:
         try:
             xmlrpc = oerplib.OERP('127.0.0.1', protocol='xmlrpc', port=port, database=database, version='6.0')
-            xmlrpc.login(uf_pass, uf_pass)
+            xmlrpc.login('admin', uf_pass)
             return True
             #sys.exit(0)
         except oerplib.error.RPCError, e:
@@ -501,7 +501,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
             try:
                 xmlrpc = oerplib.OERP('127.0.0.1', protocol='xmlrpc', port=sync_port, database=db, version='6.0')
                 sys.stdout.write("%s: Connect to sync\n" % (db, ))
-                xmlrpc.login(uf_pass, uf_pass)
+                xmlrpc.login('admin', uf_pass)
                 conn_manager = xmlrpc.get('sync.client.sync_server_connection')
                 conn_ids = conn_manager.search([])
                 conn_manager.write(conn_ids, {'automatic_patching': False, 'password': uf_pass})
@@ -745,7 +745,7 @@ if __name__ == "__main__":
         sql_queries="""-- BOTH
 update attachment_config set name=%(attach_patch)s;
 update res_users set password='"""+o.uf_password+"""';
-update res_users set login='"""+o.uf_password.lower()+"""' where id=1;
+update res_users set login='admin' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
 update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Send Remote Backup');
@@ -755,7 +755,7 @@ update ir_cron set active='f' where id in (select cron_id from automated_export)
 update ir_cron set active='f' where id in (select cron_id from automated_import);
 update ir_cron set nextcall='2100-01-01 00:00:00' where name='Update stock mission';
 update sync_client_version set patch=NULL;
-UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='"""+o.uf_password+"""', port=%(xmlrpc_port)s, protocol='xmlrpc', xmlrpc_retry=2, timeout=1200;
+UPDATE sync_client_sync_server_connection SET database=%(server_db)s, host='127.0.0.1', login='admin', port=%(xmlrpc_port)s, protocol='xmlrpc', xmlrpc_retry=2, timeout=1200;
 -- SERVER
 UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
     elif not o.list and o.sql:
