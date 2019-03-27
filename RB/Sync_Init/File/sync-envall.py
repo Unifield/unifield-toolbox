@@ -90,15 +90,15 @@ dump_dir = '/home/@@USERERP@@/exports'
 
 # uncomment the next 3 parameters to load UserRights
 @@COMMENT_ACL@@
-load_uac_file = '/home/@@USERERP@@/sync_env_script/data/uac.xml'
-load_users_file = '/home/@@USERERP@@/sync_env_script/data/unifield_users.csv'
+load_uac_file = '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/uac.xml'
+#load_users_file = '/home/@@USERERP@@/sync_env_script/data/unifield_users.csv'
 load_extra_files = [
-    '/home/@@USERERP@@/sync_env_script/data/extra/ir.actions.act_window.csv',
-    '/home/@@USERERP@@/sync_env_script/data/extra/ir.model.access.csv',
-    '/home/@@USERERP@@/sync_env_script/data/extra/ir.rule.csv',
-    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule.csv',
-    '/home/@@USERERP@@/sync_env_script/data/extra/msf_field_access_rights.field_access_rule_line.csv',
-    '/home/@@USERERP@@/sync_env_script/data/extra/msf_button_access_rights.button_access_rule.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/ir.actions.act_window.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/ir.model.access.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/ir.rule.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/msf_field_access_rights.field_access_rule.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/msf_field_access_rights.field_access_rule_line.csv',
+    '/home/@@USERERP@@/unifield-server/bin/addons/msf_profile/user_rights/msf_button_access_rights.button_access_rule.csv',
     '/home/@@USERERP@@/sync_env_script/data/master_hq/product.product.csv',
 ]
 @@COMMENT_ACL@@
