@@ -721,7 +721,7 @@ if __name__ == "__main__":
     jira_parser.add_argument("-u", "--j-user", metavar="JIRA_USER")
 
     web_parser = parser.add_argument_group('Restore from UniField Web')
-    web_parser.add_argument("--web-pass", "-w", metavar="pwd", default="", help="web backup password")
+    web_parser.add_argument("--web-pass", "-w", metavar="pwd", help="web backup password")
 
     web_parser = parser.add_argument_group('Restore from OwnCloud')
     web_parser.add_argument("--oc-pass", metavar="ocpwd", default="", help="OwnCloud Pass")
