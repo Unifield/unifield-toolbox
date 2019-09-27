@@ -1,7 +1,0 @@
-httplib2
-jira
-easywebdav
-oerplib
-configobj
-passlib==1.7.1
-bcrypt==3.1.3

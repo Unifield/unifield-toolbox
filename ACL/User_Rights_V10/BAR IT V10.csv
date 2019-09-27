@@ -1,8 +1,0 @@
-active,comment,id,group_ids
-TRUE,Start All Synchronization Process,sd.BAR_sync_clientsync_wizard_view_sync,Sync_Config
-TRUE,Start All Synchronization In Background,sd.BAR_sync_clientsync_wizard_view_sync_manual_threaded,"Sync_Manual,Sync_Config"
-TRUE,Start Pushing Data,sd.BAR_sync_clientsync_wizard_view_push_data,Sync_Config
-TRUE,Start Pulling Data,sd.BAR_sync_clientsync_wizard_view_pull_data,Sync_Config
-TRUE,Start Pushing Message,sd.BAR_sync_clientsync_wizard_view_push_message,Sync_Config
-TRUE,Start Pulling Message,sd.BAR_sync_clientsync_wizard_view_pull_message,Sync_Config
-TRUE,Recover Data and Messages,sd.BAR_sync_clientsync_wizard_view_recover_data_and_messages,Sync_Config

@@ -1,7 +1,0 @@
-- User Access: uac.xml
-- msf_button_access_rights.button_access_rule: msf_button_access_rights.button_access_rule.csv
-- ir.model.access: ir.model.access.csv
-- msf_field_access_rights.field_access_rule: msf_field_access_rights.field_access_rule.csv
-- msf_field_access_rights.field_access_rule_line: msf_field_access_rights.field_access_rule_line.csv
-- ir.rule: ir.rule.csv
-- ir.actions.act_window: ir.actions.act_window.csv

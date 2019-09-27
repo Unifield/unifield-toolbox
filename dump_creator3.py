@@ -11,6 +11,8 @@ import logging
 import logging.handlers
 import datetime
 import sys
+import config
+import importlib
 
 PSQL_DIR='/cygdrive/c/WalTools/pgsql/bin/'
 DEST_DIR='/cygdrive/d/continuous_backup_data'
@@ -44,21 +46,25 @@ def to_win(path):
     return path.replace('/cygdrive/c', 'C:').replace('/cygdrive/d', 'D:')
 
 
-def upload_od(file_path):
+def upload_od(file_path, oc):
+    importlib.reload(config)
+
     dav_data = {
         'host': 'msfintl-my.sharepoint.com',
         'port': 443,
         'protocol': 'https',
         'username': 'UniField.MSF@geneva.msf.org',
-        'path': '/personal/unifield_msf_geneva_msf_org/documents/Test',
+        'password': config.password,
     }
+
+    dav_data['path'] = config.path.get(oc, '/personal/unifield_msf_geneva_msf_org/documents/Test')
     max_retries = 10
     retries = 0
     buffer_size = 10 * 1024 * 1014
     file_name = os.path.basename(file_path)
     temp_file_name = 'Temp/%s'%file_name
     fileobj = open(file_path, 'rb')
-    log('Start upload %s'% file_path)
+    log('Start upload %s to %s '% (file_path, dav_data['path']))
     while True:
         try:
             dav = webdav.Client(**dav_data)
@@ -167,7 +173,7 @@ def process_directory():
                         # Start psql
                         psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '60000', '-w', 'start']
                         log(' '.join(psql_start))
-                        out = subprocess.run(psql_start, check=True)
+                        subprocess.run(psql_start, check=True)
                         #subprocess.check_output(psql_start)
 
                         db = psycopg2.connect('dbname=template1 host=127.0.0.1 user=openpg')
@@ -211,6 +217,8 @@ def process_directory():
                                 cr = db.cursor()
                                 cr.execute('SELECT name FROM sync_client_version order by id desc limit 1')
                                 version = cr.fetchone()[0] or 'XX'
+                                cr.execute('SELECT oc FROM sync_client_entity')
+                                oc = cr.fetchone()[0] or 'XX'
                                 db.close()
 
                                 dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
@@ -223,7 +231,7 @@ def process_directory():
                                 log(' '.join(zip_c))
                                 subprocess.call(zip_c)
                                 os.remove(dump_file)
-                                upload_od(final_zip)
+                                upload_od(final_zip, oc)
                                 open(last_dump_file, 'wb').close()
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '60000', '-w', 'stop']
