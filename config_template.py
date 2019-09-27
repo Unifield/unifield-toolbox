@@ -1,3 +1,4 @@
+# OneDrive
 password=''
 """
 path = {
@@ -13,3 +14,14 @@ path = {
     'ocg': '/personal/UF_OCG_msf_geneva_msf_org/documents/Test',
     'ocp': '/personal/UF_OCP_msf_geneva_msf_org/documents/Test',
 }
+
+# path to psql exe
+psql_dir = '/cygdrive/c/WalTools/pgsql/bin/'
+
+# path to destination base + Wal
+dest_dir = '/cygdrive/d/continuous_backup_data'
+
+# path to instance push
+src_dir = '/home/backup/'
+
+log_file = '/cygdrive/c/continuous_backup_server/creator.log'

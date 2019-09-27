@@ -14,12 +14,12 @@ import sys
 import config
 import importlib
 
-PSQL_DIR='/cygdrive/c/WalTools/pgsql/bin/'
-DEST_DIR='/cygdrive/d/continuous_backup_data'
-SRC_DIR='/home/backup/'
-PSQL_CONF=os.path.join(DEST_DIR, 'psql_conf')
-DUMP_DIR=os.path.join(DEST_DIR, 'DUMPS')
-LOG_FILE = '/cygdrive/c/TMPJFB/creator.log'
+PSQL_DIR = config.psql_dir
+DEST_DIR = config.dest_dir
+SRC_DIR = config.src_dir
+PSQL_CONF = os.path.join(DEST_DIR, 'psql_conf')
+DUMP_DIR = os.path.join(DEST_DIR, 'DUMPS')
+LOG_FILE = config.log_file
 day_abr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 logger = logging.getLogger()
