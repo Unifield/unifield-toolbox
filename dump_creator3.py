@@ -113,7 +113,7 @@ def process_directory():
     for instance in os.listdir(SRC_DIR):
         if instance.startswith('.'):
             continue
-        full_name = os.path.join(SRC_DIR, instance, 'WAL')
+        full_name = os.path.join(SRC_DIR, instance)
         try:
             if os.path.isdir(full_name):
                 log('##### Instance %s'%full_name)
