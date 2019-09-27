@@ -1,14 +1,15 @@
-#!/cygdrive/c/TMPJFB/crypto-env/bin/python3
+#!./crypto-env/bin/python3
 from Crypto.PublicKey import RSA
 import sys
 import zipfile
 import os
 from email.message import EmailMessage
 import smtplib
+import config
 
-authorized_keys = '/home/backup/.ssh/authorized_keys'
-keys_dir = '/cygdrive/d/continuous_backup_data/ssh_keys'
-smtp_host = '80.12.95.139'
+authorized_keys = os.path.join(config.src_dir, '.ssh', 'authorized_keys')
+keys_dir = config.keys_dir
+smtp_host = config.smtp_host
 
 if not sys.argv or len(sys.argv) != 2:
     print('%s instance' % sys.argv[0])
@@ -62,8 +63,8 @@ msg = EmailMessage()
 msg['Subject'] = 'SSH Key %s' % instance
 # me == the sender's email address
 # family = the list of all recipients' email addresses
-msg['From'] = 'backup@tempo-consulting.fr'
-msg['To'] = 'jfb@tempo-consulting.fr'
+msg['From'] = config.from_mail
+msg['To'] = config.to_mail
 msg.preamble = 'Key in attach'
 
 # Open the files in binary mode.  Use imghdr to figure out the

@@ -25,3 +25,10 @@ dest_dir = '/cygdrive/d/continuous_backup_data'
 src_dir = '/home/backup/'
 
 log_file = '/cygdrive/c/continuous_backup_server/creator.log'
+
+# key files
+# storage
+keys_dir = '/cygdrive/d/continuous_backup_data/ssh_keys'
+smtp_host = '80.12.95.139'
+from_mail = ''
+to_mail = ''
