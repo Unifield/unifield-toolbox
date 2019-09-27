@@ -41,6 +41,9 @@ for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Availab
         elif x.name.startswith('UF7'):
             target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf7')
             target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf7')
+        elif x.name.startswith('UF12'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf12')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf12')
 
     if issue.fields.customfield_10065:
         server_branches.append((target_server_branch, issue.fields.customfield_10065.replace('https://code.launchpad.net/', 'lp:')))
@@ -52,7 +55,10 @@ for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Availab
 
 for target_branch, br in server_branches + web_branches:
     src_branch = launchpad.branches.getByUrl(url=br)
-    link = src_branch.landing_targets_collection_link
+    try:
+        link = src_branch.landing_targets_collection_link
+    except:
+        pass
     to_merge = True
     if link:
         b = json.loads(browser.get(link))
