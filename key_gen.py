@@ -12,13 +12,26 @@ authorized_keys = os.path.join(config.src_dir, '.ssh', 'authorized_keys')
 keys_dir = config.keys_dir
 smtp_host = config.smtp_host
 
-if not sys.argv or len(sys.argv) != 2:
-    print('%s instance' % sys.argv[0])
+def error(msg):
+    print(msg)
+    input('Press enter to quit')
     sys.exit(1)
 
-instance = sys.argv[1].lower().strip()
+if sys.argv and len(sys.argv) == 2:
+    instance_input = sys.argv[1]
+    ok = 'y'
+else:
+    ok = 'n'
+
+while ok not in ('Y', 'y'):
+    if ok in ('n', 'N'):
+        instance_input = input("Intance name: ")
+
+    ok = input("'%s' do you confirm ? [y/n] " % instance_input)
+
+instance = instance_input.lower().strip()
 if not re.search('^[a-z0-9_-]+$', instance):
-    print('Instance name %s not correct' % sys.argv[0])
+    error("Name '%s' is not correct" % instance_input)
     sys.exit(1)
 
 auth_read = open(authorized_keys, 'r')
@@ -26,7 +39,7 @@ line = 0
 for x in auth_read:
     line += 1
     if x.strip().endswith(instance):
-        print ('%s found in authorized_keys, line %s' % (instance, line))
+        error('%s found in authorized_keys, line %s' % (instance, line))
         sys.exit(1)
 auth_read.close()
 
@@ -35,7 +48,7 @@ if not os.path.exists(keys_dir):
 zip_file = os.path.join(keys_dir, '%s.zip'%instance)
 
 if os.path.exists(zip_file):
-    print('%s already exists'  % (zip_file, ))
+    error('%s already exists'  % (zip_file, ))
     sys.exit(1)
 
 zip_desc = open(zip_file, 'wb')
