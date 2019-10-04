@@ -6,6 +6,7 @@ import os
 from email.message import EmailMessage
 import smtplib
 import config
+import re
 
 authorized_keys = os.path.join(config.src_dir, '.ssh', 'authorized_keys')
 keys_dir = config.keys_dir
@@ -15,7 +16,11 @@ if not sys.argv or len(sys.argv) != 2:
     print('%s instance' % sys.argv[0])
     sys.exit(1)
 
-instance = sys.argv[1]
+instance = sys.argv[1].lower().strip()
+if not re.search('^[a-z0-9_-]+$', instance):
+    print('Instance name %s not correct' % sys.argv[0])
+    sys.exit(1)
+
 auth_read = open(authorized_keys, 'r')
 line = 0
 for x in auth_read:
