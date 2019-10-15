@@ -1,4 +1,4 @@
-#!./crypto-env/bin/python3
+#!/cygdrive/c/continuous_backup_server/crypto-env/bin/python3.6
 from Crypto.PublicKey import RSA
 import sys
 import zipfile
@@ -22,12 +22,14 @@ if sys.argv and len(sys.argv) == 2:
     ok = 'y'
 else:
     ok = 'n'
+    print("\n\n\n")
 
 while ok not in ('Y', 'y'):
     if ok in ('n', 'N'):
         instance_input = input("Intance name: ")
-
-    ok = input("'%s' do you confirm ? [y/n] " % instance_input)
+    if ok in ('q', 'Q'):
+        sys.exit(1)
+    ok = input("'%s' do you confirm ? [y/n/q] " % instance_input)
 
 instance = instance_input.lower().strip()
 if not re.search('^[a-z0-9_-]+$', instance):
@@ -66,6 +68,9 @@ zip_doc.writestr('SSH_CONFIG/config', """
 IdentityFile "C:\Program Files (x86)\msf\SSH_CONFIG\id_rsa"
 StrictHostKeyChecking no
 UserKnownHostsFile "C:\Program Files (x86)\msf\SSH_CONFIG\knownhosts"
+
+# comment to use ssh on port 22
+Port 8069
 """)
 zip_doc.close()
 zip_desc.close()
