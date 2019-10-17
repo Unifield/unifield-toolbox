@@ -27,7 +27,8 @@ logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
 
 if LOG_FILE:
-    handler = logging.handlers.RotatingFileHandler(LOG_FILE, 'a', 1024*1024, 365)
+    #handler = logging.handlers.RotatingFileHandler(LOG_FILE, 'a', 1024*1024, 365)
+    handler = logging.handlers.TimedRotatingFileHandler(LOG_FILE, when='midnight')
 else:
     handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
