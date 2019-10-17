@@ -131,9 +131,11 @@ def process_directory():
                 basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                 if os.path.isfile(basebackup):
                     log('%s Found base backup %s'% (instance, basebackup))
+                    old_base_moved = False
                     if os.path.isdir(dest_basebackup):
                         # previous base found, rename it
-                        shutil.move(dest_basebackup, os.path.join(dest_dir,'base_%s' % (time.strftime('%Y-%m-%d%H%M'))))
+                        old_base_moved = os.path.join(dest_dir,'base_%s' % (time.strftime('%Y-%m-%d%H%M')))
+                        shutil.move(dest_basebackup, old_base_moved)
                         log('Move old base %s'%dest_basebackup)
 
                     new_base = os.path.join(dest_dir, 'base.tar.7z')
@@ -151,8 +153,13 @@ def process_directory():
                     for del_recreate in [pg_xlog, os.path.join(dest_basebackup, 'pg_log')]:
                         if os.path.isdir(del_recreate):
                             shutil.rmtree(del_recreate)
-                            os.makedirs(del_recreate)
+                        os.makedirs(del_recreate)
 
+                    if old_base_moved:
+                        # old base moved, copy previous WAL in the new basebackup
+                        # case of WAL created during this base backup was already moved to the old WAL
+                        shutil.rmtree(pg_xlog)
+                        shutil.copytree(os.path.join(old_base_moved, 'pg_xlog'), pg_xlog)
 
                 # Move WAL (copy + del to set right owner on target)
                 wal_moved = 0
