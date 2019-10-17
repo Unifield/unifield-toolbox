@@ -178,7 +178,7 @@ def process_directory():
                 if wal_moved:
                     try:
                         # Start psql
-                        psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '10800', '-w', 'start']
+                        psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
                         log(' '.join(psql_start))
                         subprocess.run(psql_start, check=True)
                         #subprocess.check_output(psql_start)
@@ -241,7 +241,7 @@ def process_directory():
                                 upload_od(final_zip, oc)
                                 open(last_dump_file, 'wb').close()
                     finally:
-                        psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '10800', '-w', 'stop']
+                        psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
                         log(' '.join(psql_stop))
                         subprocess.run(psql_stop)
 
