@@ -269,4 +269,5 @@ if __name__ == '__main__':
             log('Process ends')
             sys.exit(0)
 
+        log('sleep')
         time.sleep(120)
