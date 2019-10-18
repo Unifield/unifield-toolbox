@@ -10,6 +10,7 @@ import requests
 import logging
 import logging.handlers
 import datetime
+from dateutil.relativedelta import relativedelta
 import sys
 import config
 import importlib
@@ -161,6 +162,14 @@ def process_directory():
                         # case of WAL created during this base backup was already moved to the old WAL
                         shutil.rmtree(pg_xlog)
                         shutil.copytree(os.path.join(old_base_moved, 'pg_xlog'), pg_xlog)
+
+                # is there an in-progress rsync ?
+                rsync_temp = os.path.join(full_name, '.rsync-partial')
+                if os.path.exists(rsync_temp):
+                    partial_modification_date = datetime.datetime.fromtimestamp(os.path.getctime(rsync_temp))
+                    if partial_modification_date > datetime.datetime.now() + relativedelta(minutes=-10):
+                        log('%s, rsync in progess %s' % (full_name, partial_modification_date.strftime('%Y-%m-%d %H:%M')))
+                        continue
 
                 # Move WAL (copy + del to set right owner on target)
                 wal_moved = 0
