@@ -118,7 +118,7 @@ def process_directory():
         full_name = os.path.join(SRC_DIR, instance)
         try:
             if os.path.isdir(full_name):
-                log('##### Instance %s'%full_name)
+                #log('##### Instance %s'%full_name)
 
                 dest_dir = os.path.join(DEST_DIR, instance)
                 for dir_to_create in [os.path.join(dest_dir, 'OLDWAL')]:
@@ -183,7 +183,8 @@ def process_directory():
                         un7zip(src_wal, pg_xlog)
                         os.remove(src_wal)
 
-                log('%s, %d wal moved to %s' % (full_name, wal_moved, pg_xlog))
+                if wal_moved:
+                    log('%s, %d wal moved to %s' % (full_name, wal_moved, pg_xlog))
 
                 if wal_moved:
                     try:
@@ -262,9 +263,10 @@ def process_directory():
 
 if __name__ == '__main__':
     while True:
+        log('Check directories')
         process_directory()
         if sys.argv and len(sys.argv) > 1 and sys.argv[1] == '-1':
             log('Process ends')
             sys.exit(0)
-        # TODO: OneDrive for each OC
+
         time.sleep(120)
