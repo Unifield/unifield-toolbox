@@ -766,7 +766,6 @@ UPDATE sync_server_entity SET hardware_id=%(hardware_id)s, user_id=1;"""
 
     if o.upgrade:
         sql_queries = """update ir_module_module set state='to upgrade' where state='installed';
--- INSTANCE
 delete from sync_client_version;
 -- SERVER
 delete from sync_server_version;
