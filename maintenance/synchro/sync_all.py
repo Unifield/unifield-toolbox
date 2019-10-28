@@ -27,6 +27,6 @@ for dbname in oerp.db.list():
     conn_manager = netrpc.get('sync.client.sync_server_connection')
     conn_ids = conn_manager.search([])
     #conn_manager.write(conn_ids, {'password': login})
-    conn_manager.connect()
+    #conn_manager.connect()
     netrpc.get('sync.client.entity').sync()
 
