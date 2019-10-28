@@ -644,13 +644,13 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                     db_conn.commit()
 
 
-        cr.execute('ANALYZE')
         if upgrade:
             do_upgrade(sync_port, new_db_name, passw)
             #thread = threading.Thread(target=do_upgrade, args=(sync_port, new_db_name, passw))
             #list_threads.append(thread)
             #thread.start()
         #call(['vacuumdb', '-Z', new_db_name])
+        cr.execute('ANALYZE')
         db_conn.close()
     return restored, list_threads
 
