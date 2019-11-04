@@ -74,7 +74,7 @@ def upload_od(file_path, oc):
             upload_ok, error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
             if upload_ok:
                 dav.move(temp_file_name, file_name)
-                log('File uploaded')
+                log('File %s uploaded' % (file_path,))
                 return True
             else:
                 if retries > max_retries:
@@ -82,7 +82,7 @@ def upload_od(file_path, oc):
                 retries += 1
                 time.sleep(2)
                 if 'timed out' in error or '2130575252' in error:
-                    log('OneDrive: session time out')
+                    log('%s OneDrive: session time out' % (file_path,))
                     dav.login()
 
         except requests.exceptions.RequestException:
@@ -107,7 +107,6 @@ def un7zip(src_file, dest_dir, delete=False):
         command.append('-sdel')
     log('Uncompress: %s ' % ' '.join(command))
     subprocess.check_output(command, stderr=subprocess.STDOUT)
-    log('Done')
 
 def process_directory():
     if not os.path.isdir(DUMP_DIR):
@@ -172,21 +171,57 @@ def process_directory():
                         continue
 
                 # Move WAL (copy + del to set right owner on target)
-                wal_moved = 0
                 if not os.path.exists(pg_xlog):
                     error('Unable to copy WAL, base directory not found %s' % pg_xlog)
                     continue
-                for wal in os.listdir(full_name):
-                    if wal.endswith('7z'):
-                        wal_moved += 1
-                        src_wal = os.path.join(full_name, wal)
-                        un7zip(src_wal, pg_xlog)
-                        os.remove(src_wal)
+
+                wal_moved = 0
+                forced_wal = False
+                forced_dump = False
+                retry = True
+                while retry:
+                    retry_wal = False
+                    for_next_loop = False
+                    for wal in os.listdir(full_name):
+                        if wal.endswith('7z'):
+                            wal_moved += 1
+                            src_wal = os.path.join(full_name, wal)
+                            un7zip(src_wal, pg_xlog)
+                            os.remove(src_wal)
+                        elif wal == 'force_dump':
+                            os.remove(os.path.join(full_name, wal))
+                            forced_dump = True
+                        elif wal.startswith('.') and '.7z.' in wal:
+                            # there is an inprogress rsync
+                            try:
+                                partial_modification_date = datetime.datetime.fromtimestamp(os.path.getctime(os.path.join(full_name, wal)))
+                                if partial_modification_date > datetime.datetime.now() + relativedelta(minutes=-2):
+                                    # rsync inprogress is less than 2 min, go to the next instance
+                                    log('%s found %s, next_loop' % (full_name, wal))
+                                    for_next_loop = True
+                                    break
+                                else:
+                                    # inprogress is more than 2min: too slow, generate backup
+                                    log('%s found %s, too old, force wal' % (full_name, wal))
+                                    forced_wal = True
+                            except FileNotFoundError:
+                                # between listdir and getctime the temp file has been removed, retry listdir
+                                log('%s file not found %s, retry' % (full_name, wal))
+                                retry_wal = True
+                                break
+                    retry = retry_wal
+
+                if for_next_loop:
+                    continue
 
                 if wal_moved:
                     log('%s, %d wal moved to %s' % (full_name, wal_moved, pg_xlog))
+                elif forced_wal:
+                    log('%s, wal forced' % (full_name, ))
+                elif forced_dump:
+                    log('%s, dump forced' % (full_name, ))
 
-                if wal_moved:
+                if forced_wal or forced_dump or wal_moved:
                     try:
                         # Start psql
                         psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
@@ -203,7 +238,7 @@ def process_directory():
                             prev = cr.fetchone()[0]
                             if prev == previous_wall:
                                 break
-                            log('Wait recovery, previous: %s, current: %s' % (previous_wall, prev))
+                            log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                             previous_wall = prev
                             time.sleep(2)
 
@@ -221,7 +256,7 @@ def process_directory():
                         all_dbs = cr.fetchall()
                         db.close()
                         last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
-                        if os.path.exists(last_dump_file):
+                        if not forced_dump and os.path.exists(last_dump_file):
                             last_dump_date = datetime.datetime.fromtimestamp(os.path.getmtime(last_dump_file))
                             # only 1 dump per day
                             if last_dump_date.strftime('%Y-%m-%d') == time.strftime('%Y-%m-%d'):
@@ -230,7 +265,7 @@ def process_directory():
                         # dump and zip the dump
                         for x in all_dbs:
                             if x[0] not in ['template0', 'template1', 'postgres']:
-                                log('DB found %s'%x[0])
+                                log('%s db found %s'% (instance, x[0]))
                                 db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
                                 cr = db.cursor()
                                 cr.execute('SELECT name FROM sync_client_version order by id desc limit 1')
@@ -245,6 +280,9 @@ def process_directory():
                                 subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
 
                                 final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
+                                if os.path.exists(final_zip):
+                                    os.remove(final_zip)
+
                                 zip_c = ['zip', '-j', '-q', final_zip, dump_file]
                                 log(' '.join(zip_c))
                                 subprocess.call(zip_c)
