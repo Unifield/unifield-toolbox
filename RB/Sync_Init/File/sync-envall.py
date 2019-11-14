@@ -26,7 +26,6 @@ sync_user_admin = True
 default_email = 'null@msf.org'
 company_name = 'Médecins Sans Frontières'
 lang = @@MKDB_LANG@@ # fr_MF or es_MF
-default_oc = 'oca'
 default_currency = '@@MKDB_CURR@@' # 'chf' or 'eur'
 # or describe custom currency for HQs here (override default_currency above):
 currency_tree = {
@@ -35,8 +34,16 @@ currency_tree = {
 }
 if currency_tree['HQ1'] == 'chf':
     currency_tree['HQ2'] = 'eur'
+    default_oc = {
+        'HQ1': 'ocg',
+        'HQ2': 'oca'
+    }
 else:
     currency_tree['HQ2'] = 'chf'
+    default_oc = {
+        'HQ1': 'oca',
+        'HQ2': 'ocg'
+    }
 
 # WARNING:
 # hq_count = h, coordo_count = c, project_count = p 
