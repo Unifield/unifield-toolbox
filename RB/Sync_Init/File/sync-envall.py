@@ -62,7 +62,7 @@ instance_tree = {
         'C2': ['P1'],
     },
     'HQ2': {
-        'C1': [],
+        'C1': ['P1'],
     },
 }
 @@FULL_TREE@@
