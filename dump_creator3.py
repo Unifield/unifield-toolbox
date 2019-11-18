@@ -288,7 +288,8 @@ def process_directory():
                                 subprocess.call(zip_c)
                                 os.remove(dump_file)
                                 upload_od(final_zip, oc)
-                                open(last_dump_file, 'wb').close()
+                                with open(last_dump_file, 'w') as last_desc:
+                                    last_desc.write(restore_date.strftime('%Y%m%d-%H%M%S'))
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
                         log(' '.join(psql_stop))
