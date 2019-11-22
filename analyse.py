@@ -47,11 +47,13 @@ for dump in os.listdir(DUMP_DIR):
     instance_name = dump[0:-8].lower()
     dump_details.setdefault(full_dump_date.strftime('%Y-%m-%d'), []).append(instance_name)
     if zipfile.is_zipfile(full_dump):
+        file_size = os.path.getsize(full_dump)
         zip_data = zipfile.ZipFile(full_dump, mode='r')
         for zipname in zip_data.namelist():
             m = re.search('^[a-z0-9_-]+-([0-9]{8}-[0-9]{6})', zipname, re.I)
             if m:
-                zip_dump_details.setdefault(instance_name, []).append(m.group(1))
+                zip_name_date =  datetime.datetime.strptime(m.group(1), '%Y%m%d-%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+                zip_dump_details.setdefault(instance_name, []).append((zip_name_date, file_size))
         zip_data.close()
 
 print("== Dumps ==")
@@ -66,16 +68,20 @@ for d in sorted(dump_details.keys(), reverse=True):
 
 
 # Extract info from last_dump.txt generated after an pg_dump
-print("== Last Dump ==")
+print("== Last Dump %s keys ==" % (len(all_keys),))
 days_2 = (datetime.datetime.now() + relativedelta(days=-2)).strftime('%Y-%m-%d')
+days_1 = (datetime.datetime.now() + relativedelta(days=-1)).strftime('%Y-%m-%d')
 last_dump = {}
 for x in all_keys:
     dump_file = os.path.join(DEST_DIR, x, 'last_dump.txt')
-    wal_date = "00000000-000000"
+    wal_date = "0000-00-00 00:00:00"
     all_dump = []
     if os.path.exists(dump_file):
         last = datetime.datetime.fromtimestamp(os.path.getctime(dump_file)).strftime('%Y-%m-%d %H:%M')
         with open(dump_file) as last_desc:
+            from_last = last_desc.read()
+            if from_last:
+                wal_date =  datetime.datetime.strptime(from_last, '%Y%m%d-%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
             wal_date = last_desc.read() or wal_date
     else:
         last = '0000-00-00 00:00'
@@ -83,22 +89,27 @@ for x in all_keys:
         zip_dump_details[x].sort(reverse=1)
         for idx in range(0, 7):
             if len(zip_dump_details[x]) > idx:
-                zip_date = zip_dump_details[x][idx]
-                if idx > 0 and zip_date == zip_dump_details[x][idx-1]:
+                zip_date = zip_dump_details[x][idx][0]
+                if idx > 0 and zip_date == zip_dump_details[x][idx-1][0]:
                     zip_date = colored(zip_date, 'red')
-                all_dump.append(zip_date)
+                all_dump.append("%s;%03d" % (zip_date, zip_dump_details[x][idx][1]/1024/1024))
     last_dump.setdefault(last, []).append((x, wal_date, all_dump))
 
-print("inst\t\tpush date\t\tlast wal\tdate from zip")
+print("Instance\tOD Push date     Last wal on OD      Date from zip;size MB")
 for d in sorted(last_dump.keys(), reverse=True):
     last = d
     if last <= days_2:
         last = colored(last, 'red')
+    elif last <= days_1:
+        last = colored(last, 'magenta')
     for instance in sorted(last_dump[d]):
-        print("%s\t%s\t%s\t%s" % (instance[0], last, instance[1], "\t".join(instance[2])))
+        wal_date = instance[1]
+        if instance[1] and (not instance[2] or instance[2][0].split(';')[0] != instance[1]):
+            wal_date = colored(instance[1], 'red')
+        print("%s\t%s %s %s" % (instance[0], last, wal_date, " ".join(instance[2])))
 
 
 total, used, free = shutil.disk_usage("/")
-print("== Disk ==\nDisk used %s GB on %s GB (%.02lf%%)" % (used // (2**30), total // (2**30), used/total*100))
+print("== Disk ==\nDisk usage: %s/%s GB (%.02lf%%)" % (used // (2**30), total // (2**30), used/total*100))
 sys.exit(1)
 
