@@ -297,8 +297,8 @@ def process_directory():
 
         except subprocess.CalledProcessError as e:
             error(e.output or e.stderr)
-        except Exception as e:
-            error(e)
+        except Exception:
+            logger.exception('ERROR')
 
 if __name__ == '__main__':
     while True:
