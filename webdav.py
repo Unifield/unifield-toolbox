@@ -91,7 +91,7 @@ class Client(object):
                 return ' '.join(error)
         except:
             pass
-        return result.content
+        return result.text
 
     def create_folder(self, remote_path):
         webUri = '%s%s' % (self.path, remote_path)
