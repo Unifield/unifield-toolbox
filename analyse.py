@@ -12,15 +12,15 @@ from termcolor import colored
 import shutil
 import tabulate
 tabulate._table_formats['simple'] = tabulate.TableFormat(
-        lineabove=tabulate.Line("", "-", " ", ""),
-        linebelowheader=tabulate.Line("", "-", " ", ""),
-        linebetweenrows=None,
-        linebelow=tabulate.Line("", "-", " ", ""),
-        headerrow=tabulate.DataRow("", " ", ""),
-        datarow=tabulate.DataRow("", " ", ""),
-        padding=0,
-        with_header_hide=["lineabove", "linebelow"],
-    )
+    lineabove=tabulate.Line("", "-", " ", ""),
+    linebelowheader=tabulate.Line("", "-", " ", ""),
+    linebetweenrows=None,
+    linebelow=tabulate.Line("", "-", " ", ""),
+    headerrow=tabulate.DataRow("", " ", ""),
+    datarow=tabulate.DataRow("", " ", ""),
+    padding=0,
+    with_header_hide=["lineabove", "linebelow"],
+)
 
 PSQL_DIR = config.psql_dir
 DEST_DIR = config.dest_dir
