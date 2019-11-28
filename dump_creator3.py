@@ -27,6 +27,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
 
+wal_forced = {}
 if LOG_FILE:
     #handler = logging.handlers.RotatingFileHandler(LOG_FILE, 'a', 1024*1024, 365)
     handler = logging.handlers.TimedRotatingFileHandler(LOG_FILE, when='midnight')
@@ -59,6 +60,8 @@ def upload_od(file_path, oc):
         'password': config.password,
     }
 
+    if oc not in config.path:
+        error('%s unknown oc %s' % (file_path, oc))
     dav_data['path'] = config.path.get(oc, '/personal/unifield_msf_geneva_msf_org/documents/Test')
     max_retries = 10
     retries = 0
@@ -67,21 +70,23 @@ def upload_od(file_path, oc):
     temp_file_name = 'Temp/%s'%file_name
     fileobj = open(file_path, 'rb')
     log('Start upload %s to %s '% (file_path, dav_data['path']))
+    upload_ok = False
+    dav_error = False
     while True:
         try:
             dav = webdav.Client(**dav_data)
             dav.create_folder('Temp')
-            upload_ok, error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
+            upload_ok, dav_error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
             if upload_ok:
                 dav.move(temp_file_name, file_name)
                 log('File %s uploaded' % (file_path,))
                 return True
             else:
                 if retries > max_retries:
-                    raise Exception(error)
+                    raise Exception(dav_error)
                 retries += 1
                 time.sleep(2)
-                if 'timed out' in error or '2130575252' in error:
+                if 'timed out' in dav_error or '2130575252' in dav_error:
                     log('%s OneDrive: session time out' % (file_path,))
                     dav.login()
 
@@ -93,8 +98,8 @@ def upload_od(file_path, oc):
 
     fileobj.close()
     if not upload_ok:
-        if error:
-            raise Exception(error)
+        if dav_error:
+            raise Exception(dav_error)
         else:
             raise Exception('Unknown error')
     return True
@@ -172,7 +177,7 @@ def process_directory():
 
                 # Move WAL (copy + del to set right owner on target)
                 if not os.path.exists(pg_xlog):
-                    error('Unable to copy WAL, base directory not found %s' % pg_xlog)
+                    log('Unable to copy WAL, base directory not found %s' % pg_xlog)
                     continue
 
                 wal_moved = 0
@@ -183,27 +188,29 @@ def process_directory():
                     retry_wal = False
                     for_next_loop = False
                     for wal in os.listdir(full_name):
+                        full_path_wal = os.path.join(full_name, wal)
                         if wal.endswith('7z'):
                             wal_moved += 1
-                            src_wal = os.path.join(full_name, wal)
-                            un7zip(src_wal, pg_xlog)
-                            os.remove(src_wal)
+                            un7zip(full_path_wal, pg_xlog)
+                            os.remove(full_path_wal)
                         elif wal == 'force_dump':
-                            os.remove(os.path.join(full_name, wal))
+                            os.remove(full_path_wal)
                             forced_dump = True
                         elif wal.startswith('.') and '.7z.' in wal:
                             # there is an inprogress rsync
                             try:
-                                partial_modification_date = datetime.datetime.fromtimestamp(os.path.getctime(os.path.join(full_name, wal)))
-                                if partial_modification_date > datetime.datetime.now() + relativedelta(minutes=-2):
-                                    # rsync inprogress is less than 2 min, go to the next instance
-                                    log('%s found %s, next_loop' % (full_name, wal))
+                                partial_modification_date = datetime.datetime.fromtimestamp(os.path.getctime(full_path_wal))
+                                if partial_modification_date > datetime.datetime.now() + relativedelta(minutes=-45):
+                                    # rsync inprogress is less than X min, go to the next instance
+                                    log('%s found %s, next_loop (%s)' % (full_name, wal, partial_modification_date.strftime('%Y-%m-%d %H:%M')))
                                     for_next_loop = True
                                     break
                                 else:
-                                    # inprogress is more than 2min: too slow, generate backup
-                                    log('%s found %s, too old, force wal' % (full_name, wal))
-                                    forced_wal = True
+                                    # inprogress is more than X min: too slow, generate backup
+                                    log('%s found %s, too old, force wal (%s)' % (full_name, wal, partial_modification_date.strftime('%Y-%m-%d %H:%M')))
+                                    if not wal_forced.get(full_name, {}).get(full_path_wal):
+                                        wal_forced[full_name] = {full_path_wal: True}
+                                        forced_wal = True
                             except FileNotFoundError:
                                 # between listdir and getctime the temp file has been removed, retry listdir
                                 log('%s file not found %s, retry' % (full_name, wal))
@@ -256,22 +263,37 @@ def process_directory():
                         all_dbs = cr.fetchall()
                         db.close()
                         last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
+                        last_wal_date = False
                         if not forced_dump and os.path.exists(last_dump_file):
                             last_dump_date = datetime.datetime.fromtimestamp(os.path.getmtime(last_dump_file))
+                            with open(last_dump_file) as last_desc:
+                                last_wal_date = last_desc.read()
                             # only 1 dump per day
                             if last_dump_date.strftime('%Y-%m-%d') == time.strftime('%Y-%m-%d'):
                                 log('%s already dumped today' % instance)
                                 continue
+
+                        if forced_wal and last_wal_date and last_wal_date == restore_date.strftime('%Y%m%d-%H%M%S'):
+                            # same wal as previous dump: do noting (the in-progess wal is the 1st one)
+                            log('%s : same data (%s) as previous backup (%s), do not dump/push to od' % (instance, last_wal_date, restore_date.strftime('%Y%m%d-%H%M%S')))
+                            continue
+
                         # dump and zip the dump
                         for x in all_dbs:
                             if x[0] not in ['template0', 'template1', 'postgres']:
                                 log('%s db found %s'% (instance, x[0]))
                                 db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
                                 cr = db.cursor()
-                                cr.execute('SELECT name FROM sync_client_version order by id desc limit 1')
-                                version = cr.fetchone()[0] or 'XX'
+                                cr.execute('SELECT name FROM sync_client_version where date is not null order by date desc limit 1')
+                                version = cr.fetchone()[0]
+                                if not version:
+                                    error('%s: version not found' % instance)
+                                    version = 'XX'
                                 cr.execute('SELECT oc FROM sync_client_entity')
-                                oc = cr.fetchone()[0] or 'XX'
+                                oc = cr.fetchone()[0]
+                                if not oc:
+                                    error('%s: OC not found' % instance)
+                                    oc = 'XX'
                                 db.close()
 
                                 dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
