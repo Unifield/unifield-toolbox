@@ -21,6 +21,7 @@ tabulate._table_formats['simple'] = tabulate.TableFormat(
     padding=0,
     with_header_hide=["lineabove", "linebelow"],
 )
+tabulate.MIN_PADDING = 1
 
 PSQL_DIR = config.psql_dir
 DEST_DIR = config.dest_dir
