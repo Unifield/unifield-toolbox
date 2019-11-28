@@ -10,6 +10,17 @@ import zipfile
 import re
 from termcolor import colored
 import shutil
+import tabulate
+tabulate._table_formats['simple'] = tabulate.TableFormat(
+        lineabove=tabulate.Line("", "-", " ", ""),
+        linebelowheader=tabulate.Line("", "-", " ", ""),
+        linebetweenrows=None,
+        linebelow=tabulate.Line("", "-", " ", ""),
+        headerrow=tabulate.DataRow("", " ", ""),
+        datarow=tabulate.DataRow("", " ", ""),
+        padding=0,
+        with_header_hide=["lineabove", "linebelow"],
+    )
 
 PSQL_DIR = config.psql_dir
 DEST_DIR = config.dest_dir
@@ -37,6 +48,9 @@ subprocess.call(['grep', '-h', 'ERROR']+LOG_FILES_TO_CHECK)
 
 print("== New BB ==")
 subprocess.call(['grep', '-h', 'backup.7z']+LOG_FILES_TO_CHECK)
+
+print("== rsync in-progress ==")
+subprocess.call(['find', '/home/backup/', '-type', 'f', '-name', '".7z*"', '-o', '-name', '".base*"', '-exec', 'du' ,'-hs', '{}', ';'])
 
 # Extract info from DUMP.zip
 zip_dump_details = {}
@@ -69,8 +83,8 @@ for d in sorted(dump_details.keys(), reverse=True):
 
 # Extract info from last_dump.txt generated after an pg_dump
 print("== Last Dump %s keys ==" % (len(all_keys),))
-days_2 = (datetime.datetime.now() + relativedelta(days=-2)).strftime('%Y-%m-%d')
-days_1 = (datetime.datetime.now() + relativedelta(days=-1)).strftime('%Y-%m-%d')
+days_2 = (datetime.datetime.now() + relativedelta(days=-2)).strftime('%Y-%m-%d %H:%M')
+days_1 = (datetime.datetime.now() + relativedelta(days=-1)).strftime('%Y-%m-%d %H:%M')
 last_dump = {}
 for x in all_keys:
     dump_file = os.path.join(DEST_DIR, x, 'last_dump.txt')
@@ -92,10 +106,15 @@ for x in all_keys:
                 zip_date = zip_dump_details[x][idx][0]
                 if idx > 0 and zip_date == zip_dump_details[x][idx-1][0]:
                     zip_date = colored(zip_date, 'red')
-                all_dump.append("%s;%03d" % (zip_date, zip_dump_details[x][idx][1]/1024/1024))
+                all_dump += [zip_date, zip_dump_details[x][idx][1]/1024/1024]
     last_dump.setdefault(last, []).append((x, wal_date, all_dump))
 
-print("Instance\tOD Push date     Last wal on OD      Date from zip;size MB")
+headers=["Instance", "OD Push date", "Last wal on OD"]
+dow = datetime.datetime.now().weekday()
+for x in range(0,7):
+    headers += ["Date from zip %s" % (day_abr[dow%7]), "MB"]
+    dow += 1
+table_data = []
 for d in sorted(last_dump.keys(), reverse=True):
     last = d
     if last <= days_2:
@@ -104,12 +123,20 @@ for d in sorted(last_dump.keys(), reverse=True):
         last = colored(last, 'magenta')
     for instance in sorted(last_dump[d]):
         wal_date = instance[1]
-        if instance[1] and (not instance[2] or instance[2][0].split(';')[0] != instance[1]):
+        if instance[1] and (not instance[2] or instance[2][0] != instance[1]):
             wal_date = colored(instance[1], 'red')
-        print("%s\t%s %s %s" % (instance[0], last, wal_date, " ".join(instance[2])))
+        table_data.append([instance[0], last, wal_date] + instance[2])
+print(tabulate.tabulate(table_data, headers, floatfmt='.0f', tablefmt="simple"))
 
 
 total, used, free = shutil.disk_usage("/")
 print("== Disk ==\nDisk usage: %s/%s GB (%.02lf%%)" % (used // (2**30), total // (2**30), used/total*100))
+
+log_last_date = datetime.datetime.fromtimestamp(os.path.getctime(LOG_FILE))
+last_log = log_last_date.strftime('%Y-%m-%d %H:%M')
+if datetime.datetime.now() - log_last_date > datetime.timedelta(minutes=4):
+    last_log = colored(last_log, 'red')
+
+print('Last log line %s' % last_log)
 sys.exit(1)
 
