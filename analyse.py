@@ -10,6 +10,7 @@ import zipfile
 import re
 from termcolor import colored
 import shutil
+import argparse
 import tabulate
 tabulate._table_formats['simple'] = tabulate.TableFormat(
     lineabove=tabulate.Line("", "-", " ", ""),
@@ -34,6 +35,9 @@ day_abr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 LOG_FILES_TO_CHECK = ['%s.%s' % (LOG_FILE, (datetime.datetime.now() + relativedelta(days=-1)).strftime('%Y-%m-%d')), LOG_FILE]
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', action='store_true', help='Sort by instance name')
+option = parser.parse_args()
 
 # Get all ssh keys
 keys_date = {}
@@ -51,7 +55,8 @@ print("== New BB ==")
 subprocess.call(['grep', '-h', 'backup.7z']+LOG_FILES_TO_CHECK)
 
 print("== rsync in-progress ==")
-subprocess.call(['find', '/home/backup/', '-type', 'f', '-name', '".7z*"', '-o', '-name', '".base*"', '-exec', 'du' ,'-hs', '{}', ';'])
+subprocess.call(['find', '/home/backup/', '-type', 'f', '-name',  '*.7z*', '-exec', 'ls', '-lh', '{}', ';'])
+#subprocess.call(['find', '/home/backup/', '-type', 'f', '-name', '*.base*', '-exec', 'du' ,'-hs', '{}', ';'])
 
 # Extract info from DUMP.zip
 zip_dump_details = {}
@@ -127,6 +132,9 @@ for d in sorted(last_dump.keys(), reverse=True):
         if instance[1] and (not instance[2] or instance[2][0] != instance[1]):
             wal_date = colored(instance[1], 'red')
         table_data.append([instance[0], last, wal_date] + instance[2])
+
+if option.i:
+    table_data = sorted(table_data)
 print(tabulate.tabulate(table_data, headers, floatfmt='.0f', tablefmt="simple"))
 
 
