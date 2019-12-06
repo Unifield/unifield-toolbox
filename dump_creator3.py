@@ -189,7 +189,7 @@ def process_directory():
                     for_next_loop = False
                     for wal in os.listdir(full_name):
                         full_path_wal = os.path.join(full_name, wal)
-                        if wal.endswith('7z'):
+                        if wal.endswith('7z') and not wal.startswith('.'):
                             wal_moved += 1
                             un7zip(full_path_wal, pg_xlog)
                             os.remove(full_path_wal)
