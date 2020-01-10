@@ -618,7 +618,8 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                 cr.execute("SELECT last_value FROM %s" % x[0])
                 new_seq = cr.fetchone()[0]*2
                 cr.execute("ALTER SEQUENCE %s RESTART WITH %s" % (x[0], new_seq))
-            cr.execute("update ir_sequence set number_next=number_next*2")
+            cr.execute("update ir_sequence set number_next=number_next*2 where code!='sync.server.update'")
+            cr.execute("update ir_sequence set number_next=number_next+5000 where code='sync.server.update'")
             db_conn.commit()
 
             if is_server_db and upgrade:
