@@ -63,7 +63,7 @@ def upload_od(file_path, oc):
     if oc not in config.path:
         error('%s unknown oc %s' % (file_path, oc))
     dav_data['path'] = config.path.get(oc, '/personal/unifield_msf_geneva_msf_org/documents/Test')
-    max_retries = 10
+    max_retries = 5
     retries = 0
     buffer_size = 10 * 1024 * 1014
     file_name = os.path.basename(file_path)
@@ -88,9 +88,8 @@ def upload_od(file_path, oc):
                 time.sleep(2)
                 if 'timed out' in dav_error or '2130575252' in dav_error:
                     log('%s OneDrive: session time out' % (file_path,))
-                    dav.login()
 
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, webdav.ConnectionFailed):
             if retries > max_retries:
                 raise
             retries += 1
@@ -247,11 +246,15 @@ def process_directory():
                                 break
                             log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                             previous_wall = prev
-                            time.sleep(2)
+                            time.sleep(6)
+
+                        if not previous_wall:
+                            error('%s no WAL replayed' % instance)
 
                         cr.execute("SELECT pg_last_xact_replay_timestamp()")
                         restore_date = cr.fetchone()[0]
                         if not restore_date:
+                            error('%s no last replay timestamp' % instance)
                             label_file = os.path.join(dest_basebackup, 'backup_label.old')
                             if os.path.exists(label_file):
                                 restore_date = datetime.datetime.fromtimestamp(os.path.getmtime(label_file))
@@ -298,7 +301,7 @@ def process_directory():
 
                                 dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
                                 log('Dump %s' % dump_file)
-                                pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-U', 'openpg', '-Fc', '-f', to_win(dump_file), x[0]]
+                                pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
                                 subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
 
                                 final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
