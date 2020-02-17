@@ -20,6 +20,8 @@ DEST_DIR = config.dest_dir
 SRC_DIR = config.src_dir
 PSQL_CONF = os.path.join(DEST_DIR, 'psql_conf')
 DUMP_DIR = os.path.join(DEST_DIR, 'DUMPS')
+TOUCH_FILE_DUMP = os.path.join(DUMP_DIR, 'touch_dump')
+TOUCH_FILE_LOOP = os.path.join(DUMP_DIR, 'touch_loop')
 LOG_FILE = config.log_file
 day_abr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -315,6 +317,9 @@ def process_directory():
                                 upload_od(final_zip, oc)
                                 with open(last_dump_file, 'w') as last_desc:
                                     last_desc.write(restore_date.strftime('%Y%m%d-%H%M%S'))
+
+                        with open(TOUCH_FILE_DUMP, 'w') as t_file:
+                            t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
                         log(' '.join(psql_stop))
@@ -334,4 +339,6 @@ if __name__ == '__main__':
             sys.exit(0)
 
         log('sleep')
+        with open(TOUCH_FILE_LOOP, 'w') as t_file:
+            t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
         time.sleep(120)
