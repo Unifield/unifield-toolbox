@@ -750,7 +750,7 @@ update res_users set password='"""+bcrypt.encrypt(o.uf_password)+"""';
 update res_users set login='admin' where id=1;
 update backup_config set beforeautomaticsync='f', beforemanualsync='f', afterautomaticsync='f', aftermanualsync='f', scheduledbackup='f', beforepatching='f';
 -- INSTANCE
-update ir_cron set active='f' where name in ('Automatic synchronization', 'Automatic backup', 'Send Remote Backup');
+update ir_cron set active='f' where function in ('scheduled_backups', 'sent_continuous_backup_bg', 'send_backup_bg', 'sync_threaded');
 update automated_export set ftp_password='';
 update automated_import set ftp_password='';
 update ir_cron set active='f' where id in (select cron_id from automated_export);
