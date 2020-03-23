@@ -65,7 +65,7 @@ def upload_od(file_path, oc):
     if oc not in config.path:
         error('%s unknown oc %s' % (file_path, oc))
     dav_data['path'] = config.path.get(oc, '/personal/unifield_msf_geneva_msf_org/documents/Test')
-    max_retries = 5
+    max_retries = 7
     retries = 0
     buffer_size = 10 * 1024 * 1014
     file_name = os.path.basename(file_path)
@@ -74,24 +74,51 @@ def upload_od(file_path, oc):
     log('Start upload %s to %s '% (file_path, dav_data['path']))
     upload_ok = False
     dav_error = False
+    dav_connected = False
+    temp_created = False
     while True:
         try:
-            dav = webdav.Client(**dav_data)
-            dav.create_folder('Temp')
-            upload_ok, dav_error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
+            if not dav_connected:
+                fileobj.seek(0)
+                dav = webdav.Client(**dav_data)
+                dav_connected = True
+                log('Dav connected')
+                retries = 0
+
+            if not temp_created:
+                dav.create_folder('Temp')
+                temp_created = True
+                log('Temp OK')
+                retries = 0
+
+            if not upload_ok:
+                upload_ok, dav_error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
+                retries = 0
+
             if upload_ok:
-                dav.move(temp_file_name, file_name)
+                log('Moving File')
+                try:
+                    dav.move(temp_file_name, file_name)
+                except:
+                    log('Except move')
+                    if retries > max_retries:
+                        raise
+                    retries += 1
+                    time.sleep(2)
                 log('File %s uploaded' % (file_path,))
                 return True
             else:
+                log('Dav 1 retry')
                 if retries > max_retries:
                     raise Exception(dav_error)
                 retries += 1
                 time.sleep(2)
-                if 'timed out' in dav_error or '2130575252' in dav_error:
+                if dav_connected and 'timed out' in dav_error or '2130575252' in dav_error:
                     log('%s OneDrive: session time out' % (file_path,))
+                    dav.login()
 
         except (requests.exceptions.RequestException, webdav.ConnectionFailed):
+            log('Dav 2 retry')
             if retries > max_retries:
                 raise
             retries += 1
@@ -120,10 +147,17 @@ def process_directory():
     for instance in os.listdir(SRC_DIR):
         if instance.startswith('.'):
             continue
+
         full_name = os.path.join(SRC_DIR, instance)
         try:
             if os.path.isdir(full_name):
                 #log('##### Instance %s'%full_name)
+
+                stop_service = os.path.join(SRC_DIR, 'stop_service')
+                if os.path.exists(stop_service):
+                    os.remove(stop_service)
+                    log('Stopped')
+                    sys.exit(0)
 
                 dest_dir = os.path.join(DEST_DIR, instance)
                 for dir_to_create in [os.path.join(dest_dir, 'OLDWAL')]:
@@ -135,6 +169,7 @@ def process_directory():
                 pg_xlog = os.path.join(dest_basebackup, 'pg_xlog')
 
                 # Copy / extract basbackup
+                basebackup_found = False
                 basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                 if os.path.isfile(basebackup):
                     log('%s Found base backup %s'% (instance, basebackup))
@@ -167,6 +202,7 @@ def process_directory():
                         # case of WAL created during this base backup was already moved to the old WAL
                         shutil.rmtree(pg_xlog)
                         shutil.copytree(os.path.join(old_base_moved, 'pg_xlog'), pg_xlog)
+                    basebackup_found = True
 
                 # is there an in-progress rsync ?
                 rsync_temp = os.path.join(full_name, '.rsync-partial')
@@ -229,7 +265,21 @@ def process_directory():
                 elif forced_dump:
                     log('%s, dump forced' % (full_name, ))
 
-                if forced_wal or forced_dump or wal_moved:
+
+                if forced_wal or forced_dump or wal_moved or basebackup_found:
+                    wal_not_dumped = os.path.join(dest_dir, 'wal_not_dumped')
+                    last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
+                    last_wal_date = False
+                    if not forced_dump and not basebackup_found and os.path.exists(last_dump_file):
+                        last_dump_date = datetime.datetime.fromtimestamp(os.path.getmtime(last_dump_file))
+                        with open(last_dump_file) as last_desc:
+                            last_wal_date = last_desc.read()
+                        # only 1 dump per day
+                        if last_dump_date.strftime('%Y-%m-%d') == time.strftime('%Y-%m-%d'):
+                            log('%s already dumped today' % instance)
+                            open(wal_not_dumped, 'w').close()
+                            continue
+
                     try:
                         # Start psql
                         psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
@@ -256,6 +306,13 @@ def process_directory():
                         cr.execute("SELECT pg_last_xact_replay_timestamp()")
                         restore_date = cr.fetchone()[0]
                         if not restore_date:
+                            cr.execute("select checkpoint_time from pg_control_checkpoint()")
+                            check_point = cr.fetchone()
+                            if check_point:
+                                restore_date = check_point[0]
+                                log('%s : get restore date from pg_control_checkpoint: %s' % (instance, restore_date.strftime('%Y%m%d-%H%M%S')))
+
+                        if not restore_date:
                             error('%s no last replay timestamp' % instance)
                             label_file = os.path.join(dest_basebackup, 'backup_label.old')
                             if os.path.exists(label_file):
@@ -267,16 +324,6 @@ def process_directory():
                         cr.execute('SELECT datname FROM pg_database')
                         all_dbs = cr.fetchall()
                         db.close()
-                        last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
-                        last_wal_date = False
-                        if not forced_dump and os.path.exists(last_dump_file):
-                            last_dump_date = datetime.datetime.fromtimestamp(os.path.getmtime(last_dump_file))
-                            with open(last_dump_file) as last_desc:
-                                last_wal_date = last_desc.read()
-                            # only 1 dump per day
-                            if last_dump_date.strftime('%Y-%m-%d') == time.strftime('%Y-%m-%d'):
-                                log('%s already dumped today' % instance)
-                                continue
 
                         if forced_wal and last_wal_date and last_wal_date == restore_date.strftime('%Y%m%d-%H%M%S'):
                             # same wal as previous dump: do noting (the in-progess wal is the 1st one)
@@ -290,10 +337,12 @@ def process_directory():
                                 db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
                                 cr = db.cursor()
                                 cr.execute('SELECT name FROM sync_client_version where date is not null order by date desc limit 1')
-                                version = cr.fetchone()[0]
+                                version = cr.fetchone()
                                 if not version:
                                     error('%s: version not found' % instance)
                                     version = 'XX'
+                                else:
+                                    version = version[0]
                                 cr.execute('SELECT oc FROM sync_client_entity')
                                 oc = cr.fetchone()[0]
                                 if not oc:
@@ -317,13 +366,16 @@ def process_directory():
                                 upload_od(final_zip, oc)
                                 with open(last_dump_file, 'w') as last_desc:
                                     last_desc.write(restore_date.strftime('%Y%m%d-%H%M%S'))
+                                if os.path.exists(wal_not_dumped):
+                                    os.remove(wal_not_dumped)
 
-                        with open(TOUCH_FILE_DUMP, 'w') as t_file:
-                            t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
                         log(' '.join(psql_stop))
                         subprocess.run(psql_stop)
+                        
+            with open(TOUCH_FILE_DUMP, 'w') as t_file:
+                t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
 
         except subprocess.CalledProcessError as e:
             error(e.output or e.stderr)
