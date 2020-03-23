@@ -54,27 +54,32 @@ subprocess.call(['grep', '-h', 'ERROR']+LOG_FILES_TO_CHECK)
 print("== New BB ==")
 subprocess.call(['grep', '-h', 'backup.7z']+LOG_FILES_TO_CHECK)
 
-print("== rsync in-progress ==")
-subprocess.call(['find', '/home/backup/', '-type', 'f', '-name',  '*.7z*', '-exec', 'ls', '-lh', '{}', ';'])
-#subprocess.call(['find', '/home/backup/', '-type', 'f', '-name', '*.base*', '-exec', 'du' ,'-hs', '{}', ';'])
+#print("== rsync in-progress ==")
+#subprocess.call(['find', '/home/backup/', '-type', 'f', '-name',  '*.7z*', '-exec', 'ls', '-lh', '{}', ';'])
+## old #subprocess.call(['find', '/home/backup/', '-type', 'f', '-name', '*.base*', '-exec', 'du' ,'-hs', '{}', ';'])
 
 # Extract info from DUMP.zip
 zip_dump_details = {}
 dump_details = {}
 for dump in os.listdir(DUMP_DIR):
-    full_dump = os.path.join(DUMP_DIR, dump)
-    full_dump_date = datetime.datetime.fromtimestamp(os.path.getctime(full_dump))
-    instance_name = dump[0:-8].lower()
-    dump_details.setdefault(full_dump_date.strftime('%Y-%m-%d'), []).append(instance_name)
-    if zipfile.is_zipfile(full_dump):
-        file_size = os.path.getsize(full_dump)
-        zip_data = zipfile.ZipFile(full_dump, mode='r')
-        for zipname in zip_data.namelist():
-            m = re.search('^[a-z0-9_-]+-([0-9]{8}-[0-9]{6})', zipname, re.I)
-            if m:
-                zip_name_date =  datetime.datetime.strptime(m.group(1), '%Y%m%d-%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
-                zip_dump_details.setdefault(instance_name, []).append((zip_name_date, file_size))
-        zip_data.close()
+    if not dump.endswith('.zip'):
+        continue
+    try:
+        full_dump = os.path.join(DUMP_DIR, dump)
+        full_dump_date = datetime.datetime.fromtimestamp(os.path.getctime(full_dump))
+        instance_name = dump[0:-8].lower()
+        dump_details.setdefault(full_dump_date.strftime('%Y-%m-%d'), []).append(instance_name)
+        if zipfile.is_zipfile(full_dump):
+            file_size = os.path.getsize(full_dump)
+            zip_data = zipfile.ZipFile(full_dump, mode='r')
+            for zipname in zip_data.namelist():
+                m = re.search('^[a-z0-9_-]+-([0-9]{8}-[0-9]{6})', zipname, re.I)
+                if m:
+                    zip_name_date =  datetime.datetime.strptime(m.group(1), '%Y%m%d-%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
+                    zip_dump_details.setdefault(instance_name, []).append((zip_name_date, file_size))
+            zip_data.close()
+    except FileNotFoundError:
+        continue
 
 print("== Dumps ==")
 max_dump_date = (datetime.datetime.now() + relativedelta(days=-7)).strftime('%Y-%m-%d')
@@ -110,7 +115,7 @@ for x in all_keys:
         for idx in range(0, 7):
             if len(zip_dump_details[x]) > idx:
                 zip_date = zip_dump_details[x][idx][0]
-                if idx > 0 and zip_date == zip_dump_details[x][idx-1][0]:
+                if idx > 0 and abs( datetime.datetime.strptime(zip_date, '%Y-%m-%d %H:%M:%S') -  datetime.datetime.strptime(zip_dump_details[x][idx-1][0], '%Y-%m-%d %H:%M:%S')) < datetime.timedelta(minutes=30):
                     zip_date = colored(zip_date, 'red')
                 all_dump += [zip_date, zip_dump_details[x][idx][1]/1024/1024]
     last_dump.setdefault(last, []).append((x, wal_date, all_dump))
