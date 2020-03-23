@@ -64,19 +64,20 @@ exported_pub_key = pubkey.exportKey('OpenSSH')
 zip_doc.writestr('SSH_CONFIG/id_rsa.pub', exported_pub_key)
 
 
+b_instance =  bytes(instance, 'utf-8')
 zip_doc.writestr('SSH_CONFIG/config', """
+# %s
 IdentityFile "C:\Program Files (x86)\msf\SSH_CONFIG\id_rsa"
 StrictHostKeyChecking no
 UserKnownHostsFile "C:\Program Files (x86)\msf\SSH_CONFIG\knownhosts"
 
 # comment to use ssh on port 22
 Port 8069
-""")
+""" % (instance, ))
 zip_doc.close()
 zip_desc.close()
 
 auth = open(authorized_keys, 'ab')
-b_instance =  bytes(instance, 'utf-8')
 auth.write(b'### %s\n' % b_instance)
 auth.write(b'command="rsync --server -vlogDtr --no-perms --chmod=Dg+rwx,Fg+rw --remove-source-files --partial-dir=.rsync-partial --partial . %s/",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding %s %s\n' % (b_instance, exported_pub_key, b_instance))
 auth.close()
