@@ -613,7 +613,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                             cr = db_conn.cursor()
 
             # increment sequences so db ids used after the dump are not re-used
-            cr.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S'")
+            cr.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' and c.relname != 'sync_server_entity_rel_id_seq'")
             for x in cr.fetchall():
                 cr.execute("SELECT last_value FROM %s" % x[0])
                 new_seq = cr.fetchone()[0]*2
