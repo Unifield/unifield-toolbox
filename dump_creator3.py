@@ -65,7 +65,7 @@ def upload_od(file_path, oc):
     if oc not in config.path:
         error('%s unknown oc %s' % (file_path, oc))
     dav_data['path'] = config.path.get(oc, '/personal/unifield_msf_geneva_msf_org/documents/Test')
-    max_retries = 7
+    max_retries = 3
     retries = 0
     buffer_size = 10 * 1024 * 1014
     file_name = os.path.basename(file_path)
@@ -86,18 +86,25 @@ def upload_od(file_path, oc):
                 retries = 0
 
             if not temp_created:
-                dav.create_folder('Temp')
+                try:
+                    dav.create_folder('Temp')
+                except:
+                    log('Except Temp')
+                    if retries > max_retries:
+                        raise
+                    retries += 1
+                    time.sleep(2)
                 temp_created = True
                 log('Temp OK')
                 retries = 0
 
             if not upload_ok:
                 upload_ok, dav_error = dav.upload(fileobj, temp_file_name, buffer_size=buffer_size)
-                retries = 0
 
             if upload_ok:
                 log('Moving File')
                 try:
+                    dav.delete(file_name)
                     dav.move(temp_file_name, file_name)
                 except:
                     log('Except move')
@@ -147,6 +154,14 @@ def process_directory():
     for instance in os.listdir(SRC_DIR):
         if instance.startswith('.'):
             continue
+
+        forced_instance = False
+        forced_path = os.path.join(SRC_DIR, 'forced_instance')
+        if os.path.exists(forced_path):
+            with open(forced_path) as forced_path_desc:
+                instance = forced_path_desc.read()
+            forced_instance = True
+            os.remove(forced_path)
 
         full_name = os.path.join(SRC_DIR, instance)
         try:
@@ -219,7 +234,7 @@ def process_directory():
 
                 wal_moved = 0
                 forced_wal = False
-                forced_dump = False
+                forced_dump = forced_instance
                 retry = True
                 while retry:
                     retry_wal = False
@@ -258,16 +273,21 @@ def process_directory():
                 if for_next_loop:
                     continue
 
+                wal_not_dumped = os.path.join(dest_dir, 'wal_not_dumped')
+
                 if wal_moved:
                     log('%s, %d wal moved to %s' % (full_name, wal_moved, pg_xlog))
                 elif forced_wal:
                     log('%s, wal forced' % (full_name, ))
                 elif forced_dump:
                     log('%s, dump forced' % (full_name, ))
-
+                elif os.path.exists(wal_not_dumped):
+                    last_wal_date = datetime.datetime.fromtimestamp(os.path.getmtime(wal_not_dumped))
+                    if last_wal_date < datetime.datetime.now() - relativedelta(hours=36):
+                        log('%s, wal_not_dumped forced' % (full_name, ))
+                        forced_wal = True
 
                 if forced_wal or forced_dump or wal_moved or basebackup_found:
-                    wal_not_dumped = os.path.join(dest_dir, 'wal_not_dumped')
                     last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
                     last_wal_date = False
                     if not forced_dump and not basebackup_found and os.path.exists(last_dump_file):
@@ -373,7 +393,7 @@ def process_directory():
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
                         log(' '.join(psql_stop))
                         subprocess.run(psql_stop)
-                        
+
             with open(TOUCH_FILE_DUMP, 'w') as t_file:
                 t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
 

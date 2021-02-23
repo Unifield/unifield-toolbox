@@ -107,6 +107,8 @@ class Client(object):
         webUri = '%s%s' % (self.path, remote_path)
         request_url = "%s/_api/web/getfilebyserverrelativeurl('%s')" % (self.baseurl, webUri)
         result = self.format_request(request_url, 'DELETE')
+        if result.status_code == 404:
+            return False
         if result.status_code not in (200, 201):
             raise Exception(self.parse_error(result))
         return True
@@ -155,7 +157,6 @@ class Client(object):
             if self.session_offset == -1:
                 # first loop create an empty file
                 request_url = "%s/_api/web/GetFolderByServerRelativeUrl('%s')/Files/add(url='%s',overwrite=true)" % (self.baseurl, path, new_file)
-                self.session_offset = 0
             else:
                 x = fileobj.read(buffer_size)
                 if not x:
@@ -176,6 +177,8 @@ class Client(object):
             result = self.format_request(request_url, method='POST', data=x, session=s)
             if result.status_code not in (200, 201):
                 return (False, self.parse_error(result))
+            if self.session_offset == -1:
+                self.session_offset = 0
             self.session_nb_error = 0
             self.session_offset += len(x)
 
