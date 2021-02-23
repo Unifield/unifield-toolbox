@@ -1,0 +1,10 @@
+# stop the service
+touch /home/backup/stop_service
+
+# force a new dump
+touch /home/backup/$instance/force_dump
+
+# force next instance
+echo -n  $instance >  /home/backup/forced_instance
+
+
