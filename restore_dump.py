@@ -312,11 +312,13 @@ class Postgres(dbmatch):
     host = 'uf9.unifield.org'
     port = '5432'
 
-    def __init__(self, host, cert, key, include_dbs):
+    def __init__(self, host, port, cert, key, include_dbs):
         self.dbs = []
         self.cert = cert
         self.key = key
         self.host = host
+        if port:
+            self.port = port
         self.include_dbs = include_dbs.split(',')
         conn = psycopg2.connect(host=self.host, port=self.port, sslmode='require', sslcert=cert, sslkey=key, user='production-dbs', dbname='template1')
         cr = conn.cursor()
@@ -733,6 +735,7 @@ if __name__ == "__main__":
     psql_parser = parser.add_argument_group('Restore From PSQL')
     psql_parser.add_argument("--postgres-cer", action="store", help="PSQL certificate")
     psql_parser.add_argument("--postgres-key", action="store", help="PSQL key")
+    psql_parser.add_argument("--postgres-port", action="store", help="PSQL port")
 
     o = parser.parse_args()
     if o.examples:
@@ -781,6 +784,7 @@ delete from sync_server_version;
         os.environ['PGPASSWORD'] = o.db_password
     if o.db_host:
         os.environ['PGHOST'] = o.db_host
+
     PG_param.set(o.db_user, o.db_password, o.db_host, o.db_port)
     transport = False
     if not o.sync_only:
@@ -798,7 +802,7 @@ delete from sync_server_version;
         elif o.postgres:
             if o.postgres == 'prod-dbs':
                 o.postgres = 'uf9.unifield.org'
-            transport = Postgres(o.postgres, o.postgres_cer, o.postgres_key, o.include)
+            transport = Postgres(o.postgres, o.postgres_port, o.postgres_cer, o.postgres_key, o.include)
         else:
             web_host = o.uf_web and o.uf_web.replace('http://','') or False
             if web_host and web_host.endswith('/'):

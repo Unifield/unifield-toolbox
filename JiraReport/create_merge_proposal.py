@@ -27,7 +27,7 @@ cachedir = os.path.expanduser("~/.launchpadlib/cache/")
 launchpad = Launchpad.login_with('Jira-lp', 'production', cachedir)
 
 browser = launchpad._browser
-for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available', 'Pre-Integrated')"):
+for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available', 'Pre-Integrated', 'Integrated') and project = 'UniField Support' "):
 
     target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/trunk')
     target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/trunk')
@@ -44,6 +44,12 @@ for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Availab
         elif x.name.startswith('UF12'):
             target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf12')
             target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf12')
+        elif x.name.startswith('UF17'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf17')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf17')
+        elif x.name.startswith('UF19'):
+            target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/uf19')
+            target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/uf19')
 
     if issue.fields.customfield_10065:
         server_branches.append((target_server_branch, issue.fields.customfield_10065.replace('https://code.launchpad.net/', 'lp:')))
@@ -58,6 +64,7 @@ for target_branch, br in server_branches + web_branches:
     try:
         link = src_branch.landing_targets_collection_link
     except:
+        raise
         pass
     to_merge = True
     if link:
