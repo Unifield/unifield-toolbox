@@ -1,0 +1,16 @@
+[Unit]
+Description=@@USERERP@@-server
+After=postgresql.service
+
+[Service]
+Type=simple
+User=@@USERERP@@
+Group=@@USERERP@@
+ExecStart= /home/@@USERERP@@/unifield-venv/bin/python2.7 unifield-server/bin/openerp-server.py -c etc/openerprc
+Restart=always
+WorkingDirectory=/home/@@USERERP@@
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
+

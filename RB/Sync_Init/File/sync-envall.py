@@ -91,8 +91,8 @@ instance_tree = {
 load_test = 1250
 source_path = '/home/@@USERERP@@'
 addons = [@@ADDONSDIR@@]
-server_restart_cmd = '/etc/init.d/@@USERERP@@-server restart'
-web_restart_cmd = '/etc/init.d/@@USERERP@@-web restart'
+server_restart_cmd = 'sudo systemctl restart @@USERERP@@-server'
+web_restart_cmd = 'sudo systemctl restart @@USERERP@@-web'
 dump_dir = '/home/@@USERERP@@/exports'
 
 # uncomment the next 3 parameters to load UserRights

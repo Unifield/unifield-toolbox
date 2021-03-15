@@ -12,8 +12,10 @@ if [[ -f ~/RBconfig ]]; then
    source ~/RBconfig
 fi
 
-update-rc.d -f $1-server remove
-update-rc.d -f $1-web remove
+#update-rc.d -f $1-server remove
+#update-rc.d -f $1-web remove
+systemctl stop $1-server
+systemctl stop $1-web
 killall -u $1
 killall -s 9 -u $1
 a2dissite ${1}.conf
@@ -23,6 +25,15 @@ for i in  `${PG_PATH}psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.p
 echo "Dropdb $i"
 ${PG_PATH}dropdb $i
 done
+
+systemctl disable $1-server
+systemctl disable $1-web
+rm /etc/systemd/system/$1-server.service
+rm /etc/systemd/system/$1-web.service
+systemctl daemon-reload
+
+rm -f /etc/sudoers.d/99-$1
+
 fullname="${1}.${rb_server_url}"
 if [ -f ${ENCRYPT}/renewal/${fullname}.conf ]; then
     rm -fr ${ENCRYPT}/renewal/${fullname}.conf

@@ -16,13 +16,9 @@ if DRY_RUN:
     sys.stdout.write("DRY RUN MODE: JIRA WILL NOT BE UPDATED\n")
 
 dev_map = {
-    'adn741': 'd.joguet',
-    'fabien-morin': 'fabien',
-    'jr.allen': 'jrallen',
     'jfb-tempo-consulting': 'jfb',
     'julie-w': 'julie.nuguet',
-    'mallorymarcot': 'm.marcot',
-    'qt-tempo-consulting': 'qt',
+    'dorian-kemps': 'd.kemps',
 }
 config_file = os.path.realpath(os.path.expanduser('~/RBconfig'))
 cfg = ConfigObj(config_file)

@@ -346,8 +346,10 @@ config_file() {
         POSTGRES_KEY=$DEST
 
     fi
-    create_file ./File/openerp-server-sprint1  /etc/init.d/${USERERP}-server
-    create_file ./File/openerp-web-sprint1 /etc/init.d/${USERERP}-web
+    #create_file ./File/openerp-server-sprint1  /etc/init.d/${USERERP}-server
+    #create_file ./File/openerp-web-sprint1 /etc/init.d/${USERERP}-web
+    create_file ./File/server.service /etc/systemd/system/${USERERP}-server.service
+    create_file ./File/web.service /etc/systemd/system/${USERERP}-web.service
     create_file ./File/openerpallrc /home/${USERERP}/etc/openerprc
     create_file ./File/sync-envall.py /home/${USERERP}/sync_env_script/config.py
     create_file ./File/unifield.config /home/${USERERP}/unifield.config
@@ -370,9 +372,10 @@ fi
     cp ./File/runtests_partial.sh /home/${USERERP}/
     chmod +x /home/${USERERP}/runtests.sh /home/${USERERP}/build_and_test.sh
     chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
-    chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
-    update-rc.d ${USERERP}-web defaults
-    update-rc.d ${USERERP}-server defaults
+    systemctl daemon-reload
+    #chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
+    #update-rc.d ${USERERP}-web defaults
+    #update-rc.d ${USERERP}-server defaults
 }
 
 bzr_type=branch
@@ -424,8 +427,11 @@ EOF
 
 restart_servers() {
     echo "Start servers"
-    /etc/init.d/${USERERP}-server start
-    /etc/init.d/${USERERP}-web start
+    systemctl start ${USERERP}-server
+    systemctl start ${USERERP}-web
+    sleep 5
+    #/etc/init.d/${USERERP}-server start
+    #/etc/init.d/${USERERP}-web start
 }
 
 if [ -n "$wm" ]; then
@@ -444,6 +450,16 @@ if [[ "$WITH_SSL" == "Yes" ]]; then
     /etc/init.d/apache2 reload
 fi
 
+echo """
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl stop $USERERP-server
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl start $USERERP-server
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl restart $USERERP-server
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl stop $USERERP-web
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl start $USERERP-web
+$USERERP ALL=(ALL) NOPASSWD:/bin/systemctl restart $USERERP-web
+""" > /etc/sudoers.d/99-$USERERP
+chmod 0440 /etc/sudoers.d/99-$USERERP
+
 echo """Net-RPC port: $NETRPCPORT
 XML-RPC port: $XMLRPCPORT
 XML-RPCS port: $XMLRPCSPORT
@@ -454,6 +470,27 @@ URL: ${PROTO}://${USERERP}.${rb_server_url}
 """ > /home/${USERERP}/RB_info.txt
 
 cat /home/${USERERP}/RB_info.txt
+
+
+# add some alias to make easier the RB managment:
+echo "alias webrestart='sudo systemctl restart $USERERP-web'
+alias serverrestart='sudo systemctl restart $USERERP-server'
+alias webstart='sudo systemctl start $USERERP-web'
+alias webstop='sudo systemctl stop $USERERP-web'
+alias serverstart='sudo systemctl start $USERERP-server'
+alias serverstop='sudo systemctl stop $USERERP-server'
+alias servertail='tail -f -n 100 ~/log/openerp-server.log'
+function update_all_dbs() {
+   for x in \`psql -td template1 -c \"SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user;\"\`; do
+       /home/$USERERP/unifield-server/bin/openerp-server.py -c /home/$USERERP/etc/openerprc -d \$x -u \${1:-base} --stop-after-init
+   done
+}
+XMLRPCPORT=$XMLRPCPORT
+TFPGPORT=$PGPORT
+NETRPCPORT=$NETRPCPORT
+HTMLPORT=$WEBPORT
+" >> /home/${USERERP}/.bashrc
+
 
 case $INIT_TYPE in
   testfield)
@@ -489,25 +526,5 @@ esac
 if [[ "$JIRA" && "$SET_RB" ]]; then
     python Jira/set_rb.py $1 ${PROTO}://${USERERP}.${rb_server_url}
 fi
-
-# add some alias to make easier the RB managment:
-echo "alias webrestart='/etc/init.d/$USERERP-web restart'
-alias serverrestart='/etc/init.d/$USERERP-server restart'
-alias webstart='/etc/init.d/$USERERP-web start'
-alias webstop='/etc/init.d/$USERERP-web stop'
-alias serverstart='/etc/init.d/$USERERP-server start'
-alias serverstop='/etc/init.d/$USERERP-server stop'
-alias servertail='tail -f -n 100 ~/log/openerp-server.log'
-function update_all_dbs() {
-   for x in \`psql -td template1 -c \"SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user;\"\`; do
-       /home/$USERERP/unifield-server/bin/openerp-server.py -c /home/$USERERP/etc/openerprc -d \$x -u \${1:-base} --stop-after-init
-   done
-}
-XMLRPCPORT=$XMLRPCPORT
-TFPGPORT=$PGPORT
-NETRPCPORT=$NETRPCPORT
-HTMLPORT=$WEBPORT
-" >> /home/${USERERP}/.bashrc
-
 
 exit 0
