@@ -373,6 +373,8 @@ fi
     chmod +x /home/${USERERP}/runtests.sh /home/${USERERP}/build_and_test.sh
     chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
     systemctl daemon-reload
+	systemctl enable ${USERERP}-web
+	systemctl enable ${USERERP}-server
     #chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
     #update-rc.d ${USERERP}-web defaults
     #update-rc.d ${USERERP}-server defaults
