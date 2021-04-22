@@ -487,10 +487,11 @@ function update_all_dbs() {
        /home/$USERERP/unifield-server/bin/openerp-server.py -c /home/$USERERP/etc/openerprc -d \$x -u \${1:-base} --stop-after-init
    done
 }
-XMLRPCPORT=$XMLRPCPORT
-TFPGPORT=$PGPORT
-NETRPCPORT=$NETRPCPORT
-HTMLPORT=$WEBPORT
+export XMLRPCPORT=$XMLRPCPORT
+export TFPGPORT=$PGPORT
+export NETRPCPORT=$NETRPCPORT
+export HTMLPORT=$WEBPORT
+export ADMINPASSWORD=$UF_PASSWORD
 " >> /home/${USERERP}/.bashrc
 
 
