@@ -123,6 +123,7 @@ for dbname in dbnames:
     else:
         print('Passwords not changed')
 
+    cr1.execute('analyze')
 
     db1.commit()
 
