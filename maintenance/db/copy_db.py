@@ -73,7 +73,6 @@ while ret.lower() not in ('', 'y', 'n'):
 if ret.lower() == 'n':
     sys.exit(1)
 
-dup_dbnames = []
 
 # createdb -T
 for dbname in dbnames:
@@ -87,20 +86,16 @@ for dbname in dbnames:
         new_dbname = '%s_%s' % (target_user, dbname[5:])
         print('Copy %s to %s' % (dbname, new_dbname))
         cr2.execute('create database "%s" template="%s"' % (new_dbname, dbname))
-        dup_dbnames.append(new_dbname)
     except Exception, e:
         print('Unable to duplicate %s: %s' % (dbname, e))
+        continue
     finally:
         cr2.execute('GRANT CONNECT ON DATABASE "%s" TO public' % dbname)
-cr2.close()
 
-
-# change owner
-for dbname in dup_dbnames:
-    db1 = psycopg2.connect(dbname=dbname)
+    db1 = psycopg2.connect(dbname=new_dbname)
     cr1 = db1.cursor()
 
-    cr1.execute('alter database "%s" owner to "%s"' % (dbname, target_user))
+    cr1.execute('alter database "%s" owner to "%s"' % (new_dbname, target_user))
     cr1.execute("select tablename from pg_tables where schemaname = 'public'")
     for xx in cr1.fetchall():
         cr1.execute('alter table "%s" owner to "%s"' % (xx[0], target_user))
@@ -131,3 +126,4 @@ for dbname in dup_dbnames:
 
     db1.commit()
 
+cr2.close()
