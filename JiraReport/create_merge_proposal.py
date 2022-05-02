@@ -74,8 +74,8 @@ for target_branch, br in server_branches + web_branches:
     if to_merge:
         try:
             src_branch.createMergeProposal(target_branch=target_branch)
-            print 'To merge', br, target_branch
-        except Exception, e:
-            print "Unable to merge %s %s: %s", (br, target_branch, e)
+            print('To merge', br, target_branch)
+        except Exception as e:
+            print("Unable to merge %s %s: %s", (br, target_branch, e))
 
 

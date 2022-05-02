@@ -33,6 +33,8 @@ BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 CERTBOT_SCRIPT="~/certbot/certbot-auto"
 POSTGRES_CER=""
 POSTGRES_KEY=""
+PGCLUSTER=""
+POSTGRES_PORT="False"
 if [[ -f ~/RBconfig ]]; then
     source ~/RBconfig
 fi
@@ -297,10 +299,12 @@ sed -e "s#@@USERERP@@#${USERERP}#g" \
     -e "s#@@URL@@#${URL}#g" \
     -e "s#@@ADDONS@@#${ADDONS}#g" \
     -e "s#@@RB_SERVER_URL@@#${rb_server_url}#g" \
+    -e "s#@@POSTGRES_PORT@@#${POSTGRES_PORT}#g" \
     -e "s#@@CLOUD_BENCH_KEY@@#${CLOUD_BENCH_KEY}#g" \
     -e "s#@@USER_DUMP_SYNC@@#${user_dump_sync}#g" \
     -e "s#@@PASS_DUMP_SYNC@@#${pass_dump_sync}#g" \
     -e "s#@@UNIFIELDTEST@@#${UNIFIELDTEST}#g" \
+    -e "s#@@PGCLUSTER@@#${PGCLUSTER}#g" \
     -e "s#@@UF_PASSWORD@@#${UF_PASSWORD}#g" \
     -e "s#@@APACHE_PROD_USER@@#${APACHE_PROD_USER}#g" \
     -e "s#@@APACHE_PROD_PASSWORD@@#${APACHE_PROD_PASSWORD}#g" \
@@ -373,8 +377,8 @@ fi
     chmod +x /home/${USERERP}/runtests.sh /home/${USERERP}/build_and_test.sh
     chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
     systemctl daemon-reload
-	systemctl enable ${USERERP}-web
-	systemctl enable ${USERERP}-server
+    systemctl enable ${USERERP}-web
+    systemctl enable ${USERERP}-server
     #chmod +x /etc/init.d/${USERERP}-web /etc/init.d/${USERERP}-server
     #update-rc.d ${USERERP}-web defaults
     #update-rc.d ${USERERP}-server defaults
@@ -382,8 +386,6 @@ fi
 
 bzr_type=branch
 init_user() {
-    su - ${PG_USER} -c -- "${PG_PATH}psql -c 'DROP ROLE IF EXISTS \"${USERERP}\";'"
-    su - ${PG_USER} -c -- "${PG_PATH}createuser -S -R -d ${USERERP}"
     if [ ! -d /home/${USERERP}/.bzr ]; then
         cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
     fi
@@ -402,12 +404,12 @@ mkdir etc log exports
 EOF
 
     if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_admin_sync" ]]; then
-		SYNC_USER_LOGIN="admin"
-		SYNC_USER_PASSWORD=$(echo -n $web_admin_pass | base64)
-	fi
+        SYNC_USER_LOGIN="admin"
+        SYNC_USER_PASSWORD=$(echo -n $web_admin_pass | base64)
+    fi
 
     if [[ -n "${BUILD_PYTHON_ENV}" ]]; then
-	su - ${USERERP} <<EOF
+        su - ${USERERP} <<EOF
 virtualenv -p ${PYTHON_EXE} /home/${USERERP}/unifield-venv
 . /home/${USERERP}/unifield-venv/bin/activate
 cd unifield-server
@@ -423,8 +425,17 @@ python setup.py develop
 EOF
     fi
     if [[ -f /opt/unifield-venv/bin/activate &&  ! -d /home/${USERERP}/unifield-venv ]]; then
-	 ln -s /opt/unifield-venv /home/${USERERP}/unifield-venv
+        if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_py3" ]]; then
+            ln -s /opt/unifield-venv-py3 /home/${USERERP}/unifield-venv
+            PG_PATH=/usr/lib/postgresql/14/bin/
+            POSTGRES_PORT=5435
+            PGCLUSTER=14/main
+        else
+            ln -s /opt/unifield-venv /home/${USERERP}/unifield-venv
+        fi
     fi
+    su - ${PG_USER} -c -- "PGCLUSTER=$PGCLUSTER psql -c 'DROP ROLE IF EXISTS \"${USERERP}\";'"
+    su - ${PG_USER} -c -- "PGCLUSTER=$PGCLUSTER createuser -S -R -d ${USERERP}"
 }
 
 restart_servers() {
@@ -494,7 +505,9 @@ export HTMLPORT=$WEBPORT
 export ADMINPASSWORD=$UF_PASSWORD
 " >> /home/${USERERP}/.bashrc
 
-
+if [[ "$POSTGRES_PORT" != "False" ]]; then
+    echo "export PGPORT=$POSTGRES_PORT" >> /home/${USERERP}/.bashrc
+fi
 case $INIT_TYPE in
   testfield)
     su - $USERERP -c "./runtests.sh test"

@@ -4,15 +4,16 @@
 import argparse
 import oerplib
 import datetime
+import os
 from dateutil.relativedelta import relativedelta
 
 protocol='netrpc'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--host", "-H", metavar="host", default="127.0.0.1", help="Host [default: %(default)s]")
-parser.add_argument("--port", "-p", metavar="port", default=8070, help="NetRPC Port [default: 8070]")
+parser.add_argument("--port", "-p", metavar="port", default=os.getenv('NETRPCPORT',8070), help="NetRPC Port [default: 8070]")
 parser.add_argument("--user", "-u", metavar="user", default="admin", help="User [default: %(default)s]")
-parser.add_argument("--password", "-w", metavar="pwd", default="admin", help="Password [default: %(default)s]")
+parser.add_argument("--password", "-w", metavar="pwd", default=os.getenv('ADMINPASSWORD','Only4RB'), help="Password [default: %(default)s]")
 
 o = parser.parse_args()
 

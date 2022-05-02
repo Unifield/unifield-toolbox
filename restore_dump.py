@@ -54,7 +54,7 @@ webdav = True
 try:
     import easywebdav
 except ImportError:
-    print sys.stderr.write("Run pip install easywebdav to restore dumps from OwnCloud")
+    sys.stderr.write("Run pip install easywebdav to restore dumps from OwnCloud")
     webdav = False
 
 
@@ -63,7 +63,7 @@ try:
     # disable tls warning with jira
     urllib3.disable_warnings()
     import jira
-except ImportError, AttributeError:
+except (ImportError, AttributeError):
     raise SystemExit("Please install jira lib:\n sudo pip install jira")
 
 
@@ -339,7 +339,11 @@ class Postgres(dbmatch):
         my_env = os.environ.copy()
         my_env['PGSSLCERT'] = self.cert
         my_env['PGSSLKEY'] = self.key
-        call(['pg_dump', '-Fc', db, '--host', self.host, '--port', self.port, '--user', 'production-dbs'], stdout=file_desc, env=my_env)
+        if my_env.get('PGCLUSTER') != '14/main':
+            full_pg_dump = '/usr/lib/postgresql/9.6/bin/pg_dump'
+        else:
+            full_pg_dump = 'pg_dump'
+        call([full_pg_dump, '-Fc', db, '--host', self.host, '--port', self.port, '--user', 'production-dbs'], stdout=file_desc, env=my_env)
 
 
 class Web(object):
@@ -421,7 +425,7 @@ class JIRA(dbmatch):
         try:
             j_obj = jira.JIRA(self.host, options={'check_update': False}, basic_auth=(user, password))
             self.issue = j_obj.issue(issue_key)
-        except jira.exceptions.JIRAError, error:
+        except jira.exceptions.JIRAError as error:
             if error.status_code == 401:
                 message = 'Unauthorized'
             else:
@@ -477,7 +481,7 @@ def do_upgrade(port, database, uf_pass):
             xmlrpc.login('admin', uf_pass)
             return True
             #sys.exit(0)
-        except oerplib.error.RPCError, e:
+        except oerplib.error.RPCError as e:
             if 'ServerUpdate' in '%s'%e.message or ( e.args and isinstance(e.args, tuple) and 'ServerUpdate' in e.args[0]):
                 if time.time() - begin > max_sec:
                     sys.stderr.write("%s: timeout during upgrade" % (database,))
@@ -512,7 +516,7 @@ def connect_and_sync(dbs_name, sync_port, sync_run, sync_db=False, uf_pass='admi
                 if o.sync_run:
                     xmlrpc.get('sync.client.entity').sync_manual_threaded()
                     sys.stdout.write("Start sync\n")
-            except Exception, e:
+            except Exception as e:
                 sys.stderr.write("%s: unable to sync connect\n%s\n" % (db, e))
     return True
 
@@ -609,7 +613,7 @@ def restore_dump(transport, prefix_db, output_dir=False, sql_queries=False, sync
                         try:
                             cr.execute(query, sql_data)
                             db_conn.commit()
-                        except psycopg2.ProgrammingError, e:
+                        except psycopg2.ProgrammingError as e:
                             sys.stderr.write("Error during sql queries:\n%s\n" % e)
                             db_conn.rollback()
                             cr = db_conn.cursor()

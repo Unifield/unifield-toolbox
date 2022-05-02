@@ -36,7 +36,7 @@ for rb in home_dir:
     for k in issues:
         st.append(issues[k])
     if not st or st == [None]:
-        print "%s: no associated Jira issue"%(rb,)
+        print "%s : no associated Jira issue"%(rb,)
     else:
-        print "%s: %s %s"%(rb, ' '.join(st), not_set and 'NOT SET' or '')
+        print "%s : %s %s"%(rb, ' '.join(st), not_set and 'NOT SET' or '')
 

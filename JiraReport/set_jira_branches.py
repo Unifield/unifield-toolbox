@@ -19,6 +19,7 @@ dev_map = {
     'jfb-tempo-consulting': 'jfb',
     'julie-w': 'julie.nuguet',
     'dorian-kemps': 'd.kemps',
+    'mukunde': 'g.mukunde',
 }
 config_file = os.path.realpath(os.path.expanduser('~/RBconfig'))
 cfg = ConfigObj(config_file)

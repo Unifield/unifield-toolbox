@@ -12,6 +12,10 @@ if [[ -f ~/RBconfig ]]; then
    source ~/RBconfig
 fi
 
+if [[ "$1" == "us-8546" || "$1" == "jn-us-9463" ]]; then
+    echo "Please keep $1 !"
+    exit 1
+fi
 #update-rc.d -f $1-server remove
 #update-rc.d -f $1-web remove
 systemctl stop $1-server
@@ -24,6 +28,12 @@ a2dissite ${1}.conf
 for i in  `${PG_PATH}psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = '$1';"`; do 
 echo "Dropdb $i"
 ${PG_PATH}dropdb $i
+done
+
+export PGCLUSTER=14/main
+for i in  `psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = '$1';"`; do 
+echo "Dropdb $i"
+dropdb $i
 done
 
 systemctl disable $1-server
