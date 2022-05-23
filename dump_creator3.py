@@ -352,42 +352,47 @@ def process_directory():
 
                         # dump and zip the dump
                         for x in all_dbs:
-                            if x[0] not in ['template0', 'template1', 'postgres']:
-                                log('%s db found %s'% (instance, x[0]))
-                                db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
-                                cr = db.cursor()
-                                cr.execute('SELECT name FROM sync_client_version where date is not null order by date desc limit 1')
-                                version = cr.fetchone()
-                                if not version:
-                                    error('%s: version not found' % instance)
-                                    version = 'XX'
-                                else:
-                                    version = version[0]
-                                cr.execute('SELECT oc FROM sync_client_entity')
-                                oc = cr.fetchone()[0]
-                                if not oc:
-                                    error('%s: OC not found' % instance)
-                                    oc = 'XX'
-                                db.close()
+                            try:
+                                if x[0] not in ['template0', 'template1', 'postgres']:
+                                    log('%s db found %s'% (instance, x[0]))
+                                    db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
+                                    cr = db.cursor()
+                                    cr.execute('SELECT name FROM sync_client_version where date is not null order by date desc limit 1')
+                                    version = cr.fetchone()
+                                    if not version:
+                                        error('%s: version not found' % instance)
+                                        version = 'XX'
+                                    else:
+                                        version = version[0]
+                                    cr.execute('SELECT oc FROM sync_client_entity')
+                                    oc = cr.fetchone()[0]
+                                    if not oc:
+                                        error('%s: OC not found' % instance)
+                                        oc = 'XX'
+                                    db.close()
 
-                                dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
-                                log('Dump %s' % dump_file)
-                                pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
-                                subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
+                                    dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
+                                    log('Dump %s' % dump_file)
+                                    pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
+                                    subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
 
-                                final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
-                                if os.path.exists(final_zip):
-                                    os.remove(final_zip)
+                                    final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
+                                    if os.path.exists(final_zip):
+                                        os.remove(final_zip)
 
-                                zip_c = ['zip', '-j', '-q', final_zip, dump_file]
-                                log(' '.join(zip_c))
-                                subprocess.call(zip_c)
-                                os.remove(dump_file)
-                                upload_od(final_zip, oc)
-                                with open(last_dump_file, 'w') as last_desc:
-                                    last_desc.write(restore_date.strftime('%Y%m%d-%H%M%S'))
-                                if os.path.exists(wal_not_dumped):
-                                    os.remove(wal_not_dumped)
+                                    zip_c = ['zip', '-j', '-q', final_zip, dump_file]
+                                    log(' '.join(zip_c))
+                                    subprocess.call(zip_c)
+                                    os.remove(dump_file)
+                                    upload_od(final_zip, oc)
+                                    with open(last_dump_file, 'w') as last_desc:
+                                        last_desc.write(restore_date.strftime('%Y%m%d-%H%M%S'))
+                                    if os.path.exists(wal_not_dumped):
+                                        os.remove(wal_not_dumped)
+                            except subprocess.CalledProcessError as e:
+                                error(e.output or e.stderr)
+                            except Exception:
+                                logger.exception('ERROR')
 
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
