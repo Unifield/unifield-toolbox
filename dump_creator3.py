@@ -242,9 +242,16 @@ def process_directory():
                     for wal in os.listdir(full_name):
                         full_path_wal = os.path.join(full_name, wal)
                         if wal.endswith('7z') and not wal.startswith('.'):
-                            wal_moved += 1
-                            un7zip(full_path_wal, pg_xlog)
-                            os.remove(full_path_wal)
+                            try:
+                                un7zip(full_path_wal, pg_xlog)
+                                os.remove(full_path_wal)
+                                wal_moved += 1
+                            except subprocess.CalledProcessError as e:
+                                # try to extract all WAL: UC when new bb generated to unlock a dump
+                                error(e.output or e.stderr)
+                            except Exception:
+                                logger.exception('ERROR')
+
                         elif wal == 'force_dump':
                             os.remove(full_path_wal)
                             forced_dump = True
