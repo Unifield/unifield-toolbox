@@ -17,6 +17,26 @@ def error(msg):
     input('Press enter to quit')
     sys.exit(1)
 
+def sendemail(zip_file):
+    # Create the container email message.
+    msg = EmailMessage()
+    msg['Subject'] = 'SSH Key %s' % instance
+    # me == the sender's email address
+    # family = the list of all recipients' email addresses
+    msg['From'] = config.from_mail
+    msg['To'] = config.to_mail
+    msg.preamble = 'Key in attach'
+
+    # Open the files in binary mode.  Use imghdr to figure out the
+    # MIME subtype for each specific image.
+    with open(zip_file, 'rb') as fp:
+        data = fp.read()
+    msg.add_attachment(data, maintype='application', subtype='zip', filename='%s.zip' % instance)
+    # Send the email via our own SMTP server.
+    with smtplib.SMTP(smtp_host) as s:
+        s.send_message(msg)
+
+
 if sys.argv and len(sys.argv) == 2:
     instance_input = sys.argv[1]
     ok = 'y'
@@ -36,18 +56,23 @@ if not re.search('^[a-z0-9_-]+$', instance):
     error("Name '%s' is not correct" % instance_input)
     sys.exit(1)
 
+zip_file = os.path.join(keys_dir, '%s.zip'%instance)
+
 auth_read = open(authorized_keys, 'r')
 line = 0
 for x in auth_read:
     line += 1
     if x.strip().endswith(instance):
+        if os.path.exists(zip_file):
+            auth_read.close()
+            sendemail(zip_file)
+            sys.exit(0)
         error('%s found in authorized_keys, line %s' % (instance, line))
         sys.exit(1)
 auth_read.close()
 
 if not os.path.exists(keys_dir):
     os.makedirs(keys_dir)
-zip_file = os.path.join(keys_dir, '%s.zip'%instance)
 
 if os.path.exists(zip_file):
     error('%s already exists'  % (zip_file, ))
@@ -81,22 +106,5 @@ auth = open(authorized_keys, 'ab')
 auth.write(b'### %s\n' % b_instance)
 auth.write(b'command="rsync --server -vlogDtr --no-perms --chmod=Dg+rwx,Fg+rw --remove-source-files --partial-dir=.rsync-partial --partial . %s/",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding %s %s\n' % (b_instance, exported_pub_key, b_instance))
 auth.close()
-
-# Create the container email message.
-msg = EmailMessage()
-msg['Subject'] = 'SSH Key %s' % instance
-# me == the sender's email address
-# family = the list of all recipients' email addresses
-msg['From'] = config.from_mail
-msg['To'] = config.to_mail
-msg.preamble = 'Key in attach'
-
-# Open the files in binary mode.  Use imghdr to figure out the
-# MIME subtype for each specific image.
-with open(zip_file, 'rb') as fp:
-    data = fp.read()
-msg.add_attachment(data, maintype='application', subtype='zip', filename='ssh_config.zip')
-# Send the email via our own SMTP server.
-with smtplib.SMTP(smtp_host) as s:
-    s.send_message(msg)
+sendemail(zip_file)
 
