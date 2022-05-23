@@ -318,7 +318,7 @@ def process_directory():
                                 break
                             log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                             previous_wall = prev
-                            time.sleep(6)
+                            time.sleep(10)
 
                         if not previous_wall:
                             error('%s no WAL replayed' % instance)
