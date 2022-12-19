@@ -27,7 +27,7 @@ cachedir = os.path.expanduser("~/.launchpadlib/cache/")
 launchpad = Launchpad.login_with('Jira-lp', 'production', cachedir)
 
 browser = launchpad._browser
-for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available', 'Pre-Integrated', 'Integrated') and project = 'UniField Support' "):
+for issue in j_obj.search_issues("status in ('Runbot Validated', 'Runbot Available', 'Pre-Integrated', 'Integrated', 'In Progress') and project = 'UniField Support' "):
 
     target_server_branch = launchpad.branches.getByUrl(url='lp:unifield-server/trunk')
     target_web_branch = launchpad.branches.getByUrl(url='lp:unifield-web/trunk')

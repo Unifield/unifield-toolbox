@@ -3,6 +3,19 @@
 import psycopg2
 import re
 
+decom = {}
+db = psycopg2.connect(dbname='prod_SYNC_SERVER_LOCAL')
+cr = db.cursor()
+cr.execute("select name from sync_server_entity where state='invalidated';")
+
+re_prefix = ['prod_', 'oc.-uf_', 'oc._', 'oc.-dbs_', 'oc.-usdb_']
+for inv in cr.fetchall():
+    decom[inv[0]] = True
+
+
+
+to_del_decom = []
+
 db = psycopg2.connect(dbname='template1')
 cr = db.cursor()
 
@@ -18,6 +31,11 @@ for db, user in cr.fetchall():
             junk.append(db)
         else:
             db_prefix = db_match.group(1)
+            instance_name = db_prefix
+            for pr in re_prefix:
+                instance_name = re.sub('^%s'%pr, '', instance_name)
+            if instance_name in decom:
+                to_del_decom.append(db)
             all_db_by_user.setdefault(user, {}).setdefault(db_prefix, []).append(db)
 
 for user in all_db_by_user:
@@ -27,6 +45,14 @@ for user in all_db_by_user:
             sorted_db.pop()
             junk += sorted_db
 
-for to_del in junk:
-    print 'dropdb %s' % to_del
 
+for to_del in junk:
+    print('duplicate dropdb %s' % to_del)
+
+if to_del_decom:
+    print('decom dropdb: %s' % (' '.join(to_del_decom), ))
+
+if junk:
+    cr.execute('select pid, usename, application_name, datname from pg_stat_activity where datname in %s', (tuple(junk),))
+    for x in cr.fetchall():
+        print(x)
