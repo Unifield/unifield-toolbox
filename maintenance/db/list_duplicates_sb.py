@@ -2,6 +2,8 @@
 
 import psycopg2
 import re
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 decom = {}
 db = psycopg2.connect(dbname='prod_SYNC_SERVER_LOCAL')
@@ -35,7 +37,8 @@ for db, user in cr.fetchall():
             for pr in re_prefix:
                 instance_name = re.sub('^%s'%pr, '', instance_name)
             if instance_name in decom:
-                to_del_decom.append(db)
+                if datetime.strptime(db_match.group(2), '%Y%m%d') + relativedelta(months=+3) < datetime.now():
+                    to_del_decom.append(db)
             all_db_by_user.setdefault(user, {}).setdefault(db_prefix, []).append(db)
 
 for user in all_db_by_user:
