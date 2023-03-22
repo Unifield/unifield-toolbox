@@ -131,7 +131,7 @@ class Directory(dbmatch):
                         self.dumps.append(full_file)
 
     def get_dbs(self):
-        return self.dumps
+        return sorted(self.dumps)
 
     def get_db_name(self, db):
         return os.path.splitext(os.path.basename(db))[0]
