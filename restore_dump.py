@@ -34,6 +34,10 @@ Please note:
 """
 import os
 import sys
+
+if sys.version_info[0] > 2:
+    raise SystemExit("Please use restore_dump.py3")
+
 import argparse
 import getpass
 import httplib2
