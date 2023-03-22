@@ -5,6 +5,7 @@ Description=@@USERERP@@-web
 Type=simple
 User=@@USERERP@@
 Group=@@USERERP@@
+#Environment="LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1" "FAKETIME_TIMESTAMP_FILE=/home/@@USERERP@@/faketime"
 ExecStart= /home/@@USERERP@@/unifield-venv/bin/python unifield-web/openerp-web.py -c etc/openerp-web.cfg
 Restart=always
 WorkingDirectory=/home/@@USERERP@@
