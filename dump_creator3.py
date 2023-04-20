@@ -148,13 +148,30 @@ def un7zip(src_file, dest_dir, delete=False):
     log('Uncompress: %s ' % ' '.join(command))
     subprocess.check_output(command, stderr=subprocess.STDOUT)
 
+def list_instances(src_dir, seen):
+    to_analyze = []
+    top = []
+    for instance in sorted(os.listdir(SRC_DIR)):
+        if instance.startswith('.'):
+            continue
+        newbase = os.path.isfile(os.path.join(SRC_DIR, instance, 'base', 'base.tar.7z'))
+        if newbase and (not seen.get(instance) or seen.get(instance) < datetime.datetime.now() + relativedelta(minutes=-30)):
+            log('Put %s base on top' % (instance, ))
+            top.append(instance)
+        elif seen.get(instance):
+            continue
+        else:
+            to_analyze.append(instance)
+    return top + to_analyze
+
 def process_directory():
     if not os.path.isdir(DUMP_DIR):
         os.makedirs(DUMP_DIR)
-    for instance in os.listdir(SRC_DIR):
-        if instance.startswith('.'):
-            continue
+    instances_seen = {}
+    to_analyze = list_instances(SRC_DIR, instances_seen)
+    while to_analyze:
 
+        instance = to_analyze.pop(0)
         forced_instance = False
         forced_path = os.path.join(SRC_DIR, 'forced_instance')
         if os.path.exists(forced_path):
@@ -162,6 +179,8 @@ def process_directory():
                 instance = forced_path_desc.read()
             forced_instance = True
             os.remove(forced_path)
+
+        instances_seen[instance] = datetime.datetime.now()
 
         full_name = os.path.join(SRC_DIR, instance)
         try:
@@ -173,8 +192,17 @@ def process_directory():
                     os.remove(stop_service)
                     log('Stopped')
                     sys.exit(0)
-
+                
+                basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                 dest_dir = os.path.join(DEST_DIR, instance)
+
+                if not os.path.isdir(dest_dir) and not os.path.isfile(basebackup):
+                    # new instance wait for base.tar
+                    instances_seen[instance] = False
+                    continue
+
+                to_analyze = list_instances(SRC_DIR, instances_seen)
+
                 for dir_to_create in [os.path.join(dest_dir, 'OLDWAL')]:
                     if not os.path.isdir(dir_to_create):
                         log('Create %s'%dir_to_create)
@@ -185,7 +213,6 @@ def process_directory():
 
                 # Copy / extract basbackup
                 basebackup_found = False
-                basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                 if os.path.isfile(basebackup):
                     log('%s Found base backup %s'% (instance, basebackup))
                     old_base_moved = False
@@ -326,6 +353,7 @@ def process_directory():
                             log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                             previous_wall = prev
                             time.sleep(10)
+                            #time.sleep(60)
 
                         if not previous_wall:
                             error('%s no WAL replayed' % instance)
