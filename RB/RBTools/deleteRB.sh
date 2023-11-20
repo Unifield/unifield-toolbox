@@ -12,7 +12,7 @@ if [[ -f ~/RBconfig ]]; then
    source ~/RBconfig
 fi
 
-if [[ "$1" == "us-8546" || "$1" == "jn-us-9463" ]]; then
+if [[ "$1" == "XXus-8546" || "$1" == "jn-us-9463" ]]; then
     echo "Please keep $1 !"
     exit 1
 fi

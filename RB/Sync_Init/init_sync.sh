@@ -29,7 +29,9 @@ send_mail() {
 WITH_SSL="Yes"
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
+BRANCH_DEFAULT_WEB_PY3="lp:unifield-web/py3"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
+BRANCH_DEFAULT_ENV_PY3="lp:~jfb-tempo-consulting/unifield-wm/sync-env-py3"
 CERTBOT_SCRIPT="~/certbot/certbot-auto"
 POSTGRES_CER=""
 POSTGRES_KEY=""
@@ -187,7 +189,7 @@ if [ "$JIRA" ]; then
     if [[ -z "$server" ]]; then
         server=${jira[0]}
     fi
-    if [[ -z "$web" ]]; then
+    if [[ -z "$web" && "${jira[1]}" != "-" ]]; then
         web=${jira[1]}
     fi
     if [[ -z "$RB_PREFIX" ]]; then
@@ -393,12 +395,37 @@ init_user() {
     chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
     su - ${USERERP} <<EOF
 
-echo bzr ${bzr_type} ${web:=${BRANCH_DEFAULT_WEB}} unifield-web
-bzr ${bzr_type} ${web:=${BRANCH_DEFAULT_WEB}} unifield-web
 echo bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
 bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
-echo bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
-bzr ${bzr_type} ${env:=${BRANCH_DEFAULT_ENV}} sync_env_script
+if [[ -f "unifield-server/tools/.ok_py3" ]]; then
+    echo "PY3 env" 
+    if [ -z "$web" ]; then
+	WEB_BR="$BRANCH_DEFAULT_WEB_PY3"
+    else
+        WEB_BR="$web"
+    fi
+    if [ -z "$env" ]; then
+	ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
+    else
+        ENV_BR="$env"
+    fi
+else
+    echo "PY2 env $env"
+    if [ -z "$web" ]; then
+	WEB_BR="$BRANCH_DEFAULT_WEB"
+    else
+        WEB_BR="$web"
+    fi
+    if [ -z "$env" ]; then
+	ENV_BR="$BRANCH_DEFAULT_ENV"
+    else
+        ENV_BR="$env"
+    fi
+fi
+echo bzr ${bzr_type} \$WEB_BR unifield-web
+bzr ${bzr_type} \$WEB_BR unifield-web
+echo bzr ${bzr_type} \$ENV_BR sync_env_script
+bzr ${bzr_type} \$ENV_BR sync_env_script
 
 mkdir etc log exports
 EOF
@@ -426,7 +453,7 @@ EOF
     fi
     if [[ -f /opt/unifield-venv/bin/activate &&  ! -d /home/${USERERP}/unifield-venv ]]; then
         if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_py3" ]]; then
-            ln -s /opt/unifield-venv-py3 /home/${USERERP}/unifield-venv
+            ln -s /opt/unifield-venv-py3.10 /home/${USERERP}/unifield-venv
             PG_PATH=/usr/lib/postgresql/14/bin/
             POSTGRES_PORT=5435
             PGCLUSTER=14/main

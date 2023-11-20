@@ -48,7 +48,7 @@ if '.' in user_mail:
     user_mail = ''.join([x[0] for x in user_mail.split('.')])
 
 print server_branch and server_branch.replace('https://code.launchpad.net/', 'lp:') or 'lp:unifield-server'
-print web_branch and web_branch.replace('https://code.launchpad.net/', 'lp:') or 'lp:unifield-web'
+print web_branch and web_branch.replace('https://code.launchpad.net/', 'lp:') or '-'
 print user_mail
 
 

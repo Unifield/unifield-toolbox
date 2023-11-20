@@ -11,7 +11,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 url = sys.argv[1]
 
-if len(sys.argv) == 3:
+if len(sys.argv) >= 3:
     src = sys.argv[2]
 else:
     src = 'meta_features'
@@ -22,7 +22,7 @@ else:
     dest = 'meta_features_to_fix'
 
 if not os.path.exists(src):
-    print('Soruce %s directory does not exist' % src)
+    print('Source %s directory does not exist' % src)
     sys.exit(1)
 
 if os.path.exists(dest):
@@ -36,3 +36,4 @@ for danger in soup.find_all('tr', class_='danger'):
         dest_path = os.path.join(dest, os.path.dirname(p.text))
         os.makedirs(dest_path, exist_ok=True)
         shutil.copy(os.path.join(src, p.text), dest_path)
+        print('Copy %s to %s' % (os.path.join(src, p.text), dest_path))
