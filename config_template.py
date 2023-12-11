@@ -18,6 +18,9 @@ path = {
 # path to psql exe
 psql_dir = '/cygdrive/c/WalTools/pgsql/bin/'
 
+psql9_dir = '/cygdrive/c/WalTools/pgsql/bin/'
+psql14_dir = '/cygdrive/c/WalTools/pgsql14/bin/'
+
 # path to destination base + Wal
 dest_dir = '/cygdrive/d/continuous_backup_data'
 

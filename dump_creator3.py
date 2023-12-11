@@ -212,9 +212,10 @@ def process_directory():
                 pg_xlog = os.path.join(dest_basebackup, 'pg_xlog')
                 oldwal = os.path.join(dest_dir, 'OLDWAL')
 
-                # copy postgres and recovery
-                for conf in ['recovery.conf', 'postgresql.conf']:
-                    shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
+                if os.path.isdir(dest_basebackup):
+                    # copy postgres and recovery / migration of new WAL destination
+                    for conf in ['recovery.conf', 'postgresql.conf']:
+                        shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
 
                 # Copy / extract basbackup
                 basebackup_found = False
@@ -341,6 +342,14 @@ def process_directory():
 
                     try:
                         # Start psql
+                        PSQL_DIR = config.psql9_dir
+                        VERSION_FILE = os.path.join(dest_basebackup, 'PG_VERSION')
+                        if os.patch.isfile(VERSION_FILE):
+                            with open(VERSION_FILE, 'r') as ve:
+                                version = ve.read()
+                                if version.startswith('14'):
+                                    PSQL_DIR = config.psql14_dir
+                        log('%s, pg_version: %s'% (instance, PSQL_DIR))
                         psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
                         log(' '.join(psql_start))
                         subprocess.run(psql_start, check=True)
