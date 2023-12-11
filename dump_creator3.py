@@ -210,6 +210,11 @@ def process_directory():
 
                 dest_basebackup = os.path.join(dest_dir, 'base')
                 pg_xlog = os.path.join(dest_basebackup, 'pg_xlog')
+                oldwal = os.path.join(dest_dir, 'OLDWAL')
+
+                # copy postgres and recovery
+                for conf in ['recovery.conf', 'postgresql.conf']:
+                    shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
 
                 # Copy / extract basbackup
                 basebackup_found = False
@@ -239,11 +244,11 @@ def process_directory():
                             shutil.rmtree(del_recreate)
                         os.makedirs(del_recreate)
 
-                    if old_base_moved:
-                        # old base moved, copy previous WAL in the new basebackup
-                        # case of WAL created during this base backup was already moved to the old WAL
-                        shutil.rmtree(pg_xlog)
-                        shutil.copytree(os.path.join(old_base_moved, 'pg_xlog'), pg_xlog)
+                    #if old_base_moved:
+                    #    # old base moved, copy previous WAL in the new basebackup
+                    #    # case of WAL created during this base backup was already moved to the old WAL
+                    #    shutil.rmtree(pg_xlog)
+                    #    shutil.copytree(os.path.join(old_base_moved, 'pg_xlog'), pg_xlog)
                     basebackup_found = True
 
                 # is there an in-progress rsync ?
@@ -270,7 +275,7 @@ def process_directory():
                         full_path_wal = os.path.join(full_name, wal)
                         if wal.endswith('7z') and not wal.startswith('.'):
                             try:
-                                un7zip(full_path_wal, pg_xlog)
+                                un7zip(full_path_wal, oldwal)
                                 os.remove(full_path_wal)
                                 wal_moved += 1
                             except subprocess.CalledProcessError as e:
@@ -310,7 +315,7 @@ def process_directory():
                 wal_not_dumped = os.path.join(dest_dir, 'wal_not_dumped')
 
                 if wal_moved:
-                    log('%s, %d wal moved to %s' % (full_name, wal_moved, pg_xlog))
+                    log('%s, %d wal moved to %s' % (full_name, wal_moved, oldwal))
                 elif forced_wal:
                     log('%s, wal forced' % (full_name, ))
                 elif forced_dump:
