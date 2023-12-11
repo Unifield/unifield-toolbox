@@ -192,7 +192,7 @@ def process_directory():
                     os.remove(stop_service)
                     log('Stopped')
                     sys.exit(0)
-                
+
                 basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                 dest_dir = os.path.join(DEST_DIR, instance)
 
@@ -352,8 +352,8 @@ def process_directory():
                                 break
                             log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                             previous_wall = prev
-                            time.sleep(10)
-                            #time.sleep(60)
+                            #time.sleep(10)
+                            time.sleep(60)
 
                         if not previous_wall:
                             error('%s no WAL replayed' % instance)
@@ -388,6 +388,8 @@ def process_directory():
                         # dump and zip the dump
                         for x in all_dbs:
                             try:
+                                final_zip = False
+                                dump_file = False
                                 if x[0] not in ['template0', 'template1', 'postgres']:
                                     log('%s db found %s'% (instance, x[0]))
                                     db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg' % (x[0], ))
@@ -428,6 +430,11 @@ def process_directory():
                                 error(e.output or e.stderr)
                             except Exception:
                                 logger.exception('ERROR')
+                            finally:
+                                if dump_file and os.path.exists(dump_file):
+                                    os.remove(dump_file)
+                                if final_zip and os.path.exists(final_zip):
+                                    os.remove(final_zip)
 
                     finally:
                         psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
