@@ -96,7 +96,7 @@ def stopped(delete=False):
     if os.path.exists(stop_service):
         if delete:
             os.remove(stop_service)
-            return True
+        return True
     return False
 
 class Process():
@@ -105,12 +105,12 @@ class Process():
         self.thread = thread
         self.queue = queue
 
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('thread-%s' % thread)
         self.logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
 
         if LOG_FILE:
-            handler = logging.handlers.TimedRotatingFileHandler('%s-%s' % (thread, LOG_FILE), when='midnight')
+            handler = logging.handlers.TimedRotatingFileHandler('%s-%s.log' % (LOG_FILE, self.thread), when='midnight')
         else:
             handler = logging.StreamHandler()
         handler.setLevel(logging.INFO)
@@ -248,10 +248,7 @@ class Process():
                 self.log('Forced instance %s' % (instance, ))
                 forced_instance = True
 
-
-            # TODO
-            continue
-
+            self.log('Process %s' % (instance, ))
 
             full_name = os.path.join(SRC_DIR, instance)
             try:
