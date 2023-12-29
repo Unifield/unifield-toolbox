@@ -15,12 +15,16 @@ path = {
     'ocp': '/personal/UF_OCP_msf_geneva_msf_org/documents/Test',
 }
 
+# psql config filed
+psql_conf = '/cygdrive/c/continuous_backup_server/psql_conf'
+psql_conf14 = '/cygdrive/c/continuous_backup_server/psql_conf14'
+
 # path to psql exe
 psql_dir = '/cygdrive/c/WalTools/pgsql/bin/'
-
 psql9_dir = '/cygdrive/c/WalTools/pgsql/bin/'
 psql14_dir = '/cygdrive/c/WalTools/pgsql14/bin/'
 
+pgport = 5432
 # path to destination base + Wal
 dest_dir = '/cygdrive/d/continuous_backup_data'
 
@@ -28,7 +32,7 @@ dest_dir = '/cygdrive/d/continuous_backup_data'
 src_dir = '/home/backup/'
 
 log_file = '/cygdrive/c/continuous_backup_server/creator.log'
-
+nb_threads = 3
 # key files
 # storage
 keys_dir = '/cygdrive/d/continuous_backup_data/ssh_keys'

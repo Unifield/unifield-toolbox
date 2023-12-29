@@ -21,11 +21,11 @@ import itertools
 PSQL_DIR = config.psql_dir
 DEST_DIR = config.dest_dir
 SRC_DIR = config.src_dir
-PSQL_CONF = os.path.join(DEST_DIR, 'psql_conf')
+PSQL_CONF = config.psql_conf
+PSQL_CONF14 = config.psql_conf14
 DUMP_DIR = os.path.join(DEST_DIR, 'DUMPS')
-# TODO
-TOUCH_FILE_DUMP = os.path.join(DUMP_DIR, 'touch_dump-new')
-TOUCH_FILE_LOOP = os.path.join(DUMP_DIR, 'touch_loop-new')
+TOUCH_FILE_DUMP = os.path.join(DUMP_DIR, 'touch_dump')
+TOUCH_FILE_LOOP = os.path.join(DUMP_DIR, 'touch_loop')
 LOG_FILE = config.log_file
 day_abr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -42,6 +42,17 @@ class Queue():
     queue = []
     list_items = {}
     counter = itertools.count()
+    locked_instances = {}
+
+    def lock_instance(self, instance):
+        return self.locked_instances[instance].acquire(blocking=False)
+
+    def unlock(self, instance):
+        try:
+            self.locked_instances[instance].release()
+        except RuntimeError:
+            # lock not acquired
+            pass
 
     def add(self, item, prio=1):
         with self.lock:
@@ -70,11 +81,12 @@ class Queue():
                     del self.list_items[item]
                 except KeyError:
                     pass
+            self.locked_instances.setdefault(item, threading.RLock())
             return prio, item
 
-    def resfresh(self):
+    def refresh(self, only_forced=False):
         with self.lock:
-            forced_path = os.path.join(SRC_DIR, 'forced_instance_new')
+            forced_path = os.path.join(SRC_DIR, 'forced_instance')
             if os.path.exists(forced_path):
                 with open(forced_path) as forced_path_desc:
                     instance = forced_path_desc.read()
@@ -87,12 +99,11 @@ class Queue():
                 newbase = os.path.isfile(os.path.join(SRC_DIR, instance, 'base', 'base.tar.7z'))
                 if newbase:
                     self.add(instance, -1)
-                else:
+                elif not only_forced:
                     self.add(instance)
 
 def stopped(delete=False):
-    # TODO
-    stop_service = os.path.join(SRC_DIR, 'stop_service_new')
+    stop_service = os.path.join(SRC_DIR, 'stop_service')
     if os.path.exists(stop_service):
         if delete:
             os.remove(stop_service)
@@ -220,26 +231,35 @@ class Process():
                 raise Exception('Unknown error')
         return True
 
+
+    def is_pg14(self, dest_basebackup):
+        VERSION_FILE = os.path.join(dest_basebackup, 'PG_VERSION')
+        if os.path.isfile(VERSION_FILE):
+            with open(VERSION_FILE, 'r') as ve:
+                version = ve.read()
+                if version.startswith('14'):
+                    return True
+        return False
+
     def process_directory(self):
         if not os.path.isdir(DUMP_DIR):
             os.makedirs(DUMP_DIR)
 
-        psql_port = 5432 + self.thread
+        psql_port = config.pgport + self.thread
         while True:
             if stopped():
                 self.log('Stopped')
                 return False
 
-            self.queue.resfresh()
+            self.queue.refresh(only_forced=True)
 
             nb, instance = self.queue.pop()
-            if not instance or instance == 'INIT':
+            if not instance:
                 self.log('sleep')
                 time.sleep(10)
-                if instance == 'INIT':
-                    with open(TOUCH_FILE_LOOP, 'w') as t_file:
-                        t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
-                    self.queue.add('INIT')
+                self.queue.refresh(only_forced=False)
+                with open(TOUCH_FILE_LOOP, 'w') as t_file:
+                    t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
                 continue
 
 
@@ -248,10 +268,13 @@ class Process():
                 self.log('Forced instance %s' % (instance, ))
                 forced_instance = True
 
-            self.log('Process %s' % (instance, ))
 
             full_name = os.path.join(SRC_DIR, instance)
             try:
+                if not self.queue.lock_instance(instance):
+                    time.sleep(10)
+                    continue
+                self.log('Process %s' % (instance, ))
                 if os.path.isdir(full_name):
                     basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                     dest_dir = os.path.join(DEST_DIR, instance)
@@ -272,8 +295,12 @@ class Process():
 
                     if os.path.isdir(dest_basebackup):
                         # copy postgres and recovery / migration of new WAL destination
-                        for conf in ['recovery.conf', 'postgresql.conf']:
-                            shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
+                        if self.is_pg14(dest_basebackup):
+                            for conf in ['standby.signal', 'postgresql.conf']:
+                                shutil.copy(os.path.join(PSQL_CONF14, conf), dest_basebackup)
+                        else:
+                            for conf in ['recovery.conf', 'postgresql.conf']:
+                                shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
 
                     # Copy / extract basbackup
                     basebackup_found = False
@@ -295,10 +322,14 @@ class Process():
                         subprocess.check_output(untar, stderr=subprocess.STDOUT)
                         os.remove(os.path.join(dest_dir, 'base.tar'))
 
-                        for conf in ['recovery.conf', 'postgresql.conf', 'pg_hba.conf']:
-                            shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
+                        if self.is_pg14(dest_basebackup):
+                            for conf in ['standby.signal', 'postgresql.conf', 'pg_hba.conf']:
+                                shutil.copy(os.path.join(PSQL_CONF14, conf), dest_basebackup)
+                        else:
+                            for conf in ['recovery.conf', 'postgresql.conf', 'pg_hba.conf']:
+                                shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
 
-                        for del_recreate in [pg_wal, pg_xlog, os.path.join(dest_basebackup, 'pg_log')]:
+                        for del_recreate in [pg_wal,  pg_xlog, os.path.join(dest_basebackup, 'pg_log'), os.path.join(dest_basebackup, 'log')]:
                             if os.path.isdir(del_recreate):
                                 shutil.rmtree(del_recreate)
                             os.makedirs(del_recreate)
@@ -358,15 +389,17 @@ class Process():
 
                         try:
                             # Start psql
-                            PSQL_DIR = config.psql9_dir
-                            VERSION_FILE = os.path.join(dest_basebackup, 'PG_VERSION')
-                            if os.patch.isfile(VERSION_FILE):
-                                with open(VERSION_FILE, 'r') as ve:
-                                    version = ve.read()
-                                    if version.startswith('14'):
-                                        PSQL_DIR = config.psql14_dir
+                            if self.is_pg14(dest_basebackup):
+                                last_wal_method = 'pg_last_wal_replay_lsn()'
+                                last_wal_time_method = 'pg_last_xact_replay_timestamp()'
+                                PSQL_DIR = config.psql14_dir
+                            else:
+                                last_wal_method = 'pg_last_xlog_replay_location()'
+                                last_wal_time_method = 'pg_last_xact_replay_timestamp()'
+                                PSQL_DIR = config.psql9_dir
+
                             self.log('%s, pg_version: %s'% (instance, PSQL_DIR))
-                            psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'),'-o', '-p %s'%psql_port, '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
+                            psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'),'-o', '-p%s'%psql_port, '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
                             self.log(' '.join(psql_start))
                             subprocess.run(psql_start, check=True)
                             #subprocess.check_output(psql_start)
@@ -376,7 +409,7 @@ class Process():
                             # wait end of wall processing
                             previous_wall = False
                             while True:
-                                cr.execute("SELECT pg_last_xlog_replay_location()")
+                                cr.execute("SELECT %s"%last_wal_method)
                                 prev = cr.fetchone()[0]
                                 if prev == previous_wall:
                                     break
@@ -388,7 +421,7 @@ class Process():
                             if not previous_wall:
                                 self.error('%s no WAL replayed' % instance)
 
-                            cr.execute("SELECT pg_last_xact_replay_timestamp()")
+                            cr.execute("SELECT %s" % last_wal_time_method)
                             restore_date = cr.fetchone()[0]
                             if not restore_date:
                                 cr.execute("select checkpoint_time from pg_control_checkpoint()")
@@ -440,7 +473,7 @@ class Process():
 
                                         dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
                                         self.log('Dump %s' % dump_file)
-                                        pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-p', psql_port, '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
+                                        pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-p', '%s'%psql_port, '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
                                         subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
 
                                         final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
@@ -479,13 +512,14 @@ class Process():
                 self.error(e.output or e.stderr)
             except Exception:
                 self.logger.exception('ERROR')
+            finally:
+                self.queue.unlock(instance)
 
 if __name__ == '__main__':
-    nb_threads = 3
     threads = []
     q = Queue()
-    q.add('INIT')
-    for x in range(0, nb_threads):
+    q.refresh()
+    for x in range(0, config.nb_threads):
         t = threading.Thread(target=Process(x, q).process_directory)
         threads.append(t)
         t.start()
