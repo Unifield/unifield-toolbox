@@ -509,6 +509,11 @@ class Process():
                 thread_touch = '%s-%s' % (TOUCH_FILE_DUMP, self.thread)
                 with open(thread_touch, 'w') as t_file:
                     t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
+                try:
+                    with open(TOUCH_FILE_DUMP, 'w') as t_file:
+                        t_file.write(time.strftime('%Y-%m-%d%H%M%S'))
+                except:
+                    pass
 
             except subprocess.CalledProcessError as e:
                 self.error(e.output or e.stderr)
