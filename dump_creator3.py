@@ -345,6 +345,7 @@ class Process():
                         continue
 
                     wal_moved = 0
+                    forced_wal = False
                     forced_dump = forced_instance
                     for wal in os.listdir(full_name):
                         full_path_wal = os.path.join(full_name, wal)
@@ -373,8 +374,9 @@ class Process():
                         last_wal_date = datetime.datetime.fromtimestamp(os.path.getmtime(wal_not_dumped))
                         if last_wal_date < datetime.datetime.now() - relativedelta(hours=36):
                             self.log('%s, wal_not_dumped forced' % (full_name, ))
+                            forced_wal = True
 
-                    if forced_dump or wal_moved or basebackup_found:
+                    if forced_dump or wal_moved or basebackup_found or forced_wal:
                         last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
                         last_wal_date = False
                         if not forced_dump and not basebackup_found and os.path.exists(last_dump_file):
