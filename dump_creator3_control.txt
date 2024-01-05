@@ -19,3 +19,5 @@ tail -n6 /cygdrive/c/continuous_backup_server/logs/creator.log-*.log
 # current dump / last thread touch
 ls -l  /cygdrive/d/continuous_backup_data/DUMPS/
 
+# last dump
+for x in `seq 0 5`; do grep -H "dump timestamp" /cygdrive/c/continuous_backup_server/logs/creator.log-${x}.log | tail -1; done
