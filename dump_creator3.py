@@ -100,7 +100,11 @@ class Queue():
                 if newbase:
                     self.add(instance, -1)
                 elif not only_forced:
-                    self.add(instance)
+                    prio = 1
+                    last_dump_file = os.path.join(DEST_DIR, instance, 'last_dump.txt')
+                    if os.path.exists(last_dump_file):
+                        prio = os.path.getmtime(last_dump_file)
+                    self.add(instance, prio=prio)
 
 def stopped(delete=False):
     stop_service = os.path.join(SRC_DIR, 'stop_service')
@@ -371,10 +375,8 @@ class Process():
                     elif forced_dump:
                         self.log('%s, dump forced' % (full_name, ))
                     elif os.path.exists(wal_not_dumped):
-                        last_wal_date = datetime.datetime.fromtimestamp(os.path.getmtime(wal_not_dumped))
-                        if last_wal_date < datetime.datetime.now() - relativedelta(hours=36):
-                            self.log('%s, wal_not_dumped forced' % (full_name, ))
-                            forced_wal = True
+                        self.log('%s, wal_not_dumped forced' % (full_name, ))
+                        forced_wal = True
 
                     if forced_dump or wal_moved or basebackup_found or forced_wal:
                         last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
@@ -384,8 +386,9 @@ class Process():
                             with open(last_dump_file) as last_desc:
                                 last_wal_date = last_desc.read()
                             # only 1 dump per day
-                            if last_dump_date.strftime('%Y-%m-%d') == time.strftime('%Y-%m-%d'):
-                                self.log('%s already dumped today' % instance)
+                            self.log('%s dump timestamp: %s, dump name: %s' % (instance, last_dump_date.strftime('%Y-%m-%d %H:%M'), last_wal_date))
+                            if last_dump_date > datetime.datetime.now() - relativedelta(hours=15):
+                                self.log('%s already dumped today (%s)' % (instance, last_dump_date.strftime('%Y-%m-%d %H:%M')))
                                 open(wal_not_dumped, 'w').close()
                                 continue
 
@@ -404,7 +407,6 @@ class Process():
                             psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'),'-o', '-p%s'%psql_port, '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
                             self.log(' '.join(psql_start))
                             subprocess.run(psql_start, check=True)
-                            #subprocess.check_output(psql_start)
 
                             db = psycopg2.connect('dbname=template1 host=127.0.0.1 user=openpg port=%s'%psql_port)
                             cr = db.cursor()

@@ -1,10 +1,21 @@
 # stop the service
 touch /home/backup/stop_service
 
+# restart service
+echo restart > /home/backup/stop_service
+
 # force a new dump
 touch /home/backup/$instance/force_dump
 
-# force next instance
+# force instance
 echo -n  $instance >  /home/backup/forced_instance
 
+# watch log
+tail -f /cygdrive/c/continuous_backup_server/logs/creator.log-*.log
+
+# last lines
+tail -n6 /cygdrive/c/continuous_backup_server/logs/creator.log-*.log
+
+# current dump / last thread touch
+ls -l  /cygdrive/d/continuous_backup_data/DUMPS/
 
