@@ -29,7 +29,8 @@ send_mail() {
 WITH_SSL="Yes"
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
-BRANCH_DEFAULT_WEB_PY3="lp:unifield-web/py3"
+BRANCH_DEFAULT_WEB_PY3="lp:unifield-web"
+BRANCH_DEFAULT_WEB_PY2="lp:unifield-web/uf31"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 BRANCH_DEFAULT_ENV_PY3="lp:~jfb-tempo-consulting/unifield-wm/sync-env-py3"
 CERTBOT_SCRIPT="~/certbot/certbot-auto"
@@ -412,7 +413,7 @@ if [[ -f "unifield-server/tools/.ok_py3" ]]; then
 else
     echo "PY2 env $env"
     if [ -z "$web" ]; then
-	WEB_BR="$BRANCH_DEFAULT_WEB"
+	WEB_BR="$BRANCH_DEFAULT_WEB_PY2"
     else
         WEB_BR="$web"
     fi
