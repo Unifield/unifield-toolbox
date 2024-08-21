@@ -6,7 +6,7 @@ import sys
 import os
 import shutil
 
-if len(sys.argv) < 2:
+if len(sys.argv) < 1:
     print('%s <url> [src] [destination]' % sys.argv[0])
     sys.exit(1)
 url = sys.argv[1]
@@ -14,12 +14,12 @@ url = sys.argv[1]
 if len(sys.argv) >= 3:
     src = sys.argv[2]
 else:
-    src = 'meta_features'
+    src = '/home/testing/testfield/meta_features'
 
 if len(sys.argv) == 4:
     dest = sys.argv[3]
 else:
-    dest = 'meta_features_to_fix'
+    dest = 'meta_features'
 
 if not os.path.exists(src):
     print('Source %s directory does not exist' % src)

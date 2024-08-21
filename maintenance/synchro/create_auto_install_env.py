@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 import sys
 import psycopg2
 import os
-import ConfigParser
+import configparser
 import shutil
 
 home = os.path.expanduser('~')
@@ -27,10 +29,16 @@ cr = db.cursor()
 
 
 server_db = False
+alternate_db = False
 cr.execute("SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user")
 for x in cr.fetchall():
-    if 'SYNC' in x[0]:
+    if 'SYNC_SERVER_LIGHT_WITH_MASTER' in x[0]:
         server_db = x[0]
+    elif 'SYNC_SERVER' in x[0]:
+        alternate_db = x[0]
+
+if alternate_db and not server_db:
+    server_db = alternate_db
 
 db.close()
 db = psycopg2.connect('dbname=%s'%server_db)
@@ -61,7 +69,7 @@ if not cr.rowcount:
     sys.exit(1)
 
 d = cr.fetchone()
-print d
+print(d)
 
 cr.execute('''
     select
@@ -79,7 +87,7 @@ instance_code = x[0]
 instance_level = x[3]
 
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read(SRC_INI)
 config.set('instance', 'rb_prefix', '%s_' % os.environ['USER'])
 config.set('instance', 'sync_port', os.environ['XMLRPCPORT'])
