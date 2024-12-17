@@ -8,10 +8,33 @@ import os
 import time
 import re
 
+# OCB
+# "https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Backups"
+# "https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Decommissioned instances(last dump) -Archive"
+
+# OCA
+# "https://msfintl-my.sharepoint.com/personal/UF_OCA_msf_geneva_msf_org/Documents/Backups"
+# "https://msfintl-my.sharepoint.com/personal/UF_OCA_msf_geneva_msf_org/Documents/Decommissioned Instances"
+
+# OCP
+# "https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Backups"
+# "https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps"
+
+
 rcfile = '~/.restore_dumprc'
 cfile = os.path.realpath(os.path.expanduser(rcfile))
 username = False
 password = False
+
+url_shortcut = {
+    'oca': 'https://msfintl-my.sharepoint.com/personal/UF_OCA_msf_geneva_msf_org/Documents/Backups',
+    'oca_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCA_msf_geneva_msf_org/Documents/Decommissioned Instances',
+    'ocb': 'https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Backups',
+    'ocb_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Decommissioned instances(last dump) -Archive',
+    'ocp': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Backups',
+    'ocp_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps',
+}
+
 if os.path.exists(cfile):
     config = configparser.ConfigParser(interpolation=None)
     config.read([cfile])
@@ -34,6 +57,7 @@ max_retries = 3
 buffer_size = 10 * 1024 * 1014
 
 def clean_url(url):
+    url = url_shortcut.get(url, url)
     for x in  [':/r', '/:f', ':/e', '/:u']:
         url = url.replace(x, '')
     return url
@@ -95,16 +119,47 @@ def list_f(share_pointurl, pattern):
         'path': parsed_url.path,
     })
     dav = webdav.Client(**dav_data)
+    list_file = []
     for f in dav.list(dav_data['path']):
         if not pattern or pattern and re.search(pattern, f['Name']):
-            print(f['Name'], f.get('TimeLastModified'))
+            list_file.append((f['Name'], f.get('TimeLastModified')))
+    return list_file
+
+def delete_f(share_pointurl):
+    parsed_url = urlparse(clean_url(share_pointurl))
+    filename = os.path.basename(parsed_url.path)
+    dirname = os.path.dirname(parsed_url.path)
+    dav_data.update({
+        'host': parsed_url.netloc,
+        'path': dirname,
+    })
+    dav = webdav.Client(**dav_data)
+    dav.delete(filename)
+
+def delete_pattern(share_pointurl, pattern):
+    l = list_f(share_pointurl, pattern)
+    for x in l:
+        print(x[0], x[1])
+    ret = input('Delete ? y/n ')
+    if ret == 'y':
+        parsed_url = urlparse(clean_url(share_pointurl))
+        dav_data.update({
+            'host': parsed_url.netloc,
+            'path': parsed_url.path,
+        })
+        dav = webdav.Client(**dav_data)
+        for x in l:
+            dav.delete(x[0])
 
 def help():
     print("""%s
         get remote_url [locale_dir]
         push local_file remote_url
         list remote_url [pattern]
+        delete remote_url [pattern]
     """ % (sys.argv[0], ))
+
+    print('remote_url shortcuts: %s' % (', '.join(url_shortcut.keys())))
     sys.exit(1)
 
 if len(sys.argv) < 3:
@@ -124,6 +179,13 @@ elif sys.argv[1] == 'list':
     pattern = None
     if len(sys.argv) > 3:
         pattern = sys.argv[3]
-    list_f(sys.argv[2], pattern)
+    for x in list_f(sys.argv[2], pattern):
+        print(x[0], x[1])
+elif sys.argv[1] == 'delete':
+    pattern = None
+    if len(sys.argv) > 3:
+        delete_pattern(sys.argv[2], sys.argv[3])
+    else:
+        delete_f(sys.argv[2])
 else:
     help()
