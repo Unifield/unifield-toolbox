@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os
-import ConfigParser
+import configparser
 import base64
 import getpass
 
@@ -32,7 +32,7 @@ sync_user = 'sandbox_sync-user'
 openrc = os.path.expanduser('~%s/etc/openerprc'%target_user)
 if os.path.exists(openrc):
     try:
-        p = ConfigParser.ConfigParser()
+        p = configparser.ConfigParser()
         p.read([openrc])
         sync_port = p.get('options', 'xmlrpc_port')
         if not user_pass:
@@ -69,7 +69,7 @@ ret = ' '
 print('Sync user: %s, sync db: %s, sync port: %s, user password: %s' % (sync_user, sync_db, sync_port, user_pass))
 print('DB Found: %s' %(', '.join(dbnames)))
 while ret.lower() not in ('', 'y', 'n'):
-    ret = raw_input("Duplicate ? [Y/n] ")
+    ret = input("Duplicate ? [Y/n] ")
 if ret.lower() == 'n':
     sys.exit(1)
 
@@ -86,7 +86,7 @@ for dbname in dbnames:
         new_dbname = '%s_%s' % (target_user, dbname[5:])
         print('Copy %s to %s' % (dbname, new_dbname))
         cr2.execute('create database "%s" template="%s"' % (new_dbname, dbname))
-    except Exception, e:
+    except Exception as e:
         print('Unable to duplicate %s: %s' % (dbname, e))
         continue
     finally:
