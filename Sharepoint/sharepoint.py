@@ -33,6 +33,8 @@ url_shortcut = {
     'ocb_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Decommissioned instances(last dump) -Archive',
     'ocp': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Backups',
     'ocp_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps',
+    'ocg': 'https://msfintl-my.sharepoint.com/personal/UF_OCG_msf_geneva_msf_org/Documents/Backups',
+    'ocg_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocg_msf_geneva_msf_org/Documents/Decommissioned%20Instances%20-Archive'
 }
 
 if os.path.exists(cfile):
