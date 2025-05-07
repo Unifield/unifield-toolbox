@@ -54,7 +54,8 @@ if os.path.exists(openrc):
 
 # search dbs to duplicate
 for pattern_db in sys.argv[1].split(','):
-    cr2.execute("SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = 'production-dbs' and d.datname ilike '%%%s%%' order by d.datname" % pattern_db)
+    #cr2.execute("SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = 'production-dbs' and d.datname ilike '%%%s%%' order by d.datname" % pattern_db)
+    cr2.execute("SELECT d.datname FROM pg_catalog.pg_database d WHERE d.datname ilike '%%%s%%' order by d.datname" % pattern_db)
     for db in cr2.fetchall():
         dbnames.append(db[0])
         if 'SYNC' in db[0]:

@@ -30,6 +30,7 @@ WITH_SSL="Yes"
 BRANCH_DEFAULT_SERVER="lp:unifield-server"
 BRANCH_DEFAULT_WEB="lp:unifield-web"
 BRANCH_DEFAULT_WEB_PY3="lp:unifield-web"
+BRANCH_DEFAULT_WEB_PY3_13="lp:unifield-web/py3.13"
 BRANCH_DEFAULT_WEB_PY2="lp:unifield-web/uf31"
 BRANCH_DEFAULT_ENV="lp:~unifield-team/unifield-wm/sync-env"
 BRANCH_DEFAULT_ENV_PY3="lp:~jfb-tempo-consulting/unifield-wm/sync-env-py3"
@@ -398,27 +399,39 @@ init_user() {
 
 echo bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
 bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
-if [[ -f "unifield-server/tools/.ok_py3" ]]; then
-    echo "PY3 env" 
+if [[ -f "unifield-server/tools/.ok_py3.13" ]]; then
+    echo "PY3.13 env" 
     if [ -z "$web" ]; then
-	WEB_BR="$BRANCH_DEFAULT_WEB_PY3"
+        WEB_BR="$BRANCH_DEFAULT_WEB_PY3_13"
     else
         WEB_BR="$web"
     fi
     if [ -z "$env" ]; then
-	ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
+        ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
+    else
+        ENV_BR="$env"
+    fi
+elif [[ -f "unifield-server/tools/.ok_py3" ]]; then
+    echo "PY3 env" 
+    if [ -z "$web" ]; then
+        WEB_BR="$BRANCH_DEFAULT_WEB_PY3"
+    else
+        WEB_BR="$web"
+    fi
+    if [ -z "$env" ]; then
+        ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
     else
         ENV_BR="$env"
     fi
 else
     echo "PY2 env $env"
     if [ -z "$web" ]; then
-	WEB_BR="$BRANCH_DEFAULT_WEB_PY2"
+        WEB_BR="$BRANCH_DEFAULT_WEB_PY2"
     else
         WEB_BR="$web"
     fi
     if [ -z "$env" ]; then
-	ENV_BR="$BRANCH_DEFAULT_ENV"
+        ENV_BR="$BRANCH_DEFAULT_ENV"
     else
         ENV_BR="$env"
     fi
@@ -453,7 +466,12 @@ python setup.py develop
 EOF
     fi
     if [[ -f /opt/unifield-venv/bin/activate &&  ! -d /home/${USERERP}/unifield-venv ]]; then
-        if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_py3" ]]; then
+        if [[ -f "/home/${USERERP}/unifield-server/tools/.ok_py3.13" ]]; then
+            ln -s /opt/unifield-venv-py3.13 /home/${USERERP}/unifield-venv
+            PG_PATH=/usr/lib/postgresql/14/bin/
+            POSTGRES_PORT=5435
+            PGCLUSTER=14/main
+        elif [[ -f "/home/${USERERP}/unifield-server/tools/.ok_py3" ]]; then
             ln -s /opt/unifield-venv-py3.10 /home/${USERERP}/unifield-venv
             PG_PATH=/usr/lib/postgresql/14/bin/
             POSTGRES_PORT=5435
@@ -522,7 +540,7 @@ alias serverstart='sudo systemctl start $USERERP-server'
 alias serverstop='sudo systemctl stop $USERERP-server'
 alias servertail='tail -f -n 100 ~/log/openerp-server.log'
 function update_all_dbs() {
-   for x in \`psql -td template1 -c \"SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user;\"\`; do
+   for x in \`psql -td template1 -c \"SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = current_user order by datname;\"\`; do
        /home/$USERERP/unifield-server/bin/openerp-server.py -c /home/$USERERP/etc/openerprc -d \$x -u \${1:-base} --stop-after-init
    done
 }
