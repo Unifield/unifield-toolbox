@@ -65,6 +65,7 @@ to_del = [
     'msf_budget_line',
     'account_move_unreconcile',
     'account_cashbox_line',
+    'account_subscription_line',
     'account_subscription',
     'account_model',
     'cash_request',
