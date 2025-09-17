@@ -61,7 +61,7 @@ dav_data = {
 }
 
 max_retries = 3
-buffer_size = 10 * 1024 * 1014
+buffer_size = 10 * 1024 * 1024
 
 def clean_url(url):
     url = url_shortcut.get(url, url)
@@ -87,17 +87,9 @@ def push(filename, share_pointurl):
                 dav = webdav.Client(**dav_data)
                 dav_connected = True
 
-            upload_ok, dav_error = dav.upload(fileobj, filename, buffer_size=buffer_size, continuation=True)
-            if upload_ok:
-                print('Push done')
-                break
+            dav.upload(fileobj, filename, buffer_size=buffer_size, continuation=True)
+            break
 
-            if retries > max_retries:
-                raise Exception(dav_error)
-            retries += 1
-            time.sleep(2)
-            if dav_connected and 'timed out' in dav_error or '2130575252' in dav_error:
-                dav.login()
         except (requests.exceptions.RequestException, webdav.ConnectionFailed):
             if retries > max_retries:
                 raise
@@ -128,8 +120,8 @@ def list_f(share_pointurl, pattern):
     dav = webdav.Client(**dav_data)
     list_file = []
     for f in dav.list(dav_data['path']):
-        if not pattern or pattern and re.search(pattern, f['Name']):
-            list_file.append((f['Name'], f.get('TimeLastModified')))
+        if not pattern or pattern and re.search(pattern, f.name):
+            list_file.append((f.name, f.time_last_modified))
     return list_file
 
 def delete_f(share_pointurl):
@@ -200,7 +192,7 @@ elif sys.argv[1] == 'move':
     filename = os.path.basename(src_url.path)
     dirname = os.path.dirname(src_url.path)
 
-    dest = url_shortcut[sys.argv[3]].split('/')[-1]
+    dest = urlparse(clean_url(replace_shorcut(sys.argv[3]))).path
     dav_data.update({
         'host': src_url.netloc,
         'path': dirname,
