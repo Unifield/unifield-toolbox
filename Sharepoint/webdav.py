@@ -4,13 +4,14 @@ import requests
 from office365.sharepoint.client_context import ClientContext
 from office365.runtime.http.request_options import RequestOptions
 from office365.runtime.http.http_method import HttpMethod
-from office365.runtime.auth.providers.saml_token_provider import SamlTokenProvider
 import uuid
 import logging
 import os
 import posixpath
 import time
 from urllib.parse import urlparse, urljoin
+from cryptography.x509 import load_pem_x509_certificate
+from cryptography.hazmat.primitives import hashes
 
 
 class ConnectionFailed(Exception):
@@ -20,14 +21,22 @@ class PasswordFailed(Exception):
     pass
 
 class Client(object):
-    def __init__(self, host, port=0, auth=None, username=None, password=None, protocol='http', path=None):
+    def __init__(self, host, tenant=None, client_id=None, cert_path=None, cert_content=None, protocol='https', path=None, *a, **b):
         self.requests_timeout = 45
         self.session_uuid = False
         self.session_offset = -1
         self.session_nb_error = 0
 
-        self.username = username
-        self.password = password
+        self.tenant = tenant
+        self.client_id = client_id
+        self.cert_content = cert_content
+        if self.cert_content is None:
+            with open(cert_path, 'r') as c:
+                self.cert_content = c.read()
+
+        cert = load_pem_x509_certificate(bytes(self.cert_content, 'utf8'))
+        self.thumbprint = cert.fingerprint(hashes.SHA1()).hex()
+
 
         self.path = path or ''
 
@@ -36,18 +45,17 @@ class Client(object):
         self.login()
 
     def login(self):
-        self.request = ClientContext(urljoin(self.url, self.path))
-        self.request.with_user_credentials(self.username, self.password)
-        if not isinstance(self.request.authentication_context._provider, SamlTokenProvider) or \
-                not self.request.authentication_context._provider.get_authentication_cookie():
-            raise requests.exceptions.RequestException(self.request.get_last_error())
 
-        # get the server_site url
-        if not self.path.startswith('/'):
-            self.path = '/%s' % self.path
-        options = RequestOptions(self.url)
-        self.request.ensure_form_digest(options)
-        baseurl = self.request._contextWebInformation.WebFullUrl
+        self.request = ClientContext(urljoin(self.url, self.path))
+
+        ctx = self.request.with_client_certificate(
+            tenant=self.tenant,
+            client_id=self.client_id,
+            private_key=self.cert_content,
+            thumbprint=self.thumbprint,
+        )
+        baseurl = ctx._get_context_web_information().WebFullUrl
+        ctx._auth_context.url = baseurl
 
         if not baseurl:
             raise requests.exceptions.RequestException("Full Url not found %s" % self.path)
@@ -55,6 +63,7 @@ class Client(object):
             baseurl = '%s/' % baseurl
         parsed_base = urlparse(baseurl).path
         self.baseurl = '%s%s' % (self.url, parsed_base)
+
         if not self.path.startswith('/'):
             self.path = '/%s' % self.path
         if not self.path.endswith('/') and len(self.path) > 1:
@@ -72,8 +81,8 @@ class Client(object):
         options.set_header("X-HTTP-Method", method)
         options.set_header('Accept', 'application/json')
         options.set_header('Content-Type', 'application/json')
-        self.request.authenticate_request(options)
-        self.request.ensure_form_digest(options)
+        self.request._authenticate_request(options)
+        self.request._ensure_form_digest(options)
 
         if session:
             return session.post(url, data=data, headers=options.headers, auth=options.auth, timeout=self.requests_timeout)
@@ -211,9 +220,9 @@ class Client(object):
         options.method = HttpMethod.Get
         options.set_header("X-HTTP-Method", "GET")
         options.set_header('accept', 'application/json;odata=verbose')
-        self.request.authenticate_request(options)
-        self.request.ensure_form_digest(options)
-        result = requests.get(url=request_url, headers=options.headers, auth=options.auth)
+        self.request._authenticate_request(options)
+        self.request._ensure_form_digest(options)
+        result = requests.get(url=request_url, headers=options.headers)
         if result.status_code not in (200, 201):
             raise requests.exceptions.RequestException(self.parse_error(result))
 
@@ -236,8 +245,8 @@ class Client(object):
         retry = 5
         while retry:
             try:
-                self.request.authenticate_request(options)
-                self.request.ensure_form_digest(options)
+                self.request._authenticate_request(options)
+                self.request._ensure_form_digest(options)
                 with requests.get(url=request_url, headers=options.headers, auth=options.auth, stream=True, timeout=120) as r:
                     if r.status_code not in (200, 201):
                         error = self.parse_error(r)

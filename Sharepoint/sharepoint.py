@@ -23,8 +23,6 @@ import re
 
 rcfile = '~/.restore_dumprc'
 cfile = os.path.realpath(os.path.expanduser(rcfile))
-username = False
-password = False
 
 url_shortcut = {
     'oca': 'https://msfintl-my.sharepoint.com/personal/UF_OCA_msf_geneva_msf_org/Documents/Backups',
@@ -37,22 +35,29 @@ url_shortcut = {
     'ocg_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocg_msf_geneva_msf_org/Documents/Decommissioned%20Instances%20-Archive'
 }
 
+def replace_shorcut(url):
+    for k, d in url_shortcut.items():
+        fullk = '%s/' % k
+        if url.startswith(fullk):
+            url = url.replace(fullk, '%s/'%d)
+    return url
+
 if os.path.exists(cfile):
     config = configparser.ConfigParser(interpolation=None)
     config.read([cfile])
-    username = config.get('Sharepoint', 'username', fallback=None)
-    password = config.get('Sharepoint', 'password', fallback=None)
+    tenant = config.get('Sharepoint', 'tenant', fallback=None)
+    client_id = config.get('Sharepoint', 'client_id', fallback=None)
+    cert_path = config.get('Sharepoint', 'cert_path', fallback=None)
 
 
-if not username or not password:
-    print('Set [Sharepoint] username and password in %s' % (cfile,))
+if not tenant or not client_id or not cert_path:
+    print('Set [Sharepoint] tenant, client_id and cert_path in %s' % (cfile,))
     sys.exit(1)
 
 dav_data = {
-    'port': 443,
-    'protocol': 'https',
-    'username': username,
-    'password': password,
+    'tenant': tenant,
+    'client_id': client_id,
+    'cert_path': cert_path,
 }
 
 max_retries = 3
@@ -189,5 +194,20 @@ elif sys.argv[1] == 'delete':
         delete_pattern(sys.argv[2], sys.argv[3])
     else:
         delete_f(sys.argv[2])
+elif sys.argv[1] == 'move':
+
+    src_url = urlparse(clean_url(replace_shorcut(sys.argv[2])))
+    filename = os.path.basename(src_url.path)
+    dirname = os.path.dirname(src_url.path)
+
+    dest = url_shortcut[sys.argv[3]].split('/')[-1]
+    dav_data.update({
+        'host': src_url.netloc,
+        'path': dirname,
+    })
+    dav = webdav.Client(**dav_data)
+    dav.move(filename, dest)
+
+
 else:
     help()
