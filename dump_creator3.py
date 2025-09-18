@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3.9
 
 import os
 import time
@@ -53,6 +53,9 @@ class Queue():
         except RuntimeError:
             # lock not acquired
             pass
+
+    def size(self):
+        return len(self.queue)
 
     def add(self, item, prio=1):
         with self.lock:
@@ -152,10 +155,13 @@ class Process():
 
         dav_data = {
             'host': 'msfintl-my.sharepoint.com',
-            'port': 443,
             'protocol': 'https',
             'username': 'UniField.MSF@geneva.msf.org',
             'password': config.password,
+            'tenant': config.tenant,
+            'client_id': config.client_id,
+            'thumbprint': config.thumbprint,
+            'cert_pem_content': config.cert_pem_content,
         }
 
         if oc not in config.path:
@@ -280,6 +286,7 @@ class Process():
                     continue
                 self.log('Process %s' % (instance, ))
                 if os.path.isdir(full_name):
+                    psql_wait_time = '1600' # 26 min
                     basebackup = os.path.join(full_name, 'base', 'base.tar.7z')
                     dest_dir = os.path.join(DEST_DIR, instance)
 
@@ -301,14 +308,15 @@ class Process():
                         # copy postgres and recovery / migration of new WAL destination
                         if self.is_pg14(dest_basebackup):
                             for conf in ['standby.signal', 'postgresql.conf']:
-                                shutil.copy(os.path.join(PSQL_CONF14, conf), dest_basebackup)
+                                shutil.copyfile(os.path.join(PSQL_CONF14, conf), os.path.join(dest_basebackup, conf))
                         else:
                             for conf in ['recovery.conf', 'postgresql.conf']:
-                                shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
+                                shutil.copyfile(os.path.join(PSQL_CONF, conf), os.path.join(dest_basebackup, conf))
 
                     # Copy / extract basbackup
                     basebackup_found = False
                     if os.path.isfile(basebackup):
+                        psql_wait_time = '%d' % (45 * 60, )
                         self.log('%s Found base backup %s'% (instance, basebackup))
                         old_base_moved = False
                         if os.path.isdir(dest_basebackup):
@@ -328,10 +336,10 @@ class Process():
 
                         if self.is_pg14(dest_basebackup):
                             for conf in ['standby.signal', 'postgresql.conf', 'pg_hba.conf']:
-                                shutil.copy(os.path.join(PSQL_CONF14, conf), dest_basebackup)
+                                shutil.copyfile(os.path.join(PSQL_CONF14, conf), os.path.join(dest_basebackup, conf))
                         else:
                             for conf in ['recovery.conf', 'postgresql.conf', 'pg_hba.conf']:
-                                shutil.copy(os.path.join(PSQL_CONF, conf), dest_basebackup)
+                                shutil.copyfile(os.path.join(PSQL_CONF, conf), os.path.join(dest_basebackup, conf))
 
                         for del_recreate in [pg_wal,  pg_xlog, os.path.join(dest_basebackup, 'pg_log'), os.path.join(dest_basebackup, 'log')]:
                             if os.path.isdir(del_recreate):
@@ -378,6 +386,7 @@ class Process():
                         self.log('%s, wal_not_dumped forced' % (full_name, ))
                         forced_wal = True
 
+                    db_user = 'openpg'
                     if forced_dump or wal_moved or basebackup_found or forced_wal:
                         last_dump_file = os.path.join(dest_dir, 'last_dump.txt')
                         last_wal_date = False
@@ -386,14 +395,18 @@ class Process():
                             with open(last_dump_file) as last_desc:
                                 last_wal_date = last_desc.read()
                             # only 1 dump per day
-                            self.log('%s dump timestamp: %s, dump name: %s' % (instance, last_dump_date.strftime('%Y-%m-%d %H:%M'), last_wal_date))
+                            self.log('%s dump timestamp: %s, dump name: %s, queue len: %d' % (instance, last_dump_date.strftime('%Y-%m-%d %H:%M'), last_wal_date, self.queue.size()))
                             if last_dump_date > datetime.datetime.now() - relativedelta(hours=15):
                                 self.log('%s already dumped today (%s)' % (instance, last_dump_date.strftime('%Y-%m-%d %H:%M')))
                                 open(wal_not_dumped, 'w').close()
                                 continue
 
                         try:
-                            # Start psql
+                            self.log('Check %s' % os.path.join(dest_basebackup, 'postgres_user'))
+                            if os.path.isfile(os.path.join(dest_basebackup, 'postgres_user')):
+                                db_user = '4UnifieldAdmin'
+                            
+			    # Start psql
                             if self.is_pg14(dest_basebackup):
                                 last_wal_method = 'pg_last_wal_replay_lsn()'
                                 last_wal_time_method = 'pg_last_xact_replay_timestamp()'
@@ -404,11 +417,11 @@ class Process():
                                 PSQL_DIR = config.psql9_dir
 
                             self.log('%s, pg_version: %s'% (instance, PSQL_DIR))
-                            psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'),'-o', '-p%s'%psql_port, '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'start']
+                            psql_start = [os.path.join(PSQL_DIR, 'pg_ctl.exe'),'-o', '-p%s'%psql_port, '-D', to_win(dest_basebackup), '-t', psql_wait_time, '-w', 'start']
                             self.log(' '.join(psql_start))
                             subprocess.run(psql_start, check=True)
 
-                            db = psycopg2.connect('dbname=template1 host=127.0.0.1 user=openpg port=%s'%psql_port)
+                            db = psycopg2.connect('dbname=template1 host=127.0.0.1 user=%s port=%s'%(db_user, psql_port))
                             cr = db.cursor()
                             # wait end of wall processing
                             previous_wall = False
@@ -420,7 +433,7 @@ class Process():
                                 self.log('%s wait recovery, previous: %s, current: %s' % (instance, previous_wall, prev))
                                 previous_wall = prev
                                 #time.sleep(10)
-                                time.sleep(60)
+                                time.sleep(120)
 
                             if not previous_wall:
                                 self.error('%s no WAL replayed' % instance)
@@ -459,7 +472,7 @@ class Process():
                                     dump_file = False
                                     if x[0] not in ['template0', 'template1', 'postgres']:
                                         self.log('%s db found %s'% (instance, x[0]))
-                                        db = psycopg2.connect('dbname=%s host=127.0.0.1 user=openpg port=%s' % (x[0], psql_port))
+                                        db = psycopg2.connect('dbname=%s host=127.0.0.1 user=%s port=%s' % (x[0], db_user, psql_port))
                                         cr = db.cursor()
                                         cr.execute('SELECT name FROM sync_client_version where date is not null order by date desc limit 1')
                                         version = cr.fetchone()
@@ -477,7 +490,7 @@ class Process():
 
                                         dump_file = os.path.join(DUMP_DIR, '%s-%s-C-%s.dump' % (x[0], restore_date.strftime('%Y%m%d-%H%M%S'), version))
                                         self.log('Dump %s' % dump_file)
-                                        pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-p', '%s'%psql_port, '-U', 'openpg', '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
+                                        pg_dump = [os.path.join(PSQL_DIR, 'pg_dump.exe'), '-h', '127.0.0.1', '-p', '%s'%psql_port, '-U', db_user, '-Fc', '--lock-wait-timeout=120000',  '-f', to_win(dump_file), x[0]]
                                         subprocess.check_output(pg_dump, stderr=subprocess.STDOUT)
 
                                         final_zip = os.path.join(DUMP_DIR, '%s-%s.zip' % (x[0], day_abr[datetime.datetime.now().weekday()]))
@@ -504,7 +517,7 @@ class Process():
                                         os.remove(final_zip)
 
                         finally:
-                            psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', '1200', '-w', 'stop']
+                            psql_stop = [os.path.join(PSQL_DIR, 'pg_ctl.exe'), '-D', to_win(dest_basebackup), '-t', psql_wait_time, '-w', 'stop']
                             self.log(' '.join(psql_stop))
                             subprocess.run(psql_stop)
 

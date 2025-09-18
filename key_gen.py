@@ -46,10 +46,12 @@ else:
 
 while ok not in ('Y', 'y'):
     if ok in ('n', 'N'):
-        instance_input = input("Intance name: ")
+        instance_input = input("Intance name: ").strip()
+        if not instance_input:
+            continue  
     if ok in ('q', 'Q'):
         sys.exit(1)
-    ok = input("'%s' do you confirm ? [y/n/q] " % instance_input)
+    ok = input("'%s' do you confirm ? [y/n/q] " % instance_input).strip()
 
 instance = instance_input.lower().strip()
 if not re.search('^[a-z0-9_-]+$', instance):
@@ -104,7 +106,7 @@ zip_desc.close()
 
 auth = open(authorized_keys, 'ab')
 auth.write(b'### %s\n' % b_instance)
-auth.write(b'command="rsync --server -vlogDtr --no-perms --chmod=Dg+rwx,Fg+rw --remove-source-files --partial-dir=.rsync-partial --partial . %s/",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding %s %s\n' % (b_instance, exported_pub_key, b_instance))
+auth.write(b'command="rsync --server -vlogDtr --perms --chmod=750 --remove-source-files --partial-dir=.rsync-partial --partial . %s/",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding %s %s\n' % (b_instance, exported_pub_key, b_instance))
 auth.close()
 sendemail(zip_file)
 

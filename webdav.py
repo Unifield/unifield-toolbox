@@ -2,12 +2,11 @@
 
 import requests
 
-from office365.runtime.auth.authentication_context import AuthenticationContext
-from office365.runtime.client_request import ClientRequest
+
 from office365.sharepoint.client_context import ClientContext
-from office365.runtime.utilities.request_options import RequestOptions
-from office365.runtime.utilities.http_method import HttpMethod
-import cgi
+from office365.runtime.http.request_options import RequestOptions
+from office365.runtime.http.http_method import HttpMethod
+from office365.runtime.auth.providers.saml_token_provider import SamlTokenProvider
 import uuid
 import logging
 import os
@@ -19,7 +18,7 @@ class PasswordFailed(Exception):
     pass
 
 class Client(object):
-    def __init__(self, host, port=0, auth=None, username=None, password=None, protocol='http', path=None):
+    def __init__(self, host, port=0, auth=None, username=None, password=None, tenant=None, client_id=None, thumbprint=None, cert_pem_content=None, protocol='http', path=None):
         self.requests_timeout = 45
         self.session_uuid = False
         self.session_offset = -1
@@ -27,6 +26,12 @@ class Client(object):
 
         self.username = username
         self.password = password
+
+        self.tenant = tenant
+        self.client_id = client_id
+        self.thumbprint = thumbprint
+        self.cert = cert_pem_content
+
 
         if not port:
             port = 443 if protocol == 'https' else 80
@@ -37,7 +42,7 @@ class Client(object):
         # oneDrive: need to split /site/ and path
         # in our config site is /personal/unifield_xxx_yyy/
         # path is /Documents/Unifield/
-        self.baseurl = '{0}://{1}:{2}/{3}/'.format(protocol, host, port, '/'.join(self.path.split('/')[0:3]) )
+        self.baseurl = '{0}://{1}/{2}/'.format(protocol, host, '/'.join(self.path.split('/')[0:3]) )
 
         if len(self.path.split('/')) < 5:
             self.path = '%sDocuments/' % self.path
@@ -45,16 +50,27 @@ class Client(object):
         self.login()
 
     def login(self):
-        ctx_auth = AuthenticationContext(self.baseurl)
+        self.request = ClientContext(self.baseurl)
 
-        if ctx_auth.acquire_token_for_user(self.username, cgi.escape(self.password)):
-            self.request = ClientRequest(ctx_auth)
-            self.request.context = ClientContext(self.baseurl, ctx_auth)
+        if not self.tenant:
 
-            if not ctx_auth.provider.FedAuth or not ctx_auth.provider.rtFa:
-                raise ConnectionFailed(ctx_auth.get_last_error())
+            if ctx_auth.acquire_token_for_user(self.username, self.password):
+                self.request = ClientRequest(ctx_auth)
+                self.request.context = ClientContext(self.baseurl, ctx_auth)
+
+                if not ctx_auth.provider.FedAuth or not ctx_auth.provider.rtFa:
+                    raise ConnectionFailed(ctx_auth.get_last_error())
+            else:
+                raise requests.exceptions.RequestException(ctx_auth.get_last_error())
         else:
-            raise requests.exceptions.RequestException(ctx_auth.get_last_error())
+           self.ctx = self.request.with_client_certificate(
+                tenant=self.tenant,
+                client_id=self.client_id,
+                private_key=self.cert,
+                thumbprint=self.thumbprint,
+            )
+           self.ctx.web.get().execute_query()
+
 
     def format_request(self, url, method='POST', data="", session=False):
         assert(method in ['POST', 'DELETE'])
@@ -68,8 +84,8 @@ class Client(object):
         options.set_header('Accept', 'application/json')
         options.set_header('Content-Type', 'application/json')
 
-        self.request.context.authenticate_request(options)
-        self.request.context.ensure_form_digest(options)
+        self.request._authenticate_request(options)
+        self.request._ensure_form_digest(options)
 
         if session:
             return session.post(url, data=data, headers=options.headers, auth=options.auth, timeout=self.requests_timeout)
