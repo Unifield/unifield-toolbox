@@ -102,13 +102,20 @@ case $opt in
     v)
         BUILD_PYTHON_ENV=1
         ;;
-    s)
+    bs)
         server=$OPTARG
         AUTO=1
         ;;
-    w)
+    bw)
         web=$OPTARG
         AUTO=1
+        ;;
+    s)
+        gitbranch=$OPTARG
+        AUTO=1
+        ;;
+    g)
+        gitrepo=$OPTARG
         ;;
     m)
         env=$OPTARG
@@ -165,8 +172,10 @@ case $opt in
           -j: get launchpad branches from Jira ticket
           -r: set RB field in Jira (if -j is used)
           -p: change RB prefix name
-          -s: server branch
-          -w: web branch
+          -s: git server branch
+          -g: git repot (default https://github.com/Unifield/unifield-server.git)
+          -bs: bzr server branch
+          -bw: bzr web branch
         """
         exit 1
     esac
@@ -179,7 +188,7 @@ fi
 shift $((OPTIND - 1))
 REV="$1"
 
-[ -z "$REV" ] && echo "Please specify revision: dsp-utp141 for example" && exit 1
+[ -z "$REV" ] && echo "Please specify name: dsp-utp141 for example" && exit 1
 BRANCHES="branches/$REV"
 
 if [ "$JIRA" ]; then
@@ -188,8 +197,14 @@ if [ "$JIRA" ]; then
         echo "Jira Error"
         exit 1
     fi
-    if [[ -z "$server" ]]; then
-        server=${jira[0]}
+    if [[ -z "$server" && -z "$gitbranch" ]]; then
+        if [[ ${jira[0]} == *lp:* ]]; then
+            server=${jira[0]}
+        else
+            split_branch=(${jira[0]//\/tree\// })
+            gitbranch="${split_branch[1]}"
+            gitrepo="${split_branch[0]}.git"
+        fi
     fi
     if [[ -z "$web" && "${jira[1]}" != "-" ]]; then
         web=${jira[1]}
@@ -200,6 +215,9 @@ if [ "$JIRA" ]; then
     AUTO=1
 fi
 
+if [[ -n "$gitbranch" && -z "$gitrepo" ]]; then
+    gitrepo="https://github.com/Unifield/unifield-server.git"
+fi
 if [[ -n "$RB_PREFIX" ]]; then
         REV="${RB_PREFIX}-${REV}"
 fi
@@ -258,7 +276,9 @@ do
     [ -z "$correct" ] && correct=y
 done
 
-echo "server=\"$server\"" > $BRANCHES
+echo "gitrepo=\"$gitrepo\"" > $BRANCHES
+echo "gitbranch=\"$gitbranch\"" >> $BRANCHES
+echo "server=\"$server\"" >> $BRANCHES
 echo "web=\"$web\"" >> $BRANCHES
 echo "env=\"$env\"" >> $BRANCHES
 
@@ -274,7 +294,6 @@ USERERP=${REV}
 DBNAME="${REV}"
 BZBRANCH=""
 ADMINDBPASS=$web_db_pass
-
 
 useradd -s /bin/bash -d /home/${USERERP} -m ${USERERP}
 userid=`id -u ${USERERP}`
@@ -357,7 +376,11 @@ config_file() {
     #create_file ./File/openerp-server-sprint1  /etc/init.d/${USERERP}-server
     #create_file ./File/openerp-web-sprint1 /etc/init.d/${USERERP}-web
     create_file ./File/server.service /etc/systemd/system/${USERERP}-server.service
-    create_file ./File/web.service /etc/systemd/system/${USERERP}-web.service
+    if [[ -z "${gitrepo}" ]]; then
+        create_file ./File/web.service /etc/systemd/system/${USERERP}-web.service
+    else
+        create_file ./File/web.service.git /etc/systemd/system/${USERERP}-web.service
+    fi
     create_file ./File/openerpallrc /home/${USERERP}/etc/openerprc
     create_file ./File/sync-envall.py /home/${USERERP}/sync_env_script/config.py
     create_file ./File/unifield.config /home/${USERERP}/unifield.config
@@ -379,7 +402,7 @@ else
 fi
     cp ./File/runtests_partial.sh /home/${USERERP}/
     chmod +x /home/${USERERP}/runtests.sh /home/${USERERP}/build_and_test.sh
-    chown ${USERERP}.${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
+    chown ${USERERP}:${USERERP} /home/${USERERP}/etc/openerp-web.cfg /home/${USERERP}/etc/openerprc /home/${USERERP}/sync_env_script/config.py /home/${USERERP}/.bash_profile /home/${USERERP}/build_and_test.sh /home/${USERERP}/runtests.sh /home/${USERERP}/runtests_partial.sh
     systemctl daemon-reload
     systemctl enable ${USERERP}-web
     systemctl enable ${USERERP}-server
@@ -390,57 +413,66 @@ fi
 
 bzr_type=branch
 init_user() {
-    if [ ! -d /home/${USERERP}/.bzr ]; then
-        cp -a  ${template_dir}/.bzr ${template_dir}/tmp /home/${USERERP}/
+    if [ ! -d /home/${USERERP}/tmp ]; then
+        cp -a  ${template_dir}/tmp /home/${USERERP}/
+        chown -R ${USERERP}:${USERERP} /home/${USERERP}/tmp
     fi
 
-    chown -R ${USERERP}.${USERERP} /home/${USERERP}/.bzr /home/${USERERP}/tmp
+    if [[ -n "$server" && ! -d /home/${USERERP}/.bzr ]]; then
+        cp -a  ${template_dir}/.bzr /home/${USERERP}/
+        chown -R ${USERERP}:${USERERP} /home/${USERERP}/.bzr
+    fi
+
     su - ${USERERP} <<EOF
 
-echo bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
-bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
-if [[ -f "unifield-server/tools/.ok_py3.13" ]]; then
-    echo "PY3.13 env" 
-    if [ -z "$web" ]; then
-        WEB_BR="$BRANCH_DEFAULT_WEB_PY3_13"
+if [[ -n "$server" ]]; then
+    echo bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
+    bzr ${bzr_type} ${server:=${BRANCH_DEFAULT_SERVER}} unifield-server
+    if [[ -f "unifield-server/tools/.ok_py3.13" ]]; then
+        echo "PY3.13 env" 
+        if [ -z "$web" ]; then
+            WEB_BR="$BRANCH_DEFAULT_WEB_PY3_13"
+        else
+            WEB_BR="$web"
+        fi
+        if [ -z "$env" ]; then
+            ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
+        else
+            ENV_BR="$env"
+        fi
+    elif [[ -f "unifield-server/tools/.ok_py3" ]]; then
+        echo "PY3 env" 
+        if [ -z "$web" ]; then
+            WEB_BR="$BRANCH_DEFAULT_WEB_PY3"
+        else
+            WEB_BR="$web"
+        fi
+        if [ -z "$env" ]; then
+            ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
+        else
+            ENV_BR="$env"
+        fi
     else
-        WEB_BR="$web"
+        echo "PY2 env $env"
+        if [ -z "$web" ]; then
+            WEB_BR="$BRANCH_DEFAULT_WEB_PY2"
+        else
+            WEB_BR="$web"
+        fi
+        if [ -z "$env" ]; then
+            ENV_BR="$BRANCH_DEFAULT_ENV"
+        else
+            ENV_BR="$env"
+        fi
     fi
-    if [ -z "$env" ]; then
-        ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
-    else
-        ENV_BR="$env"
-    fi
-elif [[ -f "unifield-server/tools/.ok_py3" ]]; then
-    echo "PY3 env" 
-    if [ -z "$web" ]; then
-        WEB_BR="$BRANCH_DEFAULT_WEB_PY3"
-    else
-        WEB_BR="$web"
-    fi
-    if [ -z "$env" ]; then
-        ENV_BR="$BRANCH_DEFAULT_ENV_PY3"
-    else
-        ENV_BR="$env"
-    fi
+    echo bzr ${bzr_type} \$WEB_BR unifield-web
+    bzr ${bzr_type} \$WEB_BR unifield-web
+    echo bzr ${bzr_type} \$ENV_BR sync_env_script
+    bzr ${bzr_type} \$ENV_BR sync_env_script
 else
-    echo "PY2 env $env"
-    if [ -z "$web" ]; then
-        WEB_BR="$BRANCH_DEFAULT_WEB_PY2"
-    else
-        WEB_BR="$web"
-    fi
-    if [ -z "$env" ]; then
-        ENV_BR="$BRANCH_DEFAULT_ENV"
-    else
-        ENV_BR="$env"
-    fi
+    git clone --progress -b ${gitbranch} --reference ${template_dir}/unifield-server.git --dissociate ${gitrepo} unifield-server
+    git clone --progress -b jfb/sync-env-py3 --reference ${template_dir}/unifield-wm.git --dissociate https://github.com/Unifield/unifield-wm.git sync_env_script
 fi
-echo bzr ${bzr_type} \$WEB_BR unifield-web
-bzr ${bzr_type} \$WEB_BR unifield-web
-echo bzr ${bzr_type} \$ENV_BR sync_env_script
-bzr ${bzr_type} \$ENV_BR sync_env_script
-
 mkdir etc log exports
 EOF
 
