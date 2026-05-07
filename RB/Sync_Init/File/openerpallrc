@@ -59,3 +59,4 @@ static_http_document_root = None
 gzipxmlrpc = True
 sync_user_login = @@SYNC_USER_LOGIN@@
 sync_user_password = @@SYNC_USER_PASSWORD@@
+no_email_send = True
