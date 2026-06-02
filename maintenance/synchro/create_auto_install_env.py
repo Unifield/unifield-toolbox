@@ -115,3 +115,8 @@ cr.execute("update sync_server_entity set name=name||'_KO' where id=%s", (d[0], 
 
 db.commit()
 cr.close()
+
+# on sandbox, instance dbname is not the same as instance name
+print(r"""
+sed -i -e "s#partner_obj.search(cr, uid, \[('name', '=', config_dict\['instance'\].get('instance_name'))\])#partner_obj.search(cr, uid, [('name', '=', cr.dbname)])#" ~/unifield-server/bin/addons/base/module/instance_auto_creation.py
+""")
