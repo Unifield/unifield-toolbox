@@ -140,7 +140,7 @@ def delete_pattern(share_pointurl, pattern):
     for x in l:
         print(x[0], x[1])
     ret = input('Delete ? y/n ')
-    if ret == 'y':
+    if ret and ret.lower() == 'y':
         parsed_url = urlparse(clean_url(share_pointurl))
         dav_data.update({
             'host': parsed_url.netloc,
@@ -149,6 +149,8 @@ def delete_pattern(share_pointurl, pattern):
         dav = webdav.Client(**dav_data)
         for x in l:
             dav.delete(x[0])
+    else:
+        print('Cancel')
 
 def help():
     print("""%s
