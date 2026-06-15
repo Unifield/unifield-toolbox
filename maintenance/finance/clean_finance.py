@@ -86,6 +86,9 @@ to_del = [
     'deleted_object',
     'ir_attachment',
     'signature_image',
+    'esc_invoice_line',
+    'res_log',
+    'audittrail_log_line',
 ]
 
 
