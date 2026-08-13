@@ -59,7 +59,7 @@ JIRA=
 SET_RB=
 RB_PREFIX=
 BUILD_PYTHON_ENV=
-while getopts t:i:s:w:m:l:c:p:auULfhjrev opt; do
+while getopts t:i:s:w:m:l:c:p:auULfhjrenv opt; do
 case $opt in
     t)
          if [[ "$OPTARG" != "mkdb" && "$OPTARG" != "testfield" && "$OPTARG" != "devtests" && "$OPTARG" != "testfield_partial" && "$OPTARG" != "none" ]]; then
@@ -77,6 +77,9 @@ case $opt in
         ;;
     e)
         WITH_SSL="Yes"
+        ;;
+    n)
+        WITH_SSL="No"
         ;;
     p)
         RB_PREFIX=$OPTARG
@@ -158,7 +161,8 @@ case $opt in
         echo """$0
           -t [mkdb|testfield|testfield_partial|devtests|none]: command to start (default: mkdb)
           -a: start mkdb with trunk branches
-          -e: encrypt (use ssl proxy)
+          -e: encrypt (use ssl proxy) (default)
+          -n: disable ssl
           -v: build a new virtual env
 
           # MKDB options
