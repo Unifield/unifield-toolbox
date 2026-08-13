@@ -25,7 +25,7 @@ killall -s 9 -u $1
 a2dissite ${1}.conf
 [[ -f /etc/apache2/sites-enabled/$1 ]] && rm /etc/apache2/sites-enabled/$1
 /etc/init.d/apache2 reload
-for i in  `${PG_PATH}psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = '$1';"`; do 
+for i in  `${PG_PATH}psql -t -d template1 -c "SELECT d.datname FROM pg_catalog.pg_database d WHERE pg_get_userbyid(d.datdba) = '$1';" 2> /dev/null`; do
 echo "Dropdb $i"
 ${PG_PATH}dropdb $i
 done
