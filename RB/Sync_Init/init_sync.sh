@@ -422,6 +422,15 @@ init_user() {
         cp -a  ${template_dir}/.bzr /home/${USERERP}/
         chown -R ${USERERP}:${USERERP} /home/${USERERP}/.bzr
     fi
+   
+    if [[ -z "$server" ]]; then
+        if [[ -z "$gitrepo" ]]; then
+            gitrepo="https://github.com/Unifield/unifield-server.git"
+        fi
+        if [[ -z "$gitbranch" ]]; then
+            gitbranch="master"
+        fi
+    fi
 
     su - ${USERERP} <<EOF
 
@@ -470,6 +479,8 @@ if [[ -n "$server" ]]; then
     echo bzr ${bzr_type} \$ENV_BR sync_env_script
     bzr ${bzr_type} \$ENV_BR sync_env_script
 else
+    #git config --global --add safe.directory ${template_dir}/unifield-server.git/.git
+    echo git clone --progress -b ${gitbranch} --reference ${template_dir}/unifield-server.git --dissociate ${gitrepo} unifield-server
     git clone --progress -b ${gitbranch} --reference ${template_dir}/unifield-server.git --dissociate ${gitrepo} unifield-server
     git clone --progress -b jfb/sync-env-py3 --reference ${template_dir}/unifield-wm.git --dissociate https://github.com/Unifield/unifield-wm.git sync_env_script
 fi

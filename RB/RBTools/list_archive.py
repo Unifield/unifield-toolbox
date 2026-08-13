@@ -21,6 +21,9 @@ if not passwd:
     passwd = getpass.getpass('Jira Password : ')
 j = jira_lib.Jira(jira_url, jira_user, passwd)
 
+with_services = []
+no_services = []
+
 for rb in home_dir:
     rb = rb.strip()
     not_set = False
@@ -35,8 +38,23 @@ for rb in home_dir:
     st = []
     for k in issues:
         st.append(issues[k])
+    running = []
+    if os.path.exists('/etc/systemd/system/multi-user.target.wants/%s-server.service'%rb):
+        running.append('server')
+    if os.path.exists('/etc/systemd/system/multi-user.target.wants/%s-web.service'%rb):
+        running.append('web')
+    run = ' / '.join(running)
+
     if not st or st == [None]:
-        print "%s : no associated Jira issue"%(rb,)
+        line = "%s : no associated Jira issue %s"%(rb, run)
     else:
-        print "%s : %s %s"%(rb, ' '.join(st), not_set and 'NOT SET' or '')
+        line = "%s : %s %s %s"%(rb, ' '.join(st), not_set and 'NOT SET' or '', run)
+
+    if run:
+        with_services.append(line)
+    else:
+        no_services.append(line)
+
+for x in no_services + with_services:
+    print x
 

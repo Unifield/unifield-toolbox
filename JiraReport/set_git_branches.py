@@ -19,6 +19,7 @@ if DRY_RUN:
 dev_map = {
     'jfb': 'jfb',
     'dk': 'd.kemps',
+    'mas': 'mas',
 }
 config_file = os.path.realpath(os.path.expanduser('~/RBconfig'))
 cfg = ConfigObj(config_file)
