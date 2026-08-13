@@ -4,6 +4,7 @@ import configparser
 import requests
 import sys
 from urllib.parse import urlparse
+from urllib.parse import quote
 import os
 import time
 import re
@@ -30,9 +31,12 @@ url_shortcut = {
     'ocb': 'https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Backups',
     'ocb_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCB_msf_geneva_msf_org/Documents/Decommissioned instances(last dump) -Archive',
     'ocp': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Backups',
-    'ocp_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps',
+#    'ocp_decom': 'https://msfintl-my.sharepoint.com/personal/UF_OCP_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps',
+    'ocp_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocp_msf_geneva_msf_org/Documents/Decommissioned Instance last dumps',
     'ocg': 'https://msfintl-my.sharepoint.com/personal/UF_OCG_msf_geneva_msf_org/Documents/Backups',
-    'ocg_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocg_msf_geneva_msf_org/Documents/Decommissioned%20Instances%20-Archive'
+#    'ocg_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocg_msf_geneva_msf_org/Documents/Decommissioned%20Instances%20-Archive',
+    'ocg_decom': 'https://msfintl-my.sharepoint.com/personal/uf_ocg_msf_geneva_msf_org/Documents/Decommissioned Instances -Archive',
+    'ub': 'https://msfintl-my.sharepoint.com/personal/UF_UBUNTU_msf_geneva_msf_org/Documents/',
 }
 
 def replace_shorcut(url):
