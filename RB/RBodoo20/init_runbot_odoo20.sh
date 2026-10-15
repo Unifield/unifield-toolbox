@@ -23,9 +23,9 @@ MASTER_PASSWD="${RB_MASTER_PASSWD:-}"
 ADDONS_GIT_USER=""
 ADDONS_GIT_TOKEN=""
 
-ADDONS_REPO="https://git.t-c.biz/scm/msf/odoo19-msf-extra.git"; ADDONS_BRANCH=""; MODULES="profile_gate"; EXTRA_DIR=""
+ADDONS_REPO="none"; ADDONS_BRANCH=""; MODULES=""; EXTRA_DIR=""
 WITH_SSL="Yes"; WITH_DEMO=""; LANG_LOAD="fr_FR"; WORKERS=0; RB_PREFIX=""
-DBMGR=1; DRY=0
+DBMGR=1; DRY=0; MODULES_SET=0
 
 usage() {
 cat <<EOF
@@ -33,9 +33,9 @@ Usage: $0 [options] NAME
   -d           DRY RUN: print what would be done, write/execute nothing
   -b BRANCH    Odoo branch (default: $ODOO_BRANCH)
   -g URL       Odoo git repo (default: $ODOO_REPO)
-  -a URL       git repo of your modules (default: $ADDONS_REPO)
+  -a URL       git repo of your modules (default: none = Odoo only)
   -B BRANCH    branch of your modules (default: repo default branch)
-  -m LIST      modules to install, comma-separated (default: $MODULES)
+  -m LIST      modules to install, comma-separated (default: base)
   -n           no SSL (http only)
   -h           this help
 EOF
@@ -49,11 +49,13 @@ while getopts db:g:a:B:m:nh opt; do
     g) ODOO_REPO=$OPTARG ;;
     a) ADDONS_REPO=$OPTARG ;;
     B) ADDONS_BRANCH=$OPTARG ;;
-    m) MODULES=$OPTARG ;;
+    m) MODULES=$OPTARG; MODULES_SET=1 ;;
     n) WITH_SSL="No" ;;
     *) usage ;;
   esac
 done
+[[ "$ADDONS_REPO" == "none" ]] && ADDONS_REPO=""
+[[ -n "$MODULES" ]] || MODULES="base"
 shift $((OPTIND - 1))
 
 say()  { echo "== $*"; }
