@@ -179,34 +179,51 @@ echo "   ports: http=$HTTPPORT  gevent=$GEVENTPORT  private-pg=$PGPORT_RB   (Pos
 DROP_PW=$(gen_pw); BKP_PW=$(gen_pw); RESTORE_PW=$(gen_pw)
 [[ "$MASTER_PASSWD" == "admin" ]] && die "The master password cannot be 'admin' (Odoo refuses it)"
 
-say "Cloning sources"
-as_user git clone --depth 1 -b "$ODOO_BRANCH" "$ODOO_REPO" odoo
-if [[ -n "$ADDONS_REPO" ]]; then
-  if (( ! DRY )) && [[ -z "$ADDONS_GIT_TOKEN" && -t 0 && "$ADDONS_REPO" == https://* ]]; then
-    read -r -p "Git username for $ADDONS_REPO (empty = anonymous): " ADDONS_GIT_USER
-    if [[ -n "$ADDONS_GIT_USER" ]]; then read -r -s -p "Git token/password (hidden): " ADDONS_GIT_TOKEN; echo; fi
+git_clone() {
+  local url=$1 dest=$2; shift 2
+  local gu="" gt="" askpass="" genv=(GIT_TERMINAL_PROMPT=0)
+  if (( ! DRY )) && [[ -t 0 && "$url" == https://* && "$url" != "https://github.com/odoo/odoo.git" ]]; then
+    read -r -p "Git username for $url (empty = anonymous): " gu
+    if [[ -n "$gu" ]]; then read -r -s -p "Git token/password (hidden): " gt; echo; fi
   fi
-  GIT_ENV=(GIT_TERMINAL_PROMPT=0)
-  ASKPASS=""
-  if [[ -n "$ADDONS_GIT_TOKEN" ]]; then
-    if (( DRY )); then ASKPASS="/tmp/rb_askpass.XXXXXX"
-    else
-      ASKPASS=$(mktemp /tmp/rb_askpass.XXXXXX)
-      cat > "$ASKPASS" <<'EOS'
+  if [[ -n "$gt" ]]; then
+    askpass=$(mktemp /tmp/rb_askpass.XXXXXX)
+    cat > "$askpass" <<'EOS'
 #!/bin/sh
 case "$1" in Username*) printf '%s\n' "$RB_GIT_USER" ;; *) printf '%s\n' "$RB_GIT_TOKEN" ;; esac
 EOS
-      chmod 755 "$ASKPASS"
-      export RB_GIT_USER="$ADDONS_GIT_USER" RB_GIT_TOKEN="$ADDONS_GIT_TOKEN"
-    fi
-    GIT_ENV+=(GIT_ASKPASS="$ASKPASS")
-    echo "   (git credentials for user '$ADDONS_GIT_USER' passed via GIT_ASKPASS)"
+    chmod 755 "$askpass"
+    export RB_GIT_USER="$gu" RB_GIT_TOKEN="$gt"
+    genv+=(GIT_ASKPASS="$askpass")
+    echo "   (git credentials for user '$gu' passed via GIT_ASKPASS)"
   fi
-  CLONE_ARGS=(clone)
-  [[ -n "$ADDONS_BRANCH" ]] && CLONE_ARGS+=(-b "$ADDONS_BRANCH")
-  as_user env "${GIT_ENV[@]}" git "${CLONE_ARGS[@]}" "$ADDONS_REPO" custom-addons
-  [[ -n "$ASKPASS" ]] && rm -f "$ASKPASS"
+  as_user env "${genv[@]}" git clone "$@" "$url" "$dest" || { [[ -n "$askpass" ]] && rm -f "$askpass"; unset RB_GIT_USER RB_GIT_TOKEN; return 1; }
+  [[ -n "$askpass" ]] && rm -f "$askpass"
   unset RB_GIT_USER RB_GIT_TOKEN
+}
+
+say "Cloning sources"
+git_clone "$ODOO_REPO" odoo -b "$ODOO_BRANCH"
+if (( DRY )); then
+  echo "[dry] if ~/odoo/.gitmodules exists: rewrite git@github.com: to https://github.com/, then git submodule sync + update --init --recursive"
+elif [[ -f "$HOME_DIR/odoo/.gitmodules" ]]; then
+  say "Git submodules"
+  as_user sed -i 's|git@github.com:|https://github.com/|g' "$HOME_DIR/odoo/.gitmodules"
+  as_user env -C "$HOME_DIR/odoo" git submodule sync
+  as_user env -C "$HOME_DIR/odoo" git submodule update --init --recursive
+fi
+REPO_DIR="$HOME_DIR/odoo"
+ODOO_SRC="$REPO_DIR"
+if (( ! DRY )); then
+  if [[ -f "$REPO_DIR/odoo-bin" ]]; then ODOO_SRC="$REPO_DIR"
+  elif [[ -f "$REPO_DIR/odoo/odoo-bin" ]]; then ODOO_SRC="$REPO_DIR/odoo"
+  else die "odoo-bin not found in ~/odoo nor ~/odoo/odoo: unexpected layout of $ODOO_REPO (ls $REPO_DIR)"; fi
+  echo "   Odoo sources: $ODOO_SRC"
+fi
+if [[ -n "$ADDONS_REPO" ]]; then
+  ADDONS_ARGS=()
+  [[ -n "$ADDONS_BRANCH" ]] && ADDONS_ARGS+=(-b "$ADDONS_BRANCH")
+  git_clone "$ADDONS_REPO" custom-addons "${ADDONS_ARGS[@]}"
 fi
 as_user mkdir -p etc log data
 if [[ -n "$EXTRA_DIR" ]]; then
@@ -219,17 +236,29 @@ fi
 say "Virtualenv + Python dependencies"
 as_user "$PYTHON_EXE" -m venv venv
 as_user venv/bin/pip install -q -U pip wheel setuptools
-if (( DRY )); then echo "[dry] pip install -r odoo/requirements.txt (without psycopg2) + psycopg2-binary"
+if (( DRY )); then echo "[dry] pip install -r requirements.txt of the Odoo sources (without psycopg2) + psycopg2-binary"
 else
-  grep -viE '^\s*psycopg2' "$HOME_DIR/odoo/requirements.txt" > "$HOME_DIR/.req_odoo.txt"
+  REQ_SRC="$ODOO_SRC/requirements.txt"
+  [[ -s "$REQ_SRC" ]] || REQ_SRC="$REPO_DIR/requirements.txt"
+  [[ -s "$REQ_SRC" ]] || die "requirements.txt not found in $ODOO_SRC nor $REPO_DIR"
+  grep -viE '^\s*psycopg2' "$REQ_SRC" > "$HOME_DIR/.req_odoo.txt"
   chown "$USERERP:$USERERP" "$HOME_DIR/.req_odoo.txt"
   as_user venv/bin/pip install -r .req_odoo.txt
   as_user venv/bin/pip install psycopg2-binary
   rm -f "$HOME_DIR/.req_odoo.txt"
+  if [[ "$ODOO_SRC" != "$REPO_DIR" && -s "$REPO_DIR/requirements.txt" ]]; then
+    say "Python dependencies of the repo (requirements.txt at its root)"
+    grep -viE '^\s*psycopg2' "$REPO_DIR/requirements.txt" > "$HOME_DIR/.req_repo.txt"
+    chown "$USERERP:$USERERP" "$HOME_DIR/.req_repo.txt"
+    as_user venv/bin/pip install -r .req_repo.txt || warn "requirements.txt of the repo: partial failure"
+    rm -f "$HOME_DIR/.req_repo.txt"
+  fi
   if [[ -f "$HOME_DIR/custom-addons/requirements.txt" ]]; then
     as_user venv/bin/pip install -r custom-addons/requirements.txt || warn "requirements.txt of your modules: partial failure"
   fi
-  DEPS=$("$PYTHON_EXE" -I - "$HOME_DIR/custom-addons" "$HOME_DIR/test-addons" <<'PY' 2>/dev/null || true
+  SCAN_ROOTS=("$HOME_DIR/custom-addons" "$HOME_DIR/test-addons")
+  if [[ "$ODOO_SRC" != "$REPO_DIR" ]]; then SCAN_ROOTS+=("$REPO_DIR"); [[ -d "$REPO_DIR/addons" ]] && SCAN_ROOTS+=("$REPO_DIR/addons"); fi
+  DEPS=$("$PYTHON_EXE" -I - "${SCAN_ROOTS[@]}" <<'PY' 2>/dev/null || true
 import ast, os, sys
 m = {"PIL": "Pillow", "yaml": "PyYAML", "cv2": "opencv-python-headless", "dateutil": "python-dateutil"}
 out = set()
@@ -297,7 +326,11 @@ else
 fi
 
 say "odoo.conf"
-ADDONS_PATH="$HOME_DIR/odoo/addons,$HOME_DIR/odoo/odoo/addons"
+ADDONS_PATH="$ODOO_SRC/addons,$ODOO_SRC/odoo/addons"
+if [[ "$ODOO_SRC" != "$REPO_DIR" ]]; then
+  compgen -G "$REPO_DIR/*/__manifest__.py" >/dev/null && ADDONS_PATH="$ADDONS_PATH,$REPO_DIR"
+  [[ -d "$REPO_DIR/addons" ]] && ADDONS_PATH="$ADDONS_PATH,$REPO_DIR/addons"
+fi
 if [[ -n "$ADDONS_REPO" ]]; then
   ADDONS_PATH="$ADDONS_PATH,$HOME_DIR/custom-addons"
   [[ -d "$HOME_DIR/custom-addons/addons" ]] && ADDONS_PATH="$ADDONS_PATH,$HOME_DIR/custom-addons/addons"
@@ -346,8 +379,8 @@ fi
   echo '. ~/venv/bin/activate'
   [[ -n "$PGENV_HOST" ]] && echo "export PGHOST=$PGENV_HOST"
   echo "export PGPORT=$PGENV_PORT"
-  echo 'if [ "$1" = "shell" ]; then shift; exec python ~/odoo/odoo-bin shell -c ~/etc/odoo.conf "$@"; fi'
-  echo 'exec python ~/odoo/odoo-bin -c ~/etc/odoo.conf "$@"'
+  echo "if [ \"\$1\" = \"shell\" ]; then shift; exec python $ODOO_SRC/odoo-bin shell -c ~/etc/odoo.conf \"\$@\"; fi"
+  echo "exec python $ODOO_SRC/odoo-bin -c ~/etc/odoo.conf \"\$@\""
 } | write_file "$HOME_DIR/odoo.sh" 755 "$USERERP:$USERERP"
 
 say "systemd service"
@@ -361,10 +394,10 @@ say "systemd service"
   echo "Type=simple"
   echo "User=$USERERP"
   echo "Group=$USERERP"
-  echo "WorkingDirectory=$HOME_DIR/odoo"
+  echo "WorkingDirectory=$ODOO_SRC"
   [[ -n "$PGENV_HOST" ]] && echo "Environment=PGHOST=$PGENV_HOST"
   echo "Environment=PGPORT=$PGENV_PORT"
-  echo "ExecStart=$HOME_DIR/venv/bin/python $HOME_DIR/odoo/odoo-bin -c $HOME_DIR/etc/odoo.conf"
+  echo "ExecStart=$HOME_DIR/venv/bin/python $ODOO_SRC/odoo-bin -c $HOME_DIR/etc/odoo.conf"
   echo "Restart=on-failure"
   echo
   echo "[Install]"
