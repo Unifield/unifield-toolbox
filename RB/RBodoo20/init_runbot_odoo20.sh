@@ -20,12 +20,10 @@ EXTRA_PIP="numpy pypdfium2"
 DEFAULT_ADMIN_PASSWD="Only4RB!"
 ADMIN_PASSWD="${RB_ADMIN_PASSWD:-$DEFAULT_ADMIN_PASSWD}"
 MASTER_PASSWD="${RB_MASTER_PASSWD:-}"
-ADDONS_GIT_USER=""
-ADDONS_GIT_TOKEN=""
 
 ADDONS_REPO="none"; ADDONS_BRANCH=""; MODULES=""; EXTRA_DIR=""
 WITH_SSL="Yes"; WITH_DEMO=""; LANG_LOAD="fr_FR"; WORKERS=0; RB_PREFIX=""
-DBMGR=1; DRY=0; MODULES_SET=0
+DBMGR=1; DRY=0
 
 usage() {
 cat <<EOF
@@ -49,7 +47,7 @@ while getopts db:g:a:B:m:nh opt; do
     g) ODOO_REPO=$OPTARG ;;
     a) ADDONS_REPO=$OPTARG ;;
     B) ADDONS_BRANCH=$OPTARG ;;
-    m) MODULES=$OPTARG; MODULES_SET=1 ;;
+    m) MODULES=$OPTARG ;;
     n) WITH_SSL="No" ;;
     *) usage ;;
   esac
@@ -116,7 +114,6 @@ pg_bin_ge16() {
   done
 }
 shared_pg_version() {
-  (( DRY )) && { echo ""; return; }
   runuser -u "$PG_SYS_USER" -- psql -p "$PG_SHARED_PORT" -Atc 'show server_version_num' 2>/dev/null || true
 }
 if [[ "$PG_MODE" == "auto" ]]; then
@@ -197,20 +194,20 @@ EOS
     genv+=(GIT_ASKPASS="$askpass")
     echo "   (git credentials for user '$gu' passed via GIT_ASKPASS)"
   fi
-  as_user env "${genv[@]}" git clone "$@" "$url" "$dest" || { [[ -n "$askpass" ]] && rm -f "$askpass"; unset RB_GIT_USER RB_GIT_TOKEN; return 1; }
+  as_user env "${genv[@]}" git clone --progress "$@" "$url" "$dest" || { [[ -n "$askpass" ]] && rm -f "$askpass"; unset RB_GIT_USER RB_GIT_TOKEN; return 1; }
   [[ -n "$askpass" ]] && rm -f "$askpass"
   unset RB_GIT_USER RB_GIT_TOKEN
 }
 
-say "Cloning sources"
+say "Cloning sources (can take several minutes, progress shown below)"
 git_clone "$ODOO_REPO" odoo -b "$ODOO_BRANCH"
 if (( DRY )); then
   echo "[dry] if ~/odoo/.gitmodules exists: rewrite git@github.com: to https://github.com/, then git submodule sync + update --init --recursive"
 elif [[ -f "$HOME_DIR/odoo/.gitmodules" ]]; then
-  say "Git submodules"
+  say "Git submodules (can take several minutes, progress shown below)"
   as_user sed -i 's|git@github.com:|https://github.com/|g' "$HOME_DIR/odoo/.gitmodules"
   as_user env -C "$HOME_DIR/odoo" git submodule sync
-  as_user env -C "$HOME_DIR/odoo" git submodule update --init --recursive
+  as_user env -C "$HOME_DIR/odoo" git submodule update --init --recursive --progress
 fi
 REPO_DIR="$HOME_DIR/odoo"
 ODOO_SRC="$REPO_DIR"
